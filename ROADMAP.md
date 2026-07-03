@@ -1,12 +1,12 @@
 # GEO-SOP Product Roadmap
 
-This roadmap keeps the public release path simple. Detailed fixes can still be tracked in release notes, but the product should be communicated as three clear stages: desktop preview, customer beta, and commercial stable.
+This roadmap keeps the public release path simple. Detailed fixes can still be tracked in release notes, but the product should be communicated as three clear stages: desktop preview, v1.0 detection and sentiment analysis, and v2.0 fully automated GEO tasks.
 
 ## Version Policy
 
 - `dev`: internal or early customer desktop preview.
-- `beta`: customer pilot build with installer, onboarding, and upgrade safeguards.
 - `stable`: commercial release with signing, support, documentation, and upgrade policy.
+- `automation`: server-scheduled, locally executed GEO task automation.
 
 ## v0.3-dev - Desktop Preview
 
@@ -28,42 +28,43 @@ Acceptance criteria:
 - A user can install, open, create a task, collect answers, review the dashboard, run AI analysis, and find exports without developer help.
 - The dashboard explains what matters now and what to do next, instead of only listing raw data.
 
-## v0.4-beta - Customer Beta
+## v1.0 - Detection and Sentiment Analysis
 
-Goal: make GEO-SOP reliable enough for customer pilots.
+Goal: make GEO-SOP reliable enough for commercial detection and sentiment-analysis workflows.
 
 Planned focus:
 
-- First-run onboarding for non-technical users.
-- Guided platform login and login recovery.
-- Queue-based collection with retries and clearer failure diagnostics.
-- Windows installer readiness, not only a ZIP build package.
-- Local data backup and restore.
-- Basic upgrade checks that preserve tasks, exports, screenshots, and browser profiles.
+- Stable task creation, platform login checks, answer collection, screenshots, and exports.
+- Brand visibility detection, reference-source extraction, and source-domain summaries.
+- Local keyword sentiment analysis and AI-assisted sentiment analysis.
+- Compact KPI dashboard for non-technical users.
+- Cloud account login, local/cloud data sync, and server-side task visibility.
+- Signed or clearly packaged macOS and Windows builds for customer use.
 
 Acceptance criteria:
 
-- A pilot customer can install and use GEO-SOP on macOS or Windows with minimal hand-holding.
-- Collection failures are isolated and explain what the user should do next.
-- Local data survives normal upgrades.
+- A customer can detect how AI platforms mention a brand, review references, understand sentiment, and export evidence without developer assistance.
+- Detection results and sentiment conclusions are consistent between the desktop app and cloud dashboard.
+- Local data survives normal upgrades and can sync through HTTPS API and token authentication.
 
-## v1.0 - Commercial Stable
+## v2.0 - Fully Automated GEO Tasks
 
-Goal: public commercial desktop release.
+Goal: let cloud users create GEO tasks that the local desktop app can execute automatically and safely.
 
 Required before launch:
 
-- Signed and notarized macOS DMG.
-- Signed Windows installer.
-- Stable collection, export, dashboard, AI analysis, and report workflows.
-- Checksums for downloadable artifacts.
-- Public documentation, support channel, release notes, and upgrade policy.
-- Error log export for support and troubleshooting.
+- Cloud task scheduling and task assignment to the correct desktop client.
+- Local worker queue with retries, rate limits, failure diagnostics, and recovery guidance.
+- Login-state monitoring and user prompts when a platform account needs local re-authentication.
+- Automatic answer collection, screenshot evidence, sentiment analysis, dashboard refresh, and report generation.
+- Audit trail, run logs, safe cancellation, and per-user data isolation.
+- Upgrade and rollback policy for automation workers.
 
 Acceptance criteria:
 
-- A commercial user can install, configure, collect, analyze, export, and upgrade without developer assistance.
-- Security prompts are reduced to the normal signed-app baseline.
+- A user can create a task in the cloud, leave the desktop client running, and receive completed GEO results automatically.
+- Automation never exposes platform cookies or database credentials to the cloud page.
+- Failed runs are explainable and recoverable without corrupting local or cloud data.
 
 ## Release History
 
