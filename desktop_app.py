@@ -54,6 +54,17 @@ def _init_database():
         db.create_all()
 
 
+def _start_remote_worker():
+    try:
+        from app import app
+        from remote_worker import start_remote_task_worker
+
+        started = start_remote_task_worker(app)
+        _boot_log(f"remote task worker started={started}")
+    except Exception as exc:
+        _boot_log(f"remote task worker failed: {type(exc).__name__}: {exc}")
+
+
 class ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
     daemon_threads = True
 
@@ -100,6 +111,7 @@ def _wait_for_server(host: str, port: int, timeout: float = 10.0):
 def main():
     os.chdir(ROOT_DIR)
     _init_database()
+    _start_remote_worker()
 
     host = "127.0.0.1"
     port = _free_port()

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -200,11 +201,19 @@ def sync_status(user_id: int | None = None) -> dict:
 
 
 def _task_has_remote_id(task: MonitorTask, remote_task_id: int) -> bool:
+    return str(remote_task_id_for_task(task) or "") == str(remote_task_id)
+
+
+def remote_task_id_for_task(task: MonitorTask) -> int | None:
     try:
         config = json.loads(task.schedule_config or "{}")
     except Exception:
         config = {}
-    return str(config.get("remote_task_id")) == str(remote_task_id)
+    try:
+        remote_id = int(config.get("remote_task_id") or 0)
+    except Exception:
+        remote_id = 0
+    return remote_id or None
 
 
 def pull_remote_tasks(user_id: int) -> dict:
@@ -276,7 +285,7 @@ def pull_remote_tasks(user_id: int) -> dict:
 
     db.session.commit()
 
-    if created:
+    if created or skipped:
         ack_payload = {
             "install_id": get_install_id(),
             "user_key": _user_key(user),
@@ -298,3 +307,67 @@ def pull_remote_tasks(user_id: int) -> dict:
         "skipped": skipped,
         "available": len(data.get("tasks", [])),
     }
+
+
+def report_client_heartbeat(user_id: int, status: str = "online", message: str = "") -> dict:
+    if not cloud_sync_enabled():
+        return {"enabled": False, "message": "cloud api sync is disabled"}
+
+    user = db.session.get(User, int(user_id))
+    if not user:
+        raise ValueError(f"user {user_id} not found")
+
+    payload = {
+        "install_id": get_install_id(),
+        "user_key": _user_key(user),
+        "status": status,
+        "message": message,
+        "desktop": {
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+        },
+    }
+    response = requests.post(
+        f"{cloud_sync_url()}/remote-tasks/heartbeat/",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers=_headers(),
+        timeout=20,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"remote heartbeat failed: HTTP {response.status_code} {response.text[:500]}")
+    return response.json()
+
+
+def report_remote_task_status(
+    user_id: int,
+    remote_task_id: int,
+    local_task_id: int | None,
+    status: str,
+    message: str = "",
+    extra: dict | None = None,
+) -> dict:
+    if not cloud_sync_enabled():
+        return {"enabled": False, "message": "cloud api sync is disabled"}
+
+    user = db.session.get(User, int(user_id))
+    if not user:
+        raise ValueError(f"user {user_id} not found")
+
+    payload = {
+        "install_id": get_install_id(),
+        "user_key": _user_key(user),
+        "remote_task_id": int(remote_task_id),
+        "local_task_id": int(local_task_id) if local_task_id else None,
+        "status": status,
+        "message": message,
+        "extra": extra or {},
+    }
+    response = requests.post(
+        f"{cloud_sync_url()}/remote-tasks/status/",
+        data=json.dumps(payload, ensure_ascii=False, default=_dt).encode("utf-8"),
+        headers=_headers(),
+        timeout=30,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"remote task status failed: HTTP {response.status_code} {response.text[:500]}")
+    return response.json()
