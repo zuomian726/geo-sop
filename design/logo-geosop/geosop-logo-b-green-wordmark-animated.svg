@@ -1,0 +1,11 @@
+<svg width="360" height="96" viewBox="0 0 360 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="88" y2="88" gradientUnits="userSpaceOnUse"><stop stop-color="#5267F6"/><stop offset="1" stop-color="#2C4AE2"/></linearGradient>
+    <filter id="greenBlur" x="28" y="28" width="40" height="40" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2.7"><animate attributeName="stdDeviation" values="3;0.4;3" dur="1.6s" repeatCount="indefinite"/></feGaussianBlur></filter>
+  </defs>
+  <rect x="8" y="8" width="80" height="80" rx="18" fill="url(#bg)"/>
+  <text x="48" y="61" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif" font-size="45" font-weight="850" fill="white">G</text>
+  <circle cx="48" cy="48" r="8" fill="#30DD7E" opacity="0.35" filter="url(#greenBlur)"><animate attributeName="opacity" values="0.18;0.55;0.18" dur="1.6s" repeatCount="indefinite"/></circle>
+  <circle cx="48" cy="48" r="4.8" fill="#30DD7E"><animate attributeName="r" values="3.4;5;3.4" dur="1.6s" repeatCount="indefinite"/></circle>
+  <text x="112" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif" font-size="38" font-weight="820" fill="#1B2332">GEO-SOP</text>
+</svg>

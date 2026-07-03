@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>引用参考链接舆情分析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .stat-card.positive .number { color: #10b981; }
+        .stat-card.negative .number { color: #ef4444; }
+        .stat-card.neutral .number { color: #f59e0b; }
+
+        .tabs-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #888;
+            transition: all 0.3s;
+            position: relative;
+            bottom: -1px;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 15%;
+            right: 15%;
+            height: 3px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .panel {
+            display: none;
+            padding: 20px;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-row h3 {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .filter-group select {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #444;
+            font-size: 14px;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd6;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .stats-info {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .status.failed {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .sentiment {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .sentiment.positive {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .sentiment.negative {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .sentiment.neutral {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar .progress {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .progress.positive { background: #10b981; }
+        .progress.negative { background: #ef4444; }
+        .progress.neutral { background: #f59e0b; }
+
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .pagination-container button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .pagination-container button:hover:not(:disabled) {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .pagination-container button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-container span {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .modal .close {
+            float: right;
+            cursor: pointer;
+            font-size: 20px;
+            color: #999;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+        }
+
+
+
+        .url-preview {
+            word-break: break-all;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .url-preview:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ref-count {
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .ref-count:hover {
+            color: #5a6fd6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>引用参考链接舆情分析</h1>
+            <p>采集引用链接网页内容并分析舆情</p>
+        </div>
+
+        <div class="stats-row" id="stats">
+            <div class="stat-card">
+                <div class="number">--</div>
+                <div class="label">待处理引用</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">--</div>
+                <div class="label">已采集内容</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="number">--</div>
+                <div class="label">正向舆情</div>
+            </div>
+            <div class="stat-card negative">
+                <div class="number">--</div>
+                <div class="label">负向舆情</div>
+            </div>
+            <div class="stat-card neutral">
+                <div class="number">--</div>
+                <div class="label">中性舆情</div>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" onclick="showPanel('pending')">待处理</button>
+                <button class="tab" onclick="showPanel('crawled')">已采集</button>
+                <button class="tab" onclick="showPanel('sentiment')">舆情分析</button>
+            </div>
+
+            <div class="panel active" id="pending-panel">
+
+                <div class="filter-row">
+                    <h3>待处理引用链接</h3>
+                    <div class="filter-group">
+                        <label>任务:</label>
+                        <select id="taskFilter">
+                            <option value="全部">全部</option>
+                        </select>
+                        <label style="margin-left: 12px;">问题:</label>
+                        <select id="pendingQuestionFilter">
+                            <option value="全部">全部</option>
+                        </select>
+                        <label style="margin-left: 12px;">时间段:</label>
+                        <select id="timeFilter">
+                            <option value="全部时间">全部时间</option>
+                            <option value="today">今日</option>
+                            <option value="yesterday">昨日</option>
+                            <option value="week">近7天</option>
+                            <option value="month">近30天</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="pendingTable">
+                        <thead>
+                            <tr>
+                                <th>问题</th>
+                                <th>平台</th>
+                                <th>引用数量</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="empty-state">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 待处理引用链接分页 -->
+                <div id="pendingPagination" class="pagination-container" style="display: none;">
+                    <button class="btn btn-default" id="pendingPrevBtn" onclick="loadPending(currentPendingPage - 1)" disabled>上一页</button>
+                    <span id="pendingPageInfo"></span>
+                    <button class="btn btn-default" id="pendingNextBtn" onclick="loadPending(currentPendingPage + 1)" disabled>下一页</button>
+                </div>
+            </div>
+
+            <div class="panel" id="crawled-panel">
+                <div class="filter-row">
+                    <h3>已采集内容</h3>
+                    <div class="filters">
+                        <select id="crawledTaskFilter">
+                            <option value="全部">任务: 全部</option>
+                        </select>
+                        <select id="crawledQuestionFilter">
+                            <option value="全部">问题: 全部</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="crawledRefreshBtn">刷新</button>
+                </div>
+
+                <div class="table-container">
+                    <table id="crawledTable">
+                        <thead>
+                            <tr>
+                                <th>URL</th>
+                                <th>标题</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="empty-state">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 已采集内容分页 -->
+                <div id="crawledPagination" class="pagination-container" style="display: none;">
+                    <button class="btn btn-default" id="crawledPrevBtn" onclick="loadCrawled(currentCrawledPage - 1)" disabled>上一页</button>
+                    <span id="crawledPageInfo"></span>
+                    <button class="btn btn-default" id="crawledNextBtn" onclick="loadCrawled(currentCrawledPage + 1)" disabled>下一页</button>
+                </div>
+            </div>
+
+            <div class="panel" id="sentiment-panel">
+                <div class="filter-row">
+                    <h3>舆情分析结果</h3>
+                    <div class="filter-group">
+                        <label>情感倾向:</label>
+                        <select id="sentimentFilter" onchange="loadSentiment()">
+                            <option value="">全部</option>
+                            <option value="positive">正向</option>
+                            <option value="negative">负向</option>
+                            <option value="neutral">中性</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadSentiment()">刷新</button>
+                    <button class="btn btn-success" onclick="batchAnalyze()">分析已采集内容</button>
+                    <button class="btn btn-warning" onclick="clearSentiment()">清空分析结果</button>
+                    <button class="btn btn-danger" onclick="reanalyze()">重新分析</button>
+                </div>
+
+                <div class="table-container">
+                    <table id="sentimentTable">
+                        <thead>
+                            <tr>
+                                <th>URL</th>
+                                <th>标题</th>
+                                <th>情感倾向</th>
+                                <th>情感分数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="empty-state">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 舆情分析结果分页 -->
+                <div id="sentimentPagination" class="pagination-container" style="display: none;">
+                    <button class="btn btn-default" id="sentimentPrevBtn" onclick="loadSentiment(currentSentimentPage - 1)" disabled>上一页</button>
+                    <span id="sentimentPageInfo"></span>
+                    <button class="btn btn-default" id="sentimentNextBtn" onclick="loadSentiment(currentSentimentPage + 1)" disabled>下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentTask = '全部';
+
+        function showPanel(panelId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(panelId + '-panel').classList.add('active');
+            
+            if (panelId === 'crawled') loadCrawled();
+            if (panelId === 'sentiment') loadSentiment();
+        }
+
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks`);
+                const data = await response.json();
+                const select = document.getElementById('taskFilter');
+                select.innerHTML = '<option value="全部">全部</option>';
+                data.data.forEach(task => {
+                    const option = document.createElement('option');
+                    option.value = task.id;
+                    option.textContent = task.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载任务列表失败:', error);
+            }
+        }
+
+        async function loadPendingQuestions() {
+            const taskId = document.getElementById('taskFilter').value;
+            
+            try {
+                let url = `${API_BASE}/api/pending_questions`;
+                if (taskId && taskId !== '全部') {
+                    url += `?task_id=${taskId}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const select = document.getElementById('pendingQuestionFilter');
+                select.innerHTML = '<option value="全部">全部</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(question => {
+                        const option = document.createElement('option');
+                        option.value = question;
+                        option.textContent = question;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载待处理问题列表失败:', error);
+            }
+        }
+
+        async function onPendingTaskChange() {
+            await loadPendingQuestions();
+            loadPending(1);
+        }
+
+        let currentPendingPage = 1;
+        let totalPendingPages = 1;
+        
+        async function loadPending(page = 1) {
+            try {
+                const taskId = document.getElementById('taskFilter').value;
+                const question = document.getElementById('pendingQuestionFilter').value;
+                const timeRange = document.getElementById('timeFilter').value;
+                
+                console.log('待处理引用筛选 - 任务ID:', taskId, '问题:', question);
+                
+                // 构建请求URL
+                let url = `${API_BASE}/api/pending_references?task_id=${taskId}&time_range=${timeRange}&page=${page}&page_size=20`;
+                if (question && question !== '全部') {
+                    url += `&question=${encodeURIComponent(question)}`;
+                }
+                
+                console.log('待处理引用请求URL:', url);
+                
+                // 同时获取待处理数据和采集统计
+                const [pendingResponse, statsResponse] = await Promise.all([
+                    fetch(url),
+                    fetch(`${API_BASE}/api/crawl_stats`)
+                ]);
+                
+                const pendingData = await pendingResponse.json();
+                const statsData = await statsResponse.json();
+                
+                const stats = statsData.success ? statsData.data : {};
+
+                const tbody = document.getElementById('pendingTable').querySelector('tbody');
+                if (pendingData.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无待处理引用链接</td></tr>';
+                    document.getElementById('pendingPagination').style.display = 'none';
+                    return;
+                }
+
+                let html = '';
+                pendingData.data.forEach(item => {
+                    const question = item.question;
+                    const platforms = item.platforms;
+                    const questionStats = stats[question] || { crawled_count: 0, pending_count: 0, total_count: 0 };
+                    const platformCount = Object.keys(platforms).length;
+                    
+                    let platformIndex = 0;
+                    Object.keys(platforms).forEach(platform => {
+                        const showQuestion = platformIndex === 0;
+                        const rowSpan = platformIndex === 0 ? `rowspan="${platformCount}"` : '';
+                        
+                        let actionButtons = '';
+                        if (showQuestion) {
+                            actionButtons = `
+                                <div class="action-buttons">
+                                    <span class="stats-info">已采集${questionStats.crawled_count}条，未采集${questionStats.pending_count}条</span>
+                                    <button class="btn btn-primary" onclick="crawlAllForQuestion('${question}', 'pending')">采集</button>
+                                    <button class="btn btn-warning" onclick="crawlAllForQuestion('${question}', 'all')">重新采集</button>
+                                </div>
+                            `;
+                        }
+                        
+                        html += `
+                            <tr>
+                                ${showQuestion ? `<td ${rowSpan}>${question}</td>` : ''}
+                                <td>${platform}</td>
+                                ${showQuestion ? `<td ${rowSpan}><span class="ref-count" onclick="viewReferencesByPlatform('${question}', '${platform}')">${item.total_count}</span></td>` : '<td></td>'}
+                                ${showQuestion ? `<td ${rowSpan}>${actionButtons}</td>` : ''}
+                            </tr>
+                        `;
+                        platformIndex++;
+                    });
+                });
+                tbody.innerHTML = html;
+                
+                // 更新分页信息
+                currentPendingPage = pendingData.page;
+                totalPendingPages = pendingData.total_pages;
+                
+                document.getElementById('pendingPageInfo').textContent = `第 ${currentPendingPage} / ${totalPendingPages} 页，共 ${pendingData.total} 个问题`;
+                document.getElementById('pendingPrevBtn').disabled = currentPendingPage <= 1;
+                document.getElementById('pendingNextBtn').disabled = currentPendingPage >= totalPendingPages;
+                document.getElementById('pendingPagination').style.display = 'flex';
+            } catch (error) {
+                console.error('加载待处理列表失败:', error);
+            }
+        }
+
+        let currentCrawledPage = 1;
+        let totalCrawledPages = 1;
+        
+        async function loadCrawled(page = 1) {
+            try {
+                const taskId = document.getElementById('crawledTaskFilter').value;
+                const question = document.getElementById('crawledQuestionFilter').value;
+                
+                console.log('已采集内容筛选 - 任务ID:', taskId, '问题:', question);
+                
+                let url = `${API_BASE}/api/crawled_contents?page=${page}&page_size=20`;
+                if (taskId && taskId !== '全部') {
+                    url += `&task_id=${taskId}`;
+                }
+                if (question && question !== '全部') {
+                    url += `&question=${encodeURIComponent(question)}`;
+                }
+                
+                console.log('已采集内容请求URL:', url);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('crawledTable').querySelector('tbody');
+                if (data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无已采集内容</td></tr>';
+                    document.getElementById('crawledPagination').style.display = 'none';
+                    return;
+                }
+
+                let html = '';
+                data.data.forEach(item => {
+                    const statusText = item.crawl_status === 'success' ? '成功' : item.crawl_status === 'pending' ? '待采集' : '失败';
+                    html += `
+                        <tr>
+                            <td><a href="${item.url}" target="_blank" class="url-preview">${item.url.substring(0, 50)}${item.url.length > 50 ? '...' : ''}</a></td>
+                            <td>${item.title || '-'}</td>
+                            <td><span class="status ${item.crawl_status}">${statusText}</span></td>
+                            <td>
+                                <button class="btn btn-success" onclick="viewContent(${item.id})">查看</button>
+                                <button class="btn btn-warning" onclick="retryCrawl(${item.id})">重新采集</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+                
+                // 更新分页信息
+                currentCrawledPage = data.page;
+                totalCrawledPages = data.total_pages;
+                
+                document.getElementById('crawledPageInfo').textContent = `第 ${currentCrawledPage} / ${totalCrawledPages} 页，共 ${data.total} 条记录`;
+                document.getElementById('crawledPrevBtn').disabled = currentCrawledPage <= 1;
+                document.getElementById('crawledNextBtn').disabled = currentCrawledPage >= totalCrawledPages;
+                document.getElementById('crawledPagination').style.display = 'flex';
+            } catch (error) {
+                console.error('加载已采集列表失败:', error);
+            }
+        }
+
+        async function loadCrawledTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks`);
+                const data = await response.json();
+                
+                const select = document.getElementById('crawledTaskFilter');
+                select.innerHTML = '<option value="全部">任务: 全部</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(task => {
+                        const option = document.createElement('option');
+                        option.value = task.id;
+                        option.textContent = `任务: ${task.name}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载任务列表失败:', error);
+            }
+        }
+
+        async function onCrawledTaskChange() {
+            const taskId = document.getElementById('crawledTaskFilter').value;
+            
+            try {
+                let url = `${API_BASE}/api/crawled_questions`;
+                if (taskId && taskId !== '全部') {
+                    url += `?task_id=${taskId}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const select = document.getElementById('crawledQuestionFilter');
+                select.innerHTML = '<option value="全部">问题: 全部</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(question => {
+                        const option = document.createElement('option');
+                        option.value = question;
+                        option.textContent = question;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载问题列表失败:', error);
+            }
+            
+            // 重新加载数据
+            loadCrawled(1);
+        }
+
+        let currentSentimentPage = 1;
+        let totalSentimentPages = 1;
+        
+        async function loadSentiment(page = 1) {
+            try {
+                const sentimentFilter = document.getElementById('sentimentFilter').value;
+                
+                let url = `${API_BASE}/api/sentiment_results?page=${page}&page_size=20`;
+                if (sentimentFilter) {
+                    url += `&sentiment=${sentimentFilter}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('sentimentTable').querySelector('tbody');
+                if (data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">暂无舆情分析结果</td></tr>';
+                    document.getElementById('sentimentPagination').style.display = 'none';
+                    return;
+                }
+
+                let html = '';
+                data.data.forEach(item => {
+                    const sentimentText = item.sentiment === 'positive' ? '正向' : item.sentiment === 'negative' ? '负向' : '中性';
+                    html += `
+                        <tr>
+                            <td><a href="${item.url}" target="_blank" class="url-preview">${item.url.substring(0, 50)}${item.url.length > 50 ? '...' : ''}</a></td>
+                            <td>${item.title || '-'}</td>
+                            <td><span class="sentiment ${item.sentiment}">${sentimentText}</span></td>
+                            <td>
+                                <div class="progress-bar"><div class="progress ${item.sentiment}" style="width: ${item.sentiment_score}%"></div></div>
+                                ${item.sentiment_score}
+                            </td>
+                            <td>
+                                <button class="btn btn-primary" onclick="viewSentiment(${item.id})">详情</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+                
+                // 更新分页信息
+                currentSentimentPage = data.page || 1;
+                totalSentimentPages = data.total_pages || 1;
+                
+                document.getElementById('sentimentPageInfo').textContent = `第 ${currentSentimentPage} / ${totalSentimentPages} 页，共 ${data.total || 0} 条记录`;
+                document.getElementById('sentimentPrevBtn').disabled = currentSentimentPage <= 1;
+                document.getElementById('sentimentNextBtn').disabled = currentSentimentPage >= totalSentimentPages;
+                document.getElementById('sentimentPagination').style.display = 'flex';
+            } catch (error) {
+                console.error('加载舆情分析失败:', error);
+            }
+        }
+
+        async function batchAnalyze() {
+            try {
+                const response = await fetch(`${API_BASE}/api/batch_analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`分析完成，成功 ${data.success_count} 条，失败 ${data.failed_count} 条`);
+                    loadSentiment();
+                    refreshStats();
+                } else {
+                    alert('分析失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('批量分析失败:', error);
+                alert('批量分析失败: ' + error.message);
+            }
+        }
+
+        async function clearSentiment() {
+            if (!confirm('确定要清空所有舆情分析结果吗？此操作不可恢复。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/clear_sentiment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    loadSentiment();
+                    refreshStats();
+                } else {
+                    alert('清空失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('清空失败:', error);
+                alert('清空失败: ' + error.message);
+            }
+        }
+
+        async function reanalyze() {
+            if (!confirm('确定要重新分析所有已采集内容吗？这将清空现有分析结果并重新分析。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/reanalyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`重新分析完成，成功 ${data.success_count} 条，失败 ${data.failed_count} 条`);
+                    loadSentiment();
+                    refreshStats();
+                } else {
+                    alert('重新分析失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('重新分析失败:', error);
+                alert('重新分析失败: ' + error.message);
+            }
+        }
+
+        async function refreshStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                const data = await response.json();
+                
+                document.querySelectorAll('.stat-card .number')[0].textContent = data.pending_count || 0;
+                document.querySelectorAll('.stat-card .number')[1].textContent = data.crawled_count || 0;
+                document.querySelectorAll('.stat-card .number')[2].textContent = data.positive_count || 0;
+                document.querySelectorAll('.stat-card .number')[3].textContent = data.negative_count || 0;
+                document.querySelectorAll('.stat-card .number')[4].textContent = data.neutral_count || 0;
+            } catch (error) {
+                console.error('刷新统计失败:', error);
+            }
+        }
+
+        async function crawlAllForQuestion(question, mode = 'pending') {
+            try {
+                // 先获取该问题的所有引用链接
+                const pendingResponse = await fetch(`${API_BASE}/api/pending_references`);
+                const pendingData = await pendingResponse.json();
+                
+                if (!pendingData.success) {
+                    alert('获取待处理数据失败');
+                    return;
+                }
+                
+                // 找到该问题的数据
+                const questionItem = pendingData.data.find(item => item.question === question);
+                
+                if (!questionItem) {
+                    alert('未找到该问题的引用链接');
+                    return;
+                }
+                
+                // 从 platforms 对象中提取所有URL和collection_result_ids
+                const allUrls = [];
+                const urlSet = new Set();
+                
+                if (questionItem.platforms) {
+                    for (const platformName in questionItem.platforms) {
+                        const platformData = questionItem.platforms[platformName];
+                        
+                        // 获取该平台的唯一URL列表
+                        if (platformData.unique_urls && Array.isArray(platformData.unique_urls)) {
+                            for (const url of platformData.unique_urls) {
+                                if (!url) continue;
+                                
+                                // 使用第一个collection_result_id作为代表
+                                const collection_result_id = platformData.collection_result_ids ? platformData.collection_result_ids[0] : null;
+                                
+                                const key = `${collection_result_id}_${url}`;
+                                if (!urlSet.has(key)) {
+                                    urlSet.add(key);
+                                    allUrls.push({ collection_result_id, url });
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                console.log('采集URL数量:', allUrls.length);
+                
+                if (allUrls.length === 0) {
+                    alert('没有需要采集的URL');
+                    return;
+                }
+                
+                // 批量采集
+                let successCount = 0;
+                let failedCount = 0;
+                
+                for (const { collection_result_id, url } of allUrls) {
+                    const response = await fetch(`${API_BASE}/api/batch_crawl`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            collection_result_id, 
+                            urls: [url],
+                            mode 
+                        })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        successCount += data.count;
+                    } else {
+                        failedCount++;
+                    }
+                }
+                
+                const actionText = mode === 'all' ? '重新采集' : '采集';
+                alert(`${actionText}完成，成功 ${successCount} 条，失败 ${failedCount} 条`);
+                loadPending();
+                loadCrawled();
+                refreshStats();
+                
+            } catch (error) {
+                console.error('采集失败:', error);
+                alert('采集失败: ' + error.message);
+            }
+        }
+
+        async function retryCrawl(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/retry_crawl`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content_id: contentId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('重新采集成功');
+                    loadCrawled();
+                } else {
+                    alert('重新采集失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('重新采集失败:', error);
+                alert('重新采集失败: ' + error.message);
+            }
+        }
+
+        async function viewReferencesByPlatform(question, platform) {
+            try {
+                const response = await fetch(`${API_BASE}/api/pending_references`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    alert('获取数据失败');
+                    return;
+                }
+                
+                // 找到指定问题的数据
+                const questionItem = data.data.find(item => item.question === question);
+                
+                if (!questionItem) {
+                    alert('未找到该问题的引用链接');
+                    return;
+                }
+                
+                // 获取指定平台的引用链接
+                const platformData = questionItem.platforms ? questionItem.platforms[platform] : null;
+                
+                if (!platformData) {
+                    alert('未找到该平台的引用链接');
+                    return;
+                }
+                
+                // 从平台数据中获取唯一URL列表
+                const allReferences = Array.from(platformData.unique_urls || []);
+                
+                if (allReferences.length === 0) {
+                    alert('该平台没有引用链接');
+                    return;
+                }
+                
+                let html = `
+                    <h3>${question} - ${platform} 引用链接详情</h3>
+                    <div class="form-group">
+                        <label>问题</label>
+                        <input type="text" value="${question}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>平台</label>
+                        <input type="text" value="${platform}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>引用链接列表 (共 ${allReferences.length} 条)</label>
+                        <table style="width:100%;">
+                            <thead><tr><th>序号</th><th>URL</th></tr></thead>
+                            <tbody>
+                `;
+                allReferences.forEach((url, index) => {
+                    html += `<tr><td>${index + 1}</td><td><a href="${url}" target="_blank">${url}</a></td></tr>`;
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('modalContent').innerHTML = html;
+                document.getElementById('modal').classList.add('show');
+            } catch (error) {
+                console.error('查看引用详情失败:', error);
+                alert('查看引用详情失败: ' + error.message);
+            }
+        }
+
+        async function viewReferences(collectionResultId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/reference_details?collection_result_id=${collectionResultId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const item = data.data;
+                    let html = `
+                        <h3>引用链接详情</h3>
+                        <div class="form-group">
+                            <label>问题</label>
+                            <input type="text" value="${item.question || ''}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>平台</label>
+                            <input type="text" value="${item.platform || ''}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>引用链接列表 (共 ${item.references.length} 条)</label>
+                            <table style="width:100%;">
+                                <thead><tr><th>序号</th><th>URL</th></tr></thead>
+                                <tbody>
+                    `;
+                    item.references.forEach((ref, index) => {
+                        const url = typeof ref === 'object' ? ref.url : ref;
+                        html += `<tr><td>${index + 1}</td><td><a href="${url}" target="_blank">${url}</a></td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                    document.getElementById('modalContent').innerHTML = html;
+                    document.getElementById('modal').classList.add('show');
+                }
+            } catch (error) {
+                console.error('查看引用详情失败:', error);
+            }
+        }
+
+        async function viewContent(contentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/content/${contentId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const item = data.data;
+                    const statusText = item.crawl_status === 'success' ? '成功' : item.crawl_status === 'pending' ? '待采集' : '失败';
+                    let html = `
+                        <h3>内容详情</h3>
+                        <div class="form-group">
+                            <label>URL</label>
+                            <a href="${item.url}" target="_blank">${item.url}</a>
+                        </div>
+                        <div class="form-group">
+                            <label>标题</label>
+                            <input type="text" value="${item.title || ''}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <span class="status ${item.crawl_status}">${statusText}</span>
+                        </div>
+                        <div class="form-group">
+                            <label>内容</label>
+                            <textarea readonly>${item.content || ''}</textarea>
+                        </div>
+                    `;
+                    document.getElementById('modalContent').innerHTML = html;
+                    document.getElementById('modal').classList.add('show');
+                }
+            } catch (error) {
+                console.error('查看内容失败:', error);
+            }
+        }
+
+        async function viewSentiment(sentimentId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/sentiment/${sentimentId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const item = data.data;
+                    const sentimentText = item.sentiment === 'positive' ? '正向' : item.sentiment === 'negative' ? '负向' : '中性';
+                    let html = `
+                        <h3>舆情分析详情</h3>
+                        <div class="form-group">
+                            <label>URL</label>
+                            <a href="${item.url}" target="_blank">${item.url}</a>
+                        </div>
+                        <div class="form-group">
+                            <label>情感倾向</label>
+                            <span class="sentiment ${item.sentiment}">${sentimentText}</span>
+                        </div>
+                        <div class="form-group">
+                            <label>情感分数</label>
+                            <div class="progress-bar"><div class="progress ${item.sentiment}" style="width: ${item.sentiment_score}%"></div></div>
+                            ${item.sentiment_score}
+                        </div>
+                        <div class="form-group">
+                            <label>关键词</label>
+                            <input type="text" value="${item.keywords ? JSON.parse(item.keywords).join(', ') : ''}" readonly>
+                        </div>
+                    `;
+                    document.getElementById('modalContent').innerHTML = html;
+                    document.getElementById('modal').classList.add('show');
+                }
+            } catch (error) {
+                console.error('查看舆情详情失败:', error);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        async function runScheduler() {
+            try {
+                const response = await fetch(`${API_BASE}/api/run_scheduler`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 10 })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('调度执行完成');
+                    loadPending();
+                    loadCrawled();
+                    refreshStats();
+                } else {
+                    alert('执行失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('调度执行失败:', error);
+                alert('执行失败: ' + error.message);
+            }
+        }
+
+        async function startScheduler() {
+            try {
+                const response = await fetch(`${API_BASE}/api/start_scheduler`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('schedulerStatus').textContent = '状态: 运行中';
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    alert('调度器已启动');
+                } else {
+                    alert('启动失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('启动调度器失败:', error);
+                alert('启动失败: ' + error.message);
+            }
+        }
+
+        async function stopScheduler() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stop_scheduler`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('schedulerStatus').textContent = '状态: 已停止';
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    alert('调度器已停止');
+                } else {
+                    alert('停止失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('停止调度器失败:', error);
+                alert('停止失败: ' + error.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadTasks();
+            await loadPendingQuestions();
+            loadCrawledTasks();
+            loadPending();
+            refreshStats();
+            setInterval(refreshStats, 10000);
+            
+            // 添加事件监听器
+            const taskFilter = document.getElementById('taskFilter');
+            const pendingQuestionFilter = document.getElementById('pendingQuestionFilter');
+            const timeFilter = document.getElementById('timeFilter');
+            const crawledTaskFilter = document.getElementById('crawledTaskFilter');
+            const crawledQuestionFilter = document.getElementById('crawledQuestionFilter');
+            const crawledRefreshBtn = document.getElementById('crawledRefreshBtn');
+            
+            console.log('事件监听器初始化 - 元素查找结果:', {
+                taskFilter: !!taskFilter,
+                pendingQuestionFilter: !!pendingQuestionFilter,
+                timeFilter: !!timeFilter,
+                crawledTaskFilter: !!crawledTaskFilter,
+                crawledQuestionFilter: !!crawledQuestionFilter,
+                crawledRefreshBtn: !!crawledRefreshBtn
+            });
+            
+            if (taskFilter) {
+                taskFilter.addEventListener('change', function() {
+                    console.log('任务筛选器变化:', this.value);
+                    onPendingTaskChange();
+                });
+            }
+            if (pendingQuestionFilter) {
+                pendingQuestionFilter.addEventListener('change', function() {
+                    console.log('问题筛选器变化:', this.value);
+                    loadPending(1);
+                });
+            }
+            if (timeFilter) {
+                timeFilter.addEventListener('change', function() {
+                    console.log('时间筛选器变化:', this.value);
+                    loadPending(1);
+                });
+            }
+            
+            // 已采集内容模块事件监听器
+            if (crawledTaskFilter) {
+                crawledTaskFilter.addEventListener('change', function() {
+                    console.log('已采集任务筛选器变化:', this.value);
+                    onCrawledTaskChange();
+                });
+            }
+            if (crawledQuestionFilter) {
+                crawledQuestionFilter.addEventListener('change', function() {
+                    console.log('已采集问题筛选器变化:', this.value);
+                    loadCrawled(1);
+                });
+            }
+            if (crawledRefreshBtn) {
+                crawledRefreshBtn.addEventListener('click', function() {
+                    console.log('刷新按钮点击');
+                    loadCrawled(1);
+                });
+            }
+            
+            console.log('事件监听器绑定完成');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Web框架
+flask==3.0.0
+flask-login==0.6.3
+flask-sqlalchemy==3.1.1
+flask-cors==4.0.0
+gunicorn>=22.0.0
+
+# 数据库（支持 Python 3.12/3.13，避免安装 2.1 beta）
+sqlalchemy>=2.0.44,<2.1
+
+# 密码加密
+werkzeug==3.0.1
+
+# 浏览器自动化（复用现有功能）
+playwright>=1.44.0
+pillow>=10.0.0
+numpy>=1.24.0
+openpyxl>=3.1.0
+
+# 任务队列
+celery==5.3.4
+redis==5.0.1
+
+# 工具
+python-dotenv==1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+chardet>=5.2.0
+pymysql>=1.1.0
+cryptography>=42.0.0
+
+# 定时调度
+apscheduler==3.10.4

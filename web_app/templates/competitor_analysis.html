@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞品分析 - GEO监控系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        body { margin: 0; padding: 0; background: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .header { background: white; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 600; color: #262626; }
+        .back-btn { background: #f5f5f5; border: 1px solid #e8e8e8; color: #262626; padding: 8px 20px; border-radius: 6px; cursor: pointer; transition: all 0.3s; font-size: 14px; }
+        .back-btn:hover { background: #e8e8e8; }
+        .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .stats-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #f0f0f0; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .stat-item { text-align: center; padding: 20px; background: #fafafa; border-radius: 8px; border: 1px solid #f0f0f0; }
+        .stat-value { font-size: 28px; font-weight: 600; color: #262626; margin-bottom: 8px; }
+        .stat-label { font-size: 13px; color: #8c8c8c; }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); overflow: hidden; border: 1px solid #f0f0f0; }
+        .table-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; font-size: 15px; font-weight: 600; }
+        .date-filter { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .date-filter label { font-weight: 500; color: #8c8c8c; }
+        .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 600; font-size: 12px; color: white; }
+        .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%); }
+        .rank-2 { background: linear-gradient(135deg, #8c8c8c 0%, #bfbfbf 100%); }
+        .rank-3 { background: linear-gradient(135deg, #d46b08 0%, #fa8c16 100%); }
+        .rank-other { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .sentiment-tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .sentiment-positive { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .sentiment-neutral { background: rgba(250, 140, 22, 0.1); color: #fa8c16; }
+        .sentiment-negative { background: rgba(245, 108, 108, 0.1); color: #f56c6c; }
+        .rate-bar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+        .rate-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); border-radius: 4px; transition: width 0.3s; }
+        .brand-name { font-weight: 600; color: #262626; }
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .detail-label { color: #8c8c8c; font-weight: 500; }
+        .detail-value { font-weight: 600; color: #262626; }
+        
+        /* 筛选区域样式 */
+        .filter-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-item label {
+            font-weight: 500;
+            color: #8c8c8c;
+            white-space: nowrap;
+        }
+        
+        .platform-select {
+            padding: 8px 30px 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 120px;
+            background: white;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            cursor: pointer;
+        }
+        
+        .platform-select:hover {
+            border-color: #667eea;
+        }
+        
+        .platform-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        
+        /* 自定义弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 600px;
+            max-width: 90%;
+            overflow: hidden;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { margin: 0; }
+        .modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-body {
+            padding: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>竞品分析</h1>
+            <button class="back-btn" onclick="window.history.back()">返回任务结果</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="container">
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label>日期范围：</label>
+                        <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" />
+                    </div>
+                    <div class="filter-item">
+                        <label>AI平台：</label>
+                        <select v-model="selectedPlatform" class="platform-select">
+                            <option v-for="p in platformOptions" :key="p.value" :value="p.value">[[ p.label ]]</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <el-button type="primary" @click="loadData">查询</el-button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">竞品分析排名</div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="width: 80px; padding: 12px; text-align: center; border: 1px solid #e9ecef;">排名</th>
+                            <th style="width: 150px; padding: 12px; text-align: left; border: 1px solid #e9ecef;">品牌</th>
+                            <th style="width: 180px; padding: 12px; text-align: left; border: 1px solid #e9ecef;">品牌提及率</th>
+                            <th style="width: 120px; padding: 12px; text-align: center; border: 1px solid #e9ecef;">品牌提及次数</th>
+                            <th style="width: 120px; padding: 12px; text-align: center; border: 1px solid #e9ecef;">平均提及排名</th>
+                            <th style="width: 120px; padding: 12px; text-align: center; border: 1px solid #e9ecef;">情感倾向</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in competitorData" :key="index" style="border-bottom: 1px solid #e9ecef;">
+                            <td style="padding: 12px; text-align: center;">
+                                <span :class="['rank-badge', getRankClass(index + 1)]">[[ index + 1 ]]</span>
+                            </td>
+                            <td style="padding: 12px;"><span class="brand-name">[[ item.brand ]]</span></td>
+                            <td style="padding: 12px;">
+                                <div class="rate-bar"><div class="rate-fill" :style="{width: item.mention_rate + '%'}"></div></div>
+                                <div style="text-align:right; margin-top:4px; font-weight:600; color:#667eea;">[[ item.mention_rate ]]%</div>
+                            </td>
+                            <td style="padding: 12px; text-align: center;">[[ item.mention_count ]]</td>
+                            <td style="padding: 12px; text-align: center;">
+                                <span v-if="item.avg_rank" class="sentiment-tag sentiment-positive">#[[ item.avg_rank ]]</span>
+                                <span v-else class="sentiment-tag sentiment-neutral">-</span>
+                            </td>
+                            <td style="padding: 12px; text-align: center;">
+                                <span :class="['sentiment-tag', getSentimentClass(item.sentiment)]">[[ getSentimentLabel(item.sentiment) ]]</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗 -->
+    <div id="modalOverlay" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>品牌详情</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 内容将通过JavaScript动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const platformNameMap = {
+            'doubao': '豆包',
+            'deepseek': 'DeepSeek',
+            'yuanbao': '元宝',
+            'kimi': 'Kimi',
+            'qianwen': '千问',
+            'wenxin': '文心',
+            'chatgpt': 'ChatGPT',
+            'gpt': 'GPT',
+            'claude': 'Claude',
+            'gemini': 'Gemini'
+        };
+
+        const app = Vue.createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    taskId: parseInt(window.location.pathname.split('/')[2]),
+                    dateRange: [],
+                    selectedPlatform: '',
+                    competitorData: [],
+                    // 默认平台选项（包含全部平台）
+                    platformOptions: [
+                        { value: '', label: '全部平台' },
+                        { value: 'doubao', label: '豆包' },
+                        { value: 'deepseek', label: 'DeepSeek' },
+                        { value: 'yuanbao', label: '元宝' },
+                        { value: 'qianwen', label: '千问' },
+                        { value: 'wenxin', label: '文心' }
+                    ]
+                };
+            },
+            mounted() {
+                const params = new URLSearchParams(window.location.search);
+                const start = params.get('date_start');
+                const end = params.get('date_end');
+                const platform = params.get('platform');
+                if (start && end) {
+                    this.dateRange = [new Date(start), new Date(end)];
+                } else {
+                    const now = new Date();
+                    const past = new Date();
+                    past.setDate(past.getDate() - 6);
+                    this.dateRange = [past, now];
+                }
+                if (platform) {
+                    this.selectedPlatform = platform;
+                }
+                this.loadTaskInfo();
+            },
+            methods: {
+                async loadTaskInfo() {
+                    try {
+                        const res = await axios.get(`/api/tasks/${this.taskId}`);
+                        if (res.data.success && res.data.task) {
+                            const task = res.data.task;
+                            // 从任务配置中获取平台列表
+                            if (task.platforms && task.platforms.length > 0) {
+                                // 构建新的平台选项列表，以任务配置为准
+                                const newPlatformOptions = [{ value: '', label: '全部平台' }];
+                                const platformItems = task.platforms.map(p => ({
+                                    value: p,
+                                    label: platformNameMap[p] || p
+                                }));
+                                this.platformOptions = newPlatformOptions.concat(platformItems);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('加载任务信息失败:', error);
+                        // 如果加载失败，保持默认平台列表不变
+                    }
+                    this.loadData();
+                },
+                async loadData() {
+                    const params = {};
+                    if (this.dateRange[0] && this.dateRange[1]) {
+                        const fmt = d => {
+                            const date = new Date(d);
+                            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        };
+                        params.date_start = fmt(this.dateRange[0]);
+                        params.date_end = fmt(this.dateRange[1]);
+                    }
+                    if (this.selectedPlatform) {
+                        params.platform = this.selectedPlatform;
+                    }
+                    const res = await axios.get(`/api/tasks/${this.taskId}/competitor-analysis`, { params });
+                    if (res.data.success) {
+                        this.competitorData = res.data.data;
+                    }
+                },
+                getRankClass(r) { return r <= 3 ? `rank-${r}` : 'rank-other'; },
+                getSentimentClass(s) { return `sentiment-${s || 'neutral'}`; },
+                getSentimentLabel(s) {
+                    const map = { positive: '正面', neutral: '中性', negative: '负面' };
+                    return map[s] || '-';
+                }
+            }
+        });
+        app.use(ElementPlus);
+        app.mount('#app');
+
+        // 弹窗功能
+        function viewDetail(itemStr) {
+            const item = JSON.parse(itemStr);
+            const body = document.getElementById('modalBody');
+            body.innerHTML = `
+                <h3 style="color:#667eea; margin-bottom:20px;">${item.brand}</h3>
+                <div class="detail-row"><span class="detail-label">品牌提及率：</span><span class="detail-value">${item.mention_rate}%</span></div>
+                <div class="detail-row"><span class="detail-label">品牌提及次数：</span><span class="detail-value">${item.mention_count} 次</span></div>
+                <div class="detail-row"><span class="detail-label">平均提及排名：</span><span class="detail-value">${item.avg_rank ? '第' + item.avg_rank + '位' : '-'}</span></div>
+                <div class="detail-row"><span class="detail-label">情感倾向：</span><span class="sentiment-tag sentiment-${item.sentiment || 'neutral'}">${getSentimentLabel(item.sentiment)}</span></div>
+                <div class="detail-row"><span class="detail-label">品牌得分：</span><span class="detail-value">${item.score} 分</span></div>
+            `;
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        function getSentimentLabel(s) {
+            const map = { positive: '正面', neutral: '中性', negative: '负面' };
+            return map[s] || '-';
+        }
+    </script>
+</body>
+</html>

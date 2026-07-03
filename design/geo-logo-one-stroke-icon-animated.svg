@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="dotBlur" x="180" y="180" width="152" height="152" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="10">
+        <animate attributeName="stdDeviation" values="12;0;12" dur="1.8s" repeatCount="indefinite"/>
+      </feGaussianBlur>
+    </filter>
+  </defs>
+  <rect x="56" y="56" width="400" height="400" rx="92" fill="#5267F6"/>
+  <path d="M336 173C314 150 283 138 250 140C189 143 141 193 141 256C141 319 191 370 254 370C318 370 370 318 370 254H264" stroke="white" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="18" fill="white" opacity="0.92" filter="url(#dotBlur)">
+    <animate attributeName="r" values="22;13;22" dur="1.8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.35;1;0.35" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+</svg>

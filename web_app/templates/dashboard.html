@@ -1,0 +1,4236 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - AI答案采集平台{% endblock %}
+
+{% block styles %}
+.header {
+    background: white;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* 操作步骤样式 */
+.steps-container {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.steps-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* 警示信息样式 */
+.warning-text {
+    font-size: 13px;
+    color: #ad6800;
+    line-height: 1.6;
+}
+
+.warning-text ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+.warning-text li {
+    margin-bottom: 4px;
+}
+
+/* 帮助按钮 */
+.help-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #d9d9d9;
+    background: white;
+    color: #8c8c8c;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.help-btn:hover {
+    border-color: #fa8c16;
+    color: #fa8c16;
+}
+
+.task-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.task-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.task-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.task-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #333;
+}
+
+.task-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-state i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    color: #ddd;
+}
+
+.analysis-filter {
+    background: #f0f2f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+body {
+    background: #f4f6fb;
+    color: #141414;
+}
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e8edf5;
+    box-shadow: 0 10px 28px rgba(17, 24, 39, 0.06);
+}
+
+.header-title {
+    letter-spacing: 0;
+}
+
+.container {
+    max-width: 1480px;
+    padding: 24px;
+}
+
+.workspace-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, .55fr);
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.hero-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #0b1220;
+    color: #fff;
+    padding: 26px;
+    min-height: 220px;
+}
+
+.hero-kicker,
+.panel-kicker {
+    color: #00a6b2;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.hero-panel h1 {
+    max-width: 780px;
+    margin: 12px 0 10px;
+    font-size: 34px;
+    line-height: 1.12;
+}
+
+.hero-panel p {
+    max-width: 760px;
+    color: rgba(255,255,255,.72);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.hero-side {
+    display: grid;
+    gap: 12px;
+}
+
+.next-step-card,
+.ai-status-card,
+.metric-card,
+.insight-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 14px 38px rgba(17, 24, 39, .06);
+}
+
+.next-step-card,
+.ai-status-card {
+    padding: 18px;
+}
+
+.next-step-card strong,
+.ai-status-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+}
+
+.next-step-card p,
+.ai-status-card p {
+    margin-top: 8px;
+    color: #64748b;
+    line-height: 1.55;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.metric-card {
+    padding: 18px;
+}
+
+.metric-card span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.metric-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.metric-card small {
+    display: block;
+    margin-top: 8px;
+    color: #94a3b8;
+}
+
+.modern-tabs.el-tabs--border-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 16px 46px rgba(17,24,39,.06);
+    overflow: hidden;
+}
+
+.modern-tabs > .el-tabs__header {
+    background: #fff;
+}
+
+.analysis-board {
+    display: grid;
+    gap: 18px;
+}
+
+.analysis-summary {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 16px;
+}
+
+.score-hero,
+.action-hero,
+.analysis-card,
+.chart-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 14px 38px rgba(17, 24, 39, .06);
+}
+
+.score-hero {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    min-height: 210px;
+    padding: 22px;
+    text-align: center;
+}
+
+.score-ring {
+    display: grid;
+    place-items: center;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at center, #fff 0 56%, transparent 57%),
+        conic-gradient(#1664ff calc(var(--score, 0) * 1%), #e2e8f0 0);
+}
+
+.score-ring strong {
+    font-size: 36px;
+    line-height: 1;
+}
+
+.score-hero span,
+.action-hero span,
+.analysis-card span,
+.chart-panel span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.score-hero p,
+.action-hero p,
+.analysis-card p {
+    margin: 10px 0 0;
+    color: #64748b;
+    line-height: 1.55;
+}
+
+.action-hero {
+    display: grid;
+    align-content: center;
+    padding: 24px;
+}
+
+.action-hero strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 28px;
+    line-height: 1.16;
+}
+
+.analysis-card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.analysis-card {
+    padding: 18px;
+}
+
+.analysis-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
+    gap: 16px;
+}
+
+.chart-panel {
+    min-width: 0;
+    padding: 18px;
+}
+
+.chart-panel.wide {
+    grid-column: 1 / -1;
+}
+
+.chart-panel h3 {
+    margin: 8px 0 4px;
+    font-size: 22px;
+}
+
+.chart-panel p {
+    margin: 0 0 12px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.insight-chart {
+    width: 100%;
+    height: 280px;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: minmax(0, .95fr) minmax(360px, .55fr);
+    gap: 18px;
+}
+
+.insight-panel {
+    padding: 20px;
+}
+
+.insight-panel h3 {
+    margin: 8px 0 14px;
+    font-size: 22px;
+}
+
+.recommendation-list,
+.ai-list {
+    display: grid;
+    gap: 12px;
+}
+
+.recommendation-item,
+.ai-list li {
+    border: 1px solid #edf2f7;
+    border-radius: 8px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.recommendation-item strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.recommendation-item p,
+.empty-hint {
+    color: #64748b;
+    line-height: 1.55;
+}
+
+.mini-table {
+    display: grid;
+    gap: 8px;
+}
+
+.mini-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #edf2f7;
+    padding: 9px 0;
+}
+
+.mini-row:last-child {
+    border-bottom: 0;
+}
+
+.quick-ai-form {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 16px;
+}
+
+.quick-ai-form .form-row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.quick-ai-form label {
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.quick-ai-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (max-width: 980px) {
+    .workspace-hero,
+    .analysis-summary,
+    .chart-grid,
+    .insight-grid {
+        grid-template-columns: 1fr;
+    }
+    .metric-grid,
+    .analysis-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 16px;
+    }
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+    .hero-panel h1 {
+        font-size: 28px;
+    }
+    .quick-ai-form .form-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div>
+    <div class="header">
+        <div class="header-title" style="display: flex; align-items: center;">
+            <img src="/static/img/geo-ai-answer-logo.png" alt="AI 答案" style="width: 122px; height: 36px; margin-right: 12px; object-fit: contain;">
+            <el-tag v-if="appInfo.version" size="small" type="info" style="margin-left: 12px;">
+                v[[ appInfo.version ]]
+            </el-tag>
+            <el-tag v-if="desktopMode" size="small" type="success" style="margin-left: 8px;">
+                单机版
+            </el-tag>
+        </div>
+        <div>
+            <el-button @click="showLimitSettings" :type="todayCollectionCount >= dailyLimit ? 'danger' : 'default'">
+                <el-icon><Warning /></el-icon>
+                采集设置: [[ dailyLimit ]]条 [[ minInterval ]]~[[ maxInterval ]]秒
+            </el-button>
+            <el-button @click="showBrowserSettings">
+                <el-icon><Setting /></el-icon>
+                浏览器设置
+            </el-button>
+            <el-button @click="activeTab = 'sentiment_settings'">
+                <el-icon><Histogram /></el-icon>
+                智慧舆情设置
+            </el-button>
+            <el-button type="primary" @click="showCreateDialog">
+                <el-icon><Plus /></el-icon>
+                创建任务
+            </el-button>
+            <el-button @click="handleLogout">退出登录</el-button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <section class="workspace-hero">
+            <div class="hero-panel">
+                <div class="hero-kicker">GEO-SOP WORKSPACE</div>
+                <h1>AI 平台品牌可见度工作台</h1>
+                <p>从账号登录、问题采集、引用来源到 AI 分析建议，集中管理品牌在 AI 回答里的曝光、风险和下一步动作。</p>
+                <div class="hero-actions">
+                    <el-button type="primary" @click="activeTab = 'insights'">
+                        <el-icon><Histogram /></el-icon>
+                        查看数据看板
+                    </el-button>
+                    <el-button @click="quickCheckAndShowLogin">
+                        <el-icon><User /></el-icon>
+                        检测平台登录
+                    </el-button>
+                    <el-button @click="showCreateDialog">
+                        <el-icon><Plus /></el-icon>
+                        新建监测任务
+                    </el-button>
+                </div>
+            </div>
+            <div class="hero-side">
+                <div class="next-step-card">
+                    <span class="panel-kicker">Next step</span>
+                    <strong>[[ nextStep.title ]]</strong>
+                    <p>[[ nextStep.detail ]]</p>
+                </div>
+                <div class="ai-status-card">
+                    <span class="panel-kicker">AI analysis</span>
+                    <strong>[[ insights.ai_config.ready ? 'AI 看板已连接' : '等待配置 API Key' ]]</strong>
+                    <p>[[ insights.ai_config.ready ? `${insights.ai_config.model} · ${insights.ai_config.name}` : '配置 API URL、Key 和模型后，可自动生成观察、风险和下一步动作。' ]]</p>
+                    <el-button size="small" :type="insights.ai_config.ready ? 'success' : 'primary'" @click="activeTab = 'sentiment_settings'">
+                        [[ insights.ai_config.ready ? '查看配置' : '去配置 AI' ]]
+                    </el-button>
+                </div>
+            </div>
+        </section>
+
+        <section class="metric-grid">
+            <div class="metric-card">
+                <span>监测任务</span>
+                <strong>[[ insights.summary.tasks || 0 ]]</strong>
+                <small>[[ insights.summary.running_tasks || 0 ]] 个运行/暂停中</small>
+            </div>
+            <div class="metric-card">
+                <span>采集回答</span>
+                <strong>[[ insights.summary.results || 0 ]]</strong>
+                <small>覆盖 [[ insights.summary.active_platforms || 0 ]] 个 AI 平台</small>
+            </div>
+            <div class="metric-card">
+                <span>品牌曝光率</span>
+                <strong>[[ insights.summary.exposure_rate || 0 ]]%</strong>
+                <small>回答中命中品牌词的比例</small>
+            </div>
+            <div class="metric-card">
+                <span>引用域名</span>
+                <strong>[[ insights.summary.reference_domains || 0 ]]</strong>
+                <small>GEO 稿件 [[ insights.summary.geo_manuscripts || 0 ]] 条</small>
+            </div>
+        </section>
+
+        <el-tabs class="modern-tabs" v-model="activeTab" type="border-card" @tab-click="handleTabClick">
+            <el-tab-pane name="insights" label="数据看板">
+                <div style="padding: 20px;" v-loading="insightsLoading">
+                    <div class="analysis-board" v-loading="scorecardLoading">
+                        <div class="analysis-summary">
+                            <div class="score-hero">
+                                <span>GEO 健康分</span>
+                                <div class="score-ring" :style="{ '--score': scorecard.score.value || 0 }">
+                                    <strong>[[ Math.round(scorecard.score.value || 0) ]]</strong>
+                                </div>
+                                <p>[[ scorecard.score.label || '等待数据' ]]。这个分数综合品牌出现率、平台覆盖、引用来源和数据完整度。</p>
+                            </div>
+                            <div class="action-hero">
+                                <span>现在最该做的一件事</span>
+                                <strong>[[ scorecard.action.title || nextStep.title ]]</strong>
+                                <p>[[ scorecard.action.detail || nextStep.detail ]]</p>
+                            </div>
+                        </div>
+
+                        <div class="analysis-card-grid">
+                            <div class="analysis-card" v-for="card in scorecard.cards" :key="card.key">
+                                <span>[[ card.name ]] · [[ card.status?.label ]]</span>
+                                <strong>[[ card.value ]][[ card.unit ]]</strong>
+                                <p>[[ card.hint ]]</p>
+                            </div>
+                        </div>
+
+                        <div class="chart-grid">
+                            <div class="chart-panel wide">
+                                <span>趋势</span>
+                                <h3>品牌出现率有没有变好？</h3>
+                                <p>蓝线是品牌出现率，灰柱是每天采集到的回答数。小白只要看蓝线有没有向上。</p>
+                                <div id="scoreTrendChart" class="insight-chart"></div>
+                            </div>
+                            <div class="chart-panel">
+                                <span>平台对比</span>
+                                <h3>哪个 AI 平台更愿意提到你？</h3>
+                                <p>对比不同平台的品牌出现率，优先补最弱的平台。</p>
+                                <div id="platformExposureChart" class="insight-chart"></div>
+                            </div>
+                            <div class="chart-panel">
+                                <span>引用来源</span>
+                                <h3>AI 主要引用谁？</h3>
+                                <p>高频来源决定了 AI 学到什么，后续内容投放可以围绕这些来源优化。</p>
+                                <div id="sourceDomainChart" class="insight-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-grid">
+                        <div class="insight-panel">
+                            <span class="panel-kicker">AI strategy</span>
+                            <h3>AI 分析结果与下一步动作</h3>
+                            <div v-if="!insights.ai_config.ready" class="empty-hint">
+                                还没有配置 AI API。你仍然可以查看基础指标；配置 API URL、Key 和模型后，这里会生成针对采集结果的策略建议。
+                                <div class="quick-ai-form">
+                                    <div class="form-row">
+                                        <label>接口模式</label>
+                                        <el-select v-model="quickAiConfig.ai_platform" placeholder="选择接口模式">
+                                            <el-option label="base_url (OpenAI 兼容)" value="openai"></el-option>
+                                            <el-option label="base_url (Anthropic)" value="anthropic"></el-option>
+                                        </el-select>
+                                    </div>
+                                    <div class="form-row">
+                                        <label>base_url</label>
+                                        <el-input v-model="quickAiConfig.ai_api_url" placeholder="OpenAI: https://api.deepseek.com / Anthropic: https://api.anthropic.com"></el-input>
+                                    </div>
+                                    <div class="form-row">
+                                        <label>API Key</label>
+                                        <el-input v-model="quickAiConfig.ai_api_key" type="password" show-password placeholder="输入你的 AI API Key"></el-input>
+                                    </div>
+                                    <div class="form-row">
+                                        <label>模型名称</label>
+                                        <el-input v-model="quickAiConfig.ai_model_name" placeholder="deepseek-v4-flash / gpt-4o-mini / claude-sonnet-4-5"></el-input>
+                                    </div>
+                                    <div class="quick-ai-actions">
+                                        <span v-if="isDemoUser" class="empty-hint" style="margin-right: auto;">在线 Demo 为只读环境，桌面版可保存 API 配置。</span>
+                                        <el-button @click="activeTab = 'sentiment_settings'">高级设置</el-button>
+                                        <el-button type="primary" :disabled="isDemoUser" :loading="savingQuickAiConfig" @click="saveQuickAiConfig">保存并启用</el-button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else>
+                                <el-button type="primary" :loading="aiAnalysisLoading" :disabled="aiAnalysisLoading" @click="runAiInsightAnalysis">
+                                    <span v-if="aiAnalysisLoading">分析中 [[ aiAnalysisElapsed ]]s</span>
+                                    <span v-else>生成 AI 分析</span>
+                                </el-button>
+                                <el-alert
+                                    v-if="aiAnalysisLoading"
+                                    style="margin-top: 14px;"
+                                    title="正在调用 AI 生成分析，请不要重复点击。"
+                                    description="DeepSeek / Claude 等模型可能需要 20-60 秒，完成后会自动展示结果。"
+                                    type="info"
+                                    show-icon
+                                    :closable="false">
+                                </el-alert>
+                                <div v-if="aiInsight.summary" style="margin-top: 16px;">
+                                    <el-alert :title="aiInsight.summary" type="success" show-icon :closable="false"></el-alert>
+                                    <h4 style="margin: 18px 0 10px;">关键观察</h4>
+                                    <ul class="ai-list">
+                                        <li v-for="item in aiInsight.observations" :key="item">[[ item ]]</li>
+                                    </ul>
+                                    <h4 style="margin: 18px 0 10px;">下一步动作</h4>
+                                    <ul class="ai-list">
+                                        <li v-for="item in aiInsight.actions" :key="item">[[ item ]]</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div v-if="!aiInsight.summary" class="recommendation-list" style="margin-top: 16px;">
+                                <div class="recommendation-item" v-for="item in insights.recommendations" :key="item.title">
+                                    <el-tag size="small" :type="item.level === 'high' ? 'danger' : (item.level === 'medium' ? 'warning' : 'info')">[[ item.level ]]</el-tag>
+                                    <strong>[[ item.title ]]</strong>
+                                    <p>[[ item.detail ]]</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="insight-panel">
+                            <span class="panel-kicker">Signals</span>
+                            <h3>数据来源与覆盖</h3>
+                            <div class="mini-table">
+                                <div class="mini-row" v-for="item in insights.platform_mix" :key="item.platform">
+                                    <span>[[ getPlatformName(item.platform) ]]</span>
+                                    <strong>[[ item.count ]] 条</strong>
+                                </div>
+                                <div v-if="!insights.platform_mix.length" class="empty-hint">暂无平台采集数据。</div>
+                            </div>
+                            <h3 style="margin-top: 24px;">引用来源 Top</h3>
+                            <div class="mini-table">
+                                <div class="mini-row" v-for="item in insights.top_references" :key="item.domain">
+                                    <span>[[ item.domain ]]</span>
+                                    <strong>[[ item.count ]] 次</strong>
+                                </div>
+                                <div v-if="!insights.top_references.length" class="empty-hint">暂无引用来源数据。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </el-tab-pane>
+            <el-tab-pane name="tasks" label="任务管理">
+                <!-- 原有的监控任务管理内容 -->
+                <!-- 操作步骤 -->
+                <div class="steps-container" style="position: relative;">
+                    <!-- ? 帮助按钮 -->
+                    <el-popover
+                        placement="bottom-end"
+                        :width="320"
+                        trigger="click">
+                        <template #reference>
+                            <button class="help-btn" title="采集注意事项">?</button>
+                        </template>
+                        <div style="padding: 4px 0;">
+                            <div style="font-size: 14px; font-weight: 600; color: #d46b08; margin-bottom: 10px;">
+                                ⚠️ 重要提示：数据采集限制
+                            </div>
+                            <div class="warning-text">
+                        为避免触发AI平台的反爬虫机制和账号风险，请遵守以下规则：
+                        <ul>
+                            <li><strong>每日采集限制：建议单个平台每天采集不超过 [[ dailyLimit ]] 条数据</strong></li>
+                            <li>采集间隔：建议每次采集间隔至少 30 秒</li>
+                            <li>账号安全：频繁采集可能导致账号被限制或封禁</li>
+                            <li>合理使用：仅用于品牌监控和数据分析，请勿用于商业爬虫</li>
+                        </ul>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ffd591;">
+                            <strong>今日已采集：</strong>
+                            <el-tag 
+                                :type="todayCollectionCount >= dailyLimit ? 'danger' : (todayCollectionCount >= dailyLimit * 0.6 ? 'warning' : 'success')"
+                                size="small"
+                                style="margin-left: 6px;">
+                                [[ todayCollectionCount ]] / [[ dailyLimit ]] 条
+                            </el-tag>
+                            <div v-if="todayCollectionCount >= dailyLimit" style="color: #cf1322; margin-top: 6px; font-size: 12px;">
+                                ⚠️ 已达到设定上限，请调整上限或明天再采集
+                            </div>
+                        </div>
+                    </div>
+                        </div>
+                    </el-popover>
+                    <div class="steps-title">操作步骤</div>
+                    <el-steps :active="currentStep" finish-status="success" align-center>
+                        <el-step title="登录账号" description="验证AI平台登录状态">
+                            <template #icon>
+                                <el-icon><User /></el-icon>
+                            </template>
+                        </el-step>
+                        <el-step title="创建任务" description="配置监控任务参数">
+                            <template #icon>
+                                <el-icon><Edit /></el-icon>
+                            </template>
+                        </el-step>
+                        <el-step title="开始采集" description="执行数据采集任务">
+                            <template #icon>
+                                <el-icon><Download /></el-icon>
+                            </template>
+                        </el-step>
+                    </el-steps>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <el-button 
+                            type="primary" 
+                            @click="quickCheckAndShowLogin"
+                            :loading="quickChecking"
+                            :icon="currentStep === 0 ? 'Check' : ''">
+                            [[ currentStep === 0 ? '第一步：' : '' ]]登录账号验证
+                            <el-badge 
+                                v-if="!quickChecking && platformLoginStatus.length > 0"
+                                :value="getLoggedInCount()"
+                                :max="7"
+                                :type="getLoggedInCount() === 7 ? 'success' : (getLoggedInCount() > 0 ? 'warning' : 'danger')"
+                                style="margin-left: 8px;">
+                            </el-badge>
+                        </el-button>
+                        <el-button 
+                            type="primary" 
+                            @click="showCreateDialog"
+                            :disabled="currentStep < 1"
+                            :icon="currentStep === 1 ? 'Check' : ''">
+                            [[ currentStep === 1 ? '第二步：' : '' ]]创建任务
+                        </el-button>
+                        <el-button 
+                            type="success" 
+                            :disabled="currentStep < 2 || tasks.length === 0"
+                            :icon="currentStep === 2 ? 'Check' : ''">
+                            [[ currentStep === 2 ? '第三步：' : '' ]]开始采集
+                        </el-button>
+                    </div>
+                </div>
+                
+                <!-- 任务列表 -->
+                <div v-if="tasks.length > 0">
+                    <div v-for="task in tasks" :key="task.id" class="task-card">
+                        <div class="task-header">
+                            <div class="task-name">[[ task.name ]]</div>
+                            <el-tag :type="getStatusType(task.status)">
+                                [[ getStatusText(task.status) ]]
+                            </el-tag>
+                        </div>
+                        
+                        <div class="task-info">
+                            <div class="info-item">
+                                <div class="info-label">品牌名称</div>
+                                <div class="info-value">[[ task.brand_name || '-' ]]</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">品牌曝光词</div>
+                                <div class="info-value">[[ task.brand_keywords.join(', ') ]]</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">监控问题</div>
+                                <div class="info-value">[[ task.questions.length ]] 个</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">AI平台</div>
+                                <div class="info-value">[[ task.platforms.length ]] 个</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">截图配置</div>
+                                <div class="info-value">
+                                    <span v-if="getScreenshotEnabledCount(task) === task.platforms.length">
+                                        <el-tag type="success" size="small">全部启用</el-tag>
+                                    </span>
+                                    <span v-else-if="getScreenshotEnabledCount(task) === 0">
+                                        <el-tag type="info" size="small">全部禁用</el-tag>
+                                    </span>
+                                    <span v-else>
+                                        <el-tag type="warning" size="small">
+                                            部分启用 ([[ getScreenshotEnabledCount(task) ]]/[[ task.platforms.length ]])
+                                        </el-tag>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">最后运行</div>
+                                <div class="info-value">[[ formatDate(task.last_run_at) ]]</div>
+                            </div>
+                        </div>
+                        
+                        <div class="task-actions">
+                            <el-button
+                                v-if="task.status !== 'running' && task.status !== 'paused'"
+                                type="primary"
+                                size="small"
+                                :disabled="todayCollectionCount >= dailyLimit"
+                                @click="runTask(task.id)">
+                                <span v-if="todayCollectionCount >= dailyLimit">已达上限</span>
+                                <span v-else>开始采集</span>
+                            </el-button>
+                            <el-button
+                                v-if="task.status === 'running'"
+                                type="warning"
+                                size="small"
+                                :loading="taskCommanding[String(task.id)] === 'pause'"
+                                @click="controlTask(task.id, 'pause')">
+                                [[ taskCommanding[String(task.id)] === 'pause' ? '暂停中……' : '暂停采集' ]]
+                            </el-button>
+                            <el-button
+                                v-if="task.status === 'paused'"
+                                type="success"
+                                size="small"
+                                :loading="taskCommanding[String(task.id)] === 'resume'"
+                                @click="controlTask(task.id, 'resume')">
+                                [[ taskCommanding[String(task.id)] === 'resume' ? '恢复中……' : '继续采集' ]]
+                            </el-button>
+                            <el-button
+                                v-if="task.status === 'paused'"
+                                type="danger"
+                                size="small"
+                                :loading="taskCommanding[String(task.id)] === 'stop'"
+                                @click="controlTask(task.id, 'stop')">
+                                [[ taskCommanding[String(task.id)] === 'stop' ? '停止中……' : '结束采集' ]]
+                            </el-button>
+                            <el-button 
+                                size="small"
+                                @click="viewResults(task.id)">
+                                查看结果
+                            </el-button>
+                            <el-button 
+                                size="small"
+                                :disabled="task.status === 'running' || task.status === 'paused'"
+                                @click="editTask(task)">
+                                编辑
+                            </el-button>
+                            <el-button 
+                                v-if="task.status === 'running' || task.status === 'failed'"
+                                type="warning" 
+                                size="small"
+                                :loading="taskCommanding[String(task.id)] === 'reset'"
+                                @click="resetTaskStatus(task.id)">
+                                [[ taskCommanding[String(task.id)] === 'reset' ? '重置中……' : '重置状态' ]]
+                            </el-button>
+                            <el-button 
+                                type="danger" 
+                                size="small"
+                                :disabled="task.status === 'running' || task.status === 'paused'"
+                                @click="deleteTask(task.id)">
+                                删除
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-else class="empty-state">
+                    <el-icon><Document /></el-icon>
+                    <div style="font-size: 16px; margin-bottom: 10px;">暂无监控任务</div>
+                    <div>点击"创建任务"开始监控AI平台的品牌曝光</div>
+                </div>
+            </el-tab-pane>
+
+            <!-- 引用参考分析 -->
+            <el-tab-pane name="analysis" label="引用参考源分析">
+                <div style="padding: 20px;">
+                    <!-- 筛选栏 -->
+                    <el-form :inline="true" :model="analysisFilter" class="analysis-filter">
+                        <el-form-item label="AI平台">
+                            <el-select v-model="analysisFilter.platform" placeholder="全部平台" clearable style="width: 150px;">
+                                <el-option 
+                                    v-for="platform in availablePlatforms" 
+                                    :key="platform.id" 
+                                    :label="platform.name" 
+                                    :value="platform.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="任务名">
+                            <el-select v-model="analysisFilter.task_id" placeholder="全部任务" clearable style="width: 200px;">
+                                <el-option 
+                                    v-for="task in tasks" 
+                                    :key="task.id" 
+                                    :label="task.name" 
+                                    :value="task.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="时间段">
+                            <el-date-picker
+                                v-model="analysisFilter.dateRange"
+                                type="daterange"
+                                range-separator="至"
+                                start-placeholder="开始日期"
+                                end-placeholder="结束日期"
+                                value-format="YYYY-MM-DD"
+                                style="width: 250px;">
+                            </el-date-picker>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-tooltip content="开启后，相同链接（URL）在选定范围内仅计算一次，避免重复统计同一来源" placement="top">
+                                <el-checkbox v-model="analysisFilter.deduplicate">
+                                    链接去重
+                                    <span style="color: #909399; margin-left: 2px; cursor: help;">(?)</span>
+                                </el-checkbox>
+                            </el-tooltip>
+                        </el-form-item>
+                        <el-form-item>
+                                <el-button type="primary" @click="loadAnalysisData" :loading="analyzing">分析</el-button>
+                            </el-form-item>
+                    </el-form>
+                    
+                    <div style="font-size: 12px; color: #909399; margin-top: -15px; margin-bottom: 15px; padding-left: 15px;">
+                        * 链接去重：在当前筛选范围内，相同的 URL 仅统计一次，反映引用的唯一来源分布。
+                    </div>
+
+                    <!-- 分析结果展示 -->
+                    <div v-loading="analyzing">
+                        <div v-if="analysisData.length > 0" style="margin-top: 20px;">
+                            <el-row :gutter="20">
+                                <el-col :span="14">
+                                    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+                                        <div style="font-weight: 600; margin-bottom: 10px; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>顶级域名分布</span>
+                                            <el-button v-if="topAnalysisData.length > 0" size="small" type="success" plain @click="exportTopDomainData">
+                                                <el-icon><Download /></el-icon> 导出数据
+                                            </el-button>
+                                        </div>
+                                        <div id="mediaChart" style="width: 100%; height: 460px;"></div>
+                                    </div>
+                                </el-col>
+                                <el-col :span="10">
+                                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); height: 500px; display: flex; flex-direction: column;">
+                                        <div style="font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>媒体引用排行</span>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <el-tag size="small">共 [[ analysisData.length ]] 个媒体</el-tag>
+                                                <el-button v-if="analysisData.length > 0" size="small" type="success" plain @click="exportMediaRankingData">
+                                                    <el-icon><Download /></el-icon> 导出数据
+                                                </el-button>
+                                            </div>
+                                        </div>
+                                        <el-table :data="analysisData" size="small" stripe style="flex: 1;" height="400">
+                                            <el-table-column type="index" label="排名" width="60" align="center"></el-table-column>
+                                            <el-table-column prop="name" label="媒体域名"></el-table-column>
+                                            <el-table-column prop="count" label="引用次数" width="100" align="center">
+                                                <template #default="scope">
+                                                    <el-tag type="success" size="small">[[ scope.row.count ]]</el-tag>
+                                                </template>
+                                            </el-table-column>
+                                        </el-table>
+                                    </div>
+                                </el-col>
+                            </el-row>
+                        </div>
+                        <div v-else-if="!analyzing" class="empty-state">
+                            <el-icon><Histogram /></el-icon>
+                            <div style="font-size: 16px; margin-bottom: 10px;">暂无分析数据</div>
+                            <div>调整筛选条件并点击"分析"按钮</div>
+                        </div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
+            <!-- 引用参考走势图 -->
+            <el-tab-pane name="trends" label="引用参考源走势图">
+                <div style="padding: 20px;">
+                    <!-- 筛选栏 -->
+                    <el-form :inline="true" :model="trendFilter" class="analysis-filter">
+                        <el-form-item label="AI平台">
+                            <el-select v-model="trendFilter.platform" placeholder="全部平台" clearable style="width: 150px;" @change="onTrendFilterChange">
+                                <el-option 
+                                    v-for="platform in availablePlatforms" 
+                                    :key="platform.id" 
+                                    :label="platform.name" 
+                                    :value="platform.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="任务名">
+                            <el-select v-model="trendFilter.task_id" placeholder="全部任务" clearable style="width: 200px;" @change="onTrendFilterChange">
+                                <el-option 
+                                    v-for="task in tasks" 
+                                    :key="task.id" 
+                                    :label="task.name" 
+                                    :value="task.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="时间段">
+                            <el-date-picker
+                                v-model="trendFilter.dateRange"
+                                type="daterange"
+                                range-separator="至"
+                                start-placeholder="开始日期"
+                                end-placeholder="结束日期"
+                                value-format="YYYY-MM-DD"
+                                style="width: 250px;"
+                                @change="onTrendFilterChange">
+                            </el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="域名等级">
+                            <el-radio-group v-model="trendFilter.level" size="small" @change="onTrendLevelChange">
+                                <el-radio-button label="top">顶级域名</el-radio-button>
+                                <el-radio-button label="full">完整域名</el-radio-button>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="域名筛选">
+                            <el-select 
+                                v-model="trendFilter.domains" 
+                                placeholder="选择指定域名" 
+                                multiple 
+                                filterable
+                                collapse-tags
+                                collapse-tags-tooltip
+                                clearable 
+                                style="width: 250px;">
+                                <el-option 
+                                    v-for="domain in filteredDomains" 
+                                    :key="domain" 
+                                    :label="domain" 
+                                    :value="domain">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="展示数量" v-if="!trendFilter.domains || trendFilter.domains.length === 0">
+                            <el-select v-model="trendFilter.top_n" style="width: 100px;">
+                                <el-option label="TOP 5" :value="5"></el-option>
+                                <el-option label="TOP 10" :value="10"></el-option>
+                                <el-option label="TOP 20" :value="20"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="loadTrendData" :loading="trending">分析</el-button>
+                        </el-form-item>
+                    </el-form>
+
+                    <!-- 图表展示 -->
+                    <div v-loading="trending" style="margin-top: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);">
+                        <div id="trendChart" style="width: 100%; height: 600px;"></div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
+            <!-- GEO稿件分析 -->
+            <el-tab-pane name="geo_analysis" label="GEO稿件被引用分析">
+                <div style="padding: 20px;">
+                    <!-- 操作栏 -->
+                    <div style="margin-bottom: 20px;">
+                        <!-- 筛选条件行 -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                            <el-form :inline="true" :model="geoFilter" class="analysis-filter" style="margin-bottom: 0; flex-wrap: wrap; gap: 10px;">
+                                <el-form-item label="任务筛选" label-width="70px">
+                                    <el-select v-model="geoFilter.task_id" placeholder="全部任务" clearable @change="loadGeoCoverageData" style="width: 180px;">
+                                        <el-option 
+                                            v-for="task in tasks" 
+                                            :key="task.id" 
+                                            :label="task.name" 
+                                            :value="task.id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="AI平台" label-width="60px">
+                                    <el-select v-model="geoFilter.platform" placeholder="选择平台" @change="loadGeoCoverageData" style="width: 120px;">
+                                        <el-option 
+                                            v-for="platform in availablePlatforms" 
+                                            :key="platform.id" 
+                                            :label="platform.name" 
+                                            :value="platform.id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="日期" label-width="40px">
+                                    <el-date-picker
+                                        v-model="geoFilter.date"
+                                        type="date"
+                                        placeholder="选择日期"
+                                        value-format="YYYY-MM-DD"
+                                        @change="loadGeoCoverageData"
+                                        style="width: 150px;">
+                                    </el-date-picker>
+                                </el-form-item>
+                                <el-form-item>
+                                    <el-button type="primary" @click="loadGeoCoverageData" :loading="geoLoading">
+                                        <el-icon><Refresh /></el-icon> 刷新分析
+                                    </el-button>
+                                </el-form-item>
+                            </el-form>
+                            
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <el-button type="success" @click="showAddGeoManuscript">
+                                    <el-icon><Plus /></el-icon> 添加GEO稿件
+                                </el-button>
+                                <el-button type="primary" @click="exportGeoAnalysis">
+                                    <el-icon><Download /></el-icon> 导出分析
+                                </el-button>
+                            </div>
+                        </div>
+                        
+                        <!-- 提示信息行 -->
+                        <div style="padding: 10px 15px; background: #f5f7fa; border-radius: 4px; font-size: 13px; color: #909399;">
+                            <el-icon style="margin-right: 5px;"><info-filled /></el-icon>
+                            * 默认展示今日最新一次的数据
+                        </div>
+                    </div>
+
+                    <!-- 分析结果表格 -->
+                    <el-table :data="geoCoverageData" v-loading="geoLoading" border stripe style="width: 100%">
+                        <el-table-column prop="title" label="稿件备注" width="200"></el-table-column>
+                        <el-table-column prop="url" label="目标URL/特征" min-width="300">
+                            <template #default="scope">
+                                <el-link :href="scope.row.url.startsWith('http') ? scope.row.url : 'https://' + scope.row.url" target="_blank" type="primary">
+                                    [[ scope.row.url ]]
+                                </el-link>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="task_name" label="关联任务" width="180"></el-table-column>
+                        <el-table-column label="引用状态" width="120" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.is_cited ? 'success' : 'info'">
+                                    [[ scope.row.is_cited ? '已引用' : '未引用' ]]
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="引用次数" width="120" align="center">
+                            <template #default="scope">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <el-tag v-if="scope.row.cited_count > 0" type="success" size="small" effect="dark">
+                                        [[ scope.row.cited_count ]]
+                                    </el-tag>
+                                    <el-button size="small" @click="viewGeoDetails(scope.row)" :disabled="!scope.row.is_cited">
+                                        查看详情
+                                    </el-button>
+                                </div>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="150" align="center">
+                            <template #default="scope">
+                                <el-button-group>
+                                    <el-button size="small" @click="editGeoManuscript(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="confirmDeleteGeo(scope.row)">删除</el-button>
+                                </el-button-group>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </el-tab-pane>
+
+            <!-- 智慧舆情设置 -->
+            <el-tab-pane name="sentiment_settings" label="智慧舆情设置">
+                <div style="padding: 20px;">
+                    <!-- 配置列表 -->
+                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0;">舆情配置管理</h3>
+                        <el-button type="primary" @click="showSentimentConfigDialog">
+                            <el-icon><Plus /></el-icon> 添加配置
+                        </el-button>
+                    </div>
+
+                    <el-table :data="sentimentConfigs" border stripe style="width: 100%; table-layout: auto;">
+                        <el-table-column prop="name" label="配置名称" min-width="150"></el-table-column>
+                        <el-table-column prop="positive_words" label="正向关键词数" width="120" align="center">
+                            <template #default="scope">[[ scope.row.positive_words.length ]]</template>
+                        </el-table-column>
+                        <el-table-column prop="negative_words" label="负向关键词数" width="120" align="center">
+                            <template #default="scope">[[ scope.row.negative_words.length ]]</template>
+                        </el-table-column>
+                        <el-table-column prop="enable_ai_sentiment" label="智能舆情" width="100" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.enable_ai_sentiment ? 'success' : 'info'">
+                                    [[ scope.row.enable_ai_sentiment ? '开启' : '关闭' ]]
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="is_default" label="默认" width="80" align="center">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.is_default" type="primary">默认</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="updated_at" label="更新时间" min-width="160"></el-table-column>
+                        <el-table-column label="操作" min-width="220" align="center">
+                            <template #default="scope">
+                                <el-button-group>
+                                    <el-button size="small" @click="editSentimentConfig(scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="confirmDeleteSentimentConfig(scope.row)">删除</el-button>
+                                    <el-button v-if="!scope.row.is_default" size="small" type="success" @click="setDefaultSentimentConfig(scope.row)">设为默认</el-button>
+                                </el-button-group>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 舆情配置对话框 -->
+                <el-dialog 
+                    v-model="sentimentConfigDialogVisible" 
+                    :title="editingSentimentConfig ? '编辑舆情配置' : '添加舆情配置'"
+                    width="800px">
+                    <el-form :model="sentimentConfigForm" label-width="120px">
+                        <el-form-item label="配置名称" required>
+                            <el-input v-model="sentimentConfigForm.name" placeholder="请输入配置名称"></el-input>
+                        </el-form-item>
+
+                        <!-- 普通舆情设置 -->
+                        <el-form-item label="正向关键词">
+                            <el-input 
+                                v-model="sentimentConfigForm.positiveWordsInput" 
+                                type="textarea" 
+                                :rows="3"
+                                placeholder="好,不错,优秀,棒,赞,推荐,喜欢,满意,靠谱,好评,出色,卓越,完美,理想,认可,信赖,放心,值得,划算,实惠,优质,高端,专业,有效,神奇,见效,吸收,补水,保湿,美白,抗衰,修复,温和,清爽,不油腻,无刺激,抗过敏,口碑好,效果好,质量好,性价比高,回购,正品,安全,健康,自然,纯正,地道,正宗"></el-input>
+                        </el-form-item>
+                        <el-form-item label="负向关键词">
+                            <el-input 
+                                v-model="sentimentConfigForm.negativeWordsInput" 
+                                type="textarea" 
+                                :rows="3"
+                                placeholder="差,不好,烂,垃圾,失望,后悔,差评,糟糕,骗人,虚假,没效果,无用,无效,过敏,刺激,油腻,干燥,紧绷,爆痘,泛红,瘙痒,副作用,假货,劣质,粗糙,廉价,智商税,坑人,受骗,上当,不推荐,避雷,踩坑,鸡肋,不值,浪费,昂贵,伤皮肤,有问题,不合格,超标,有害,致癌,激素,荧光剂,重金属"></el-input>
+                        </el-form-item>
+
+                        <!-- 智能舆情设置 -->
+                        <el-form-item label="启用智能舆情">
+                            <el-switch v-model="sentimentConfigForm.enable_ai_sentiment" @change="toggleAiSentiment"></el-switch>
+                        </el-form-item>
+
+                        <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="接口模式">
+                            <el-select v-model="sentimentConfigForm.ai_platform" @change="onPlatformChange" placeholder="请选择AI平台">
+                                <el-option label="base_url (OpenAI 兼容)" value="openai"></el-option>
+                                <el-option label="base_url (Anthropic)" value="anthropic"></el-option>
+                                <el-option label="SiliconFlow / OpenAI 兼容" value="siliconflow"></el-option>
+                                <el-option label="豆包 / OpenAI 兼容" value="doubao"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="base_url">
+                            <el-input v-model="sentimentConfigForm.ai_api_url" placeholder="OpenAI兼容：https://api.deepseek.com；Anthropic：https://api.anthropic.com"></el-input>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                <strong>说明：</strong>OpenAI兼容模式会自动补全 <code>/chat/completions</code>；Anthropic模式会自动补全 <code>/v1/messages</code>。
+                            </div>
+                        </el-form-item>
+                        <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="API密钥">
+                            <el-input v-model="sentimentConfigForm.ai_api_key" type="password" placeholder="输入API密钥"></el-input>
+                        </el-form-item>
+                        <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="模型名称">
+                            <el-input v-model="sentimentConfigForm.ai_model_name" placeholder="如：gpt-4o-mini"></el-input>
+                        </el-form-item>
+                        <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="分析Prompt">
+                            <el-input 
+                                v-model="sentimentConfigForm.ai_prompt" 
+                                type="textarea" 
+                                :rows="6"
+                                style="width: 100%; font-family: monospace; font-size: 13px;"
+                                placeholder="请输入自定义的分析Prompt"></el-input>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                <strong>占位符：</strong>
+                                <span style="margin-right: 20px;">{text} → AI回答内容</span>
+                                <span style="margin-right: 20px;">{keyword} → 品牌曝光词</span>
+                                <strong>注意：</strong>输出必须为JSON格式
+                            </div>
+                        </el-form-item>
+
+                        <el-form-item label="设为默认配置">
+                            <el-switch v-model="sentimentConfigForm.is_default"></el-switch>
+                        </el-form-item>
+                    </el-form>
+
+                    <template #footer>
+                        <el-button @click="sentimentConfigDialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="saveSentimentConfig">保存</el-button>
+                    </template>
+                </el-dialog>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+    
+    <!-- 登录验证对话框 -->
+    <el-dialog 
+        v-model="loginDialogVisible" 
+        title="AI平台登录验证"
+        width="700px">
+        <div style="margin-bottom: 20px; color: #666; font-size: 14px;">
+            <el-icon style="color: #1890ff;"><info-filled /></el-icon>
+            请确保以下AI平台已登录，未登录的平台将无法采集数据
+        </div>
+        
+        <el-table :data="platformLoginStatus" style="width: 100%">
+            <el-table-column prop="name" label="AI平台" width="150">
+                <template #default="scope">
+                    <strong>[[ scope.row.name ]]</strong>
+                </template>
+            </el-table-column>
+            <el-table-column prop="status" label="登录状态" width="120" align="center">
+                <template #default="scope">
+                    <el-tag 
+                        :type="scope.row.isLoggedIn ? 'success' : 'danger'"
+                        size="small">
+                        [[ scope.row.isLoggedIn ? '已登录' : '未登录' ]]
+                    </el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="checkedAt" label="上次检测" width="150">
+                <template #default="scope">
+                    <span style="color: #666; font-size: 12px;">[[ scope.row.checkedAt || '尚未检测' ]]</span>
+                    <div v-if="scope.row.statusMessage" style="color: #d46b08; font-size: 12px; margin-top: 4px; line-height: 1.35;">
+                        [[ scope.row.statusMessage ]]
+                    </div>
+                </template>
+            </el-table-column>
+            <el-table-column prop="url" label="登录地址">
+                <template #default="scope">
+                    <a :href="scope.row.url" target="_blank" style="color: #1890ff; text-decoration: none;">
+                        [[ scope.row.url ]]
+                        <el-icon style="vertical-align: middle;"><Link /></el-icon>
+                    </a>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" width="260" align="center">
+                <template #default="scope">
+                    <el-button 
+                        v-if="!scope.row.isLoggedIn"
+                        type="primary" 
+                        size="small"
+                        @click="openLoginPage(scope.row.id)">
+                        去登录
+                    </el-button>
+                    <el-button 
+                        size="small"
+                        :loading="scope.row.checking"
+                        @click="checkLoginStatus(scope.row.id)">
+                        重新检测
+                    </el-button>
+                    <el-button
+                        v-if="scope.row.isLoggedIn"
+                        type="danger"
+                        plain
+                        size="small"
+                        @click="clearPlatformLogin(scope.row.id)">
+                        清除登录
+                    </el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        
+        <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border: 1px solid #91d5ff;">
+            <div style="color: #0958d9; font-size: 13px; line-height: 1.6;">
+                <el-icon style="vertical-align: middle;"><info-filled /></el-icon>
+                <strong>提示：</strong>
+                <ul style="margin: 8px 0 0 20px; padding: 0;">
+                    <li>点击"去登录"会打开浏览器窗口，请在浏览器中完成登录</li>
+                    <li>登录完成后，关闭浏览器窗口（或等待自动关闭）</li>
+                    <li>然后点击"重新检测"验证登录状态</li>
+                    <li>登录状态会保存在浏览器中，下次无需重复登录</li>
+                    <li>需要退出某个平台账号时，点击"清除登录"即可删除当前用户的 Cookie</li>
+                    <li>浏览器窗口将在 5 分钟后自动关闭</li>
+                </ul>
+            </div>
+        </div>
+        
+        <template #footer>
+            <el-button @click="loginDialogVisible = false">关闭</el-button>
+            <el-button type="primary" @click="checkAllLoginStatus" :loading="checkingLogin">
+                <el-icon><Refresh /></el-icon>
+                检测所有平台
+            </el-button>
+        </template>
+    </el-dialog>
+    
+    <!-- 创建/编辑任务对话框 -->
+    <el-dialog 
+        v-model="dialogVisible" 
+        :title="dialogTitle"
+        width="800px"
+        @close="resetForm">
+        <el-form :model="taskForm" :rules="formRules" ref="taskFormRef" label-width="120px">
+            <el-form-item label="任务名称" prop="name">
+                <el-input v-model="taskForm.name" placeholder="例如：品牌监控-每日"></el-input>
+            </el-form-item>
+            
+            <el-form-item label="品牌名称" prop="brand_name">
+                <el-input v-model="taskForm.brand_name" placeholder="例如：我的品牌"></el-input>
+            </el-form-item>
+            
+            <el-form-item label="品牌曝光词" prop="brand_keywords">
+                <el-tag
+                    v-for="keyword in taskForm.brand_keywords"
+                    :key="keyword"
+                    closable
+                    @close="removeKeyword(keyword)"
+                    style="margin-right: 10px;">
+                    [[ keyword ]]
+                </el-tag>
+                <el-input
+                    v-if="keywordInputVisible"
+                    ref="keywordInputRef"
+                    v-model="keywordInput"
+                    size="small"
+                    style="width: 120px;"
+                    @keyup.enter="addKeyword"
+                    @blur="addKeyword">
+                </el-input>
+                <el-button v-else size="small" @click="showKeywordInput">
+                    + 添加关键词
+                </el-button>
+            </el-form-item>
+            
+            <el-form-item label="竞品品牌（选填）">
+                <el-tag
+                    v-for="brand in taskForm.competitor_brands"
+                    :key="brand"
+                    closable
+                    @close="removeCompetitorBrand(brand)"
+                    style="margin-right: 10px; background-color: #fff3e0; border-color: #ffb347;">
+                    [[ brand ]]
+                </el-tag>
+                <el-input
+                    v-if="competitorInputVisible"
+                    ref="competitorInputRef"
+                    v-model="competitorInput"
+                    size="small"
+                    style="width: 120px;"
+                    @keyup.enter="addCompetitorBrand"
+                    @blur="addCompetitorBrand">
+                </el-input>
+                <el-button v-else size="small" @click="showCompetitorInput">
+                    + 添加竞品品牌
+                </el-button>
+                <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                    多个竞品品牌用回车或点击空白处添加
+                </div>
+            </el-form-item>
+            
+            <el-form-item label="监控问题" prop="questions">
+                <el-input
+                    type="textarea"
+                    v-model="questionsText"
+                    :rows="5"
+                    placeholder="每行一个问题，例如：&#10;今日热门新闻&#10;今日热门体育新闻">
+                </el-input>
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                    每行一个问题，共 [[ taskForm.questions.length ]] 个问题
+                </div>
+            </el-form-item>
+            
+            <el-form-item label="AI平台" prop="platforms">
+                <el-checkbox-group v-model="taskForm.platforms" @change="handlePlatformChange">
+                    <el-checkbox 
+                        v-for="platform in availablePlatforms" 
+                        :key="platform.id"
+                        :label="platform.id">
+                        [[ platform.name ]]
+                    </el-checkbox>
+                </el-checkbox-group>
+            </el-form-item>
+            
+            <el-form-item label="并行AI平台数">
+                <el-input-number 
+                    v-model="taskForm.max_parallel_platforms" 
+                    :min="1" 
+                    style="width: 150px;">
+                </el-input-number>
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                    设置同时执行的AI平台数量。设为1则串行执行（逐个完成），设为大于平台数则全部同时执行。
+                </div>
+            </el-form-item>
+            
+            <el-form-item label="截长图配置">
+                <div style="margin-bottom: 10px;">
+                    <el-switch 
+                        v-model="screenshotGlobalEnabled"
+                        active-text="全部启用"
+                        inactive-text="全部禁用"
+                        @change="handleGlobalScreenshotChange">
+                    </el-switch>
+                    <span style="color: #999; font-size: 12px; margin-left: 10px;">
+                        启用后会截取完整对话截图（拼接长图），禁用则只采集AI回答和引用参考数据
+                    </span>
+                </div>
+                
+                <div v-if="taskForm.platforms.length > 0" style="margin-top: 15px;">
+                    <div style="color: #666; font-size: 13px; margin-bottom: 10px;">各平台截图设置：</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                        <div 
+                            v-for="platformId in taskForm.platforms" 
+                            :key="platformId"
+                            style="padding: 10px; background: #f5f7fa; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 14px;">[[ getPlatformName(platformId) ]]</span>
+                            <el-switch 
+                                v-model="taskForm.screenshot_config[platformId]"
+                                size="small">
+                            </el-switch>
+                        </div>
+                    </div>
+                </div>
+            </el-form-item>
+            
+            <el-form-item label="调度类型">
+                <el-radio-group v-model="taskForm.schedule_type">
+                    <el-radio label="manual">手动执行</el-radio>
+                    <el-radio label="daily">每日执行</el-radio>
+                    <el-radio label="weekly">每周执行</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            
+            <!-- 每日执行配置 -->
+            <el-form-item v-if="taskForm.schedule_type === 'daily'" label="执行时间">
+                <div style="margin-bottom: 10px;">
+                    <el-checkbox v-model="scheduleConfig.enable_schedule" @change="handleScheduleEnableChange">
+                        启用自动采集
+                    </el-checkbox>
+                </div>
+                <div v-if="scheduleConfig.enable_schedule" style="padding: 15px; background: #f5f7fa; border-radius: 4px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">每日采集次数：</div>
+                        <el-radio-group v-model="scheduleConfig.frequency">
+                            <el-radio label="once">每日1次</el-radio>
+                            <el-radio label="twice">每日2次</el-radio>
+                            <el-radio label="three_times">每日3次</el-radio>
+                            <el-radio label="custom">自定义</el-radio>
+                        </el-radio-group>
+                    </div>
+                    
+                    <!-- 执行时间选择 -->
+                    <div v-if="scheduleConfig.frequency === 'once'" style="margin-bottom: 10px;">
+                        <span style="font-size: 13px; color: #666; margin-right: 10px;">执行时间：</span>
+                        <el-time-picker
+                            v-model="scheduleConfig.run_time_1"
+                            format="HH:mm"
+                            value-format="HH:mm"
+                            placeholder="选择时间"
+                            style="width: 150px;">
+                        </el-time-picker>
+                    </div>
+                    
+                    <div v-if="scheduleConfig.frequency === 'twice'" style="margin-bottom: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第一次：</span>
+                            <el-time-picker
+                                v-model="scheduleConfig.run_time_1"
+                                format="HH:mm"
+                                value-format="HH:mm"
+                                placeholder="选择时间"
+                                style="width: 150px;">
+                            </el-time-picker>
+                        </div>
+                        <div>
+                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第二次：</span>
+                            <el-time-picker
+                                v-model="scheduleConfig.run_time_2"
+                                format="HH:mm"
+                                value-format="HH:mm"
+                                placeholder="选择时间"
+                                style="width: 150px;">
+                            </el-time-picker>
+                        </div>
+                    </div>
+                    
+                    <div v-if="scheduleConfig.frequency === 'three_times'" style="margin-bottom: 10px;">
+                        <div v-for="i in 3" :key="i" style="margin-bottom: 10px;">
+                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第[[i]]次：</span>
+                            <el-time-picker
+                                v-model="scheduleConfig['run_time_' + i]"
+                                format="HH:mm"
+                                value-format="HH:mm"
+                                placeholder="选择时间"
+                                style="width: 150px;">
+                            </el-time-picker>
+                        </div>
+                    </div>
+                    
+                    <div v-if="scheduleConfig.frequency === 'custom'" style="margin-bottom: 10px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">自定义执行时间（每行一个）：</div>
+                        <el-input
+                            type="textarea"
+                            v-model="scheduleConfig.custom_times_text"
+                            :rows="4"
+                            placeholder="例如：&#10;09:00&#10;14:00&#10;20:00">
+                        </el-input>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #fff7e6; border-radius: 4px; border: 1px solid #ffd591;">
+                        <div style="font-size: 12px; color: #d46b08;">
+                            <el-icon style="vertical-align: middle;"><info-filled /></el-icon>
+                            <strong>提示：</strong>系统会在设定时间自动执行采集任务，请确保浏览器保持登录状态。
+                        </div>
+                    </div>
+                </div>
+            </el-form-item>
+            
+            <!-- 每周执行配置 -->
+            <el-form-item v-if="taskForm.schedule_type === 'weekly'" label="执行时间">
+                <div style="margin-bottom: 10px;">
+                    <el-checkbox v-model="scheduleConfig.enable_schedule" @change="handleScheduleEnableChange">
+                        启用自动采集
+                    </el-checkbox>
+                </div>
+                <div v-if="scheduleConfig.enable_schedule" style="padding: 15px; background: #f5f7fa; border-radius: 4px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">执行星期：</div>
+                        <el-checkbox-group v-model="scheduleConfig.run_weekdays">
+                            <el-checkbox :label="0">周一</el-checkbox>
+                            <el-checkbox :label="1">周二</el-checkbox>
+                            <el-checkbox :label="2">周三</el-checkbox>
+                            <el-checkbox :label="3">周四</el-checkbox>
+                            <el-checkbox :label="4">周五</el-checkbox>
+                            <el-checkbox :label="5">周六</el-checkbox>
+                            <el-checkbox :label="6">周日</el-checkbox>
+                        </el-checkbox-group>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: #666; margin-right: 10px;">执行时间：</span>
+                        <el-time-picker
+                            v-model="scheduleConfig.run_time"
+                            format="HH:mm"
+                            value-format="HH:mm"
+                            placeholder="选择时间"
+                            style="width: 150px;">
+                        </el-time-picker>
+                    </div>
+                </div>
+            </el-form-item>
+            
+            <!-- 舆情配置选择 -->
+            <el-form-item label="舆情配置">
+                <el-select 
+                    v-model="taskForm.sentiment_config_id" 
+                    placeholder="选择舆情配置（可选）"
+                    clearable
+                    style="width: 100%;">
+                    <el-option
+                        v-for="config in sentimentConfigs"
+                        :key="config.id"
+                        :label="config.name + (config.is_default ? ' (默认)' : '')"
+                        :value="config.id">
+                        <span>[[ config.name ]]</span>
+                        <el-tag v-if="config.is_default" size="small" type="primary" style="margin-left: 8px;">默认</el-tag>
+                        <el-tag v-if="config.enable_ai_sentiment" size="small" type="success" style="margin-left: 8px;">AI</el-tag>
+                    </el-option>
+                </el-select>
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                    选择任务专属的舆情配置，不选择则使用全局默认配置
+                </div>
+            </el-form-item>
+        </el-form>
+        
+        <template #footer>
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitTask" :loading="submitting">
+                确定
+            </el-button>
+        </template>
+    </el-dialog>
+    
+    <!-- 全局采集设置对话框 -->
+    <el-dialog 
+        v-model="limitSettingsVisible" 
+        title="全局采集设置"
+        width="450px">
+        <div style="padding: 10px 0;">
+            <el-form label-width="100px">
+                <el-form-item label="每日上限">
+                    <el-input-number v-model="limitForm.daily_limit" :min="1" :max="1000" style="width: 100%;"></el-input-number>
+                    <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                        设定每日允许采集的最大条数。建议不要超过 100 以降低封号风险。
+                    </div>
+                </el-form-item>
+                <el-form-item label="采集间隔">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <el-input-number v-model="limitForm.min_interval" :min="5" :max="3600" style="width: 45%;"></el-input-number>
+                        <span style="color: #999;">~</span>
+                        <el-input-number v-model="limitForm.max_interval" :min="5" :max="3600" style="width: 45%;"></el-input-number>
+                        <span style="color: #999; font-size: 12px;">秒</span>
+                    </div>
+                    <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                        问题之间的等待时间范围（秒）。系统会在此范围内随机选择，防止被判定为恶意采集。建议最小值不低于 30 秒。
+                    </div>
+                </el-form-item>
+            </el-form>
+        </div>
+        <template #footer>
+            <el-button @click="limitSettingsVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveLimitSettings">保存设置</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- 浏览器设置对话框 -->
+    <el-dialog 
+        v-model="browserSettingsVisible" 
+        title="浏览器设置"
+        width="600px">
+        <div style="padding: 10px 0;">
+            <el-alert
+                :type="browserConfig.current_browser_path ? 'success' : 'warning'"
+                :title="browserConfig.current_browser_path ? '当前浏览器检测正常' : '未检测到可用浏览器'"
+                :description="browserConfig.current_browser_path ? 
+                    ('当前使用: ' + (browserConfig.current_browser_type === 'msedge' ? 'Edge' : 'Chrome')) : 
+                    '请手动指定浏览器可执行文件路径'"
+                show-icon
+                style="margin-bottom: 20px;">
+            </el-alert>
+            
+            <el-form label-width="100px">
+                <el-form-item label="当前路径">
+                    <el-input 
+                        v-model="browserConfig.current_browser_path" 
+                        readonly
+                        placeholder="自动检测中...">
+                    </el-input>
+                </el-form-item>
+                
+                <el-form-item label="自定义路径">
+                    <el-input 
+                        v-model="browserConfigForm.browser_path" 
+                        placeholder="例如: C:\Program Files\Google\Chrome\Application\chrome.exe">
+                        <template #append>
+                            <el-button @click="testBrowserPath" :disabled="!browserConfigForm.browser_path">
+                                测试
+                            </el-button>
+                        </template>
+                    </el-input>
+                    <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                        留空则使用系统自动检测模式。自定义路径将优先于自动检测。
+                    </div>
+                </el-form-item>
+                
+                <el-form-item v-if="testResult.message" label="测试结果">
+                    <el-tag :type="testResult.success ? 'success' : 'danger'">
+                        [[ testResult.message ]]
+                    </el-tag>
+                </el-form-item>
+            </el-form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f5f7fa; border-radius: 4px;">
+                <div style="font-weight: 600; margin-bottom: 10px; color: #666;">
+                    <el-icon><info-filled /></el-icon>
+                    常见浏览器路径参考：
+                </div>
+                <div style="font-size: 12px; color: #8c8c8c; line-height: 1.8;">
+                    <div><strong>Chrome:</strong> C:\Program Files\Google\Chrome\Application\chrome.exe</div>
+                    <div><strong>Edge:</strong> C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe</div>
+                    <div><strong>说明：</strong>建议使用 Chrome 或 Edge 稳定版，不建议使用开发版或便携版浏览器</div>
+                </div>
+            </div>
+        </div>
+        
+        <template #footer>
+            <el-button @click="browserSettingsVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveBrowserSettings" :loading="savingBrowserConfig">
+                保存设置
+            </el-button>
+        </template>
+    </el-dialog>
+
+    <!-- GEO稿件管理对话框 -->
+    <el-dialog 
+        v-model="geoDialogVisible" 
+        :title="geoDialogTitle"
+        width="600px">
+        <el-form :model="geoForm" label-width="100px">
+            <el-form-item label="关联任务" required>
+                <el-select v-model="geoForm.task_ids" placeholder="请选择关联的任务" style="width: 100%" multiple>
+                    <el-option 
+                        v-for="task in tasks" 
+                        :key="task.id" 
+                        :label="task.name" 
+                        :value="task.id">
+                    </el-option>
+                </el-select>
+                <span style="color: #999; font-size: 12px;">支持选择多个任务</span>
+            </el-form-item>
+            <el-form-item label="稿件备注" required>
+                <el-input v-model="geoForm.title" placeholder="例如：卡地亚腕表官网介绍页"></el-input>
+            </el-form-item>
+            <el-form-item label="目标URL" required>
+                <el-input v-model="geoForm.url" type="textarea" :rows="5" placeholder="请输入目标URL或其关键特征（如：cartier.com/zh-cn/watches）&#10;&#10;支持批量添加：一行一个URL，系统将为每个URL创建一条记录"></el-input>
+                <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                    <span style="color: #409EFF;">批量添加：</span>一行一个URL，系统将为每个URL创建一条记录。<br>
+                    系统将在采集到的"引用参考"中查找包含此内容的链接。
+                </div>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button @click="geoDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitGeoManuscript" :loading="geoSubmitting">确定</el-button>
+        </template>
+    </el-dialog>
+
+    <!-- GEO引用详情对话框 -->
+    <el-dialog 
+        v-model="geoDetailsVisible" 
+        title="引用来源详情"
+        width="900px">
+        <el-table :data="currentGeoDetails" border stripe size="small">
+            <el-table-column prop="platform" label="平台" width="100"></el-table-column>
+            <el-table-column prop="question" label="问题" min-width="200"></el-table-column>
+            <el-table-column prop="ref_title" label="引用标题" min-width="250"></el-table-column>
+            <el-table-column prop="ref_url" label="引用URL" min-width="250">
+                <template #default="scope">
+                    <el-link :href="scope.row.ref_url" target="_blank" type="primary">[[ scope.row.ref_url ]]</el-link>
+                </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="采集时间" width="150"></el-table-column>
+        </el-table>
+    </el-dialog>
+</div>
+{% endblock %}
+
+{% block scripts %}
+const app = createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            currentUser: null,
+            desktopMode: false,
+            appInfo: {
+                name: 'GEO-SOP',
+                version: '',
+                build_number: '',
+                build_date: ''
+            },
+            dataDir: '',
+            activeTab: 'insights',
+            tasks: [],
+            loading: false,
+            insightsLoading: false,
+            scorecardLoading: false,
+            aiAnalysisLoading: false,
+            aiAnalysisElapsed: 0,
+            aiAnalysisTimer: null,
+            savingQuickAiConfig: false,
+            insights: {
+                summary: {},
+                platform_mix: [],
+                top_references: [],
+                sentiment: {},
+                recommendations: [],
+                ai_config: { ready: false }
+            },
+            scorecard: {
+                score: { value: 0, label: '等待数据', type: 'info' },
+                cards: [],
+                action: {},
+                charts: { trend: [], platforms: [], sources: [], weak_questions: [] },
+                explainer: {}
+            },
+            insightCharts: {
+                trend: null,
+                platforms: null,
+                sources: null
+            },
+            aiInsight: {
+                summary: '',
+                observations: [],
+                actions: [],
+                risks: [],
+                experiments: []
+            },
+            quickAiConfig: {
+                ai_platform: 'openai',
+                ai_api_url: '',
+                ai_api_key: '',
+                ai_model_name: ''
+            },
+            dialogVisible: false,
+            dialogTitle: '创建任务',
+            isEdit: false,
+            editingTaskId: null,
+            submitting: false,
+            
+            // 引用分析
+            analyzing: false,
+            analysisFilter: {
+                platform: '',
+                task_id: null,
+                dateRange: [],
+                deduplicate: true
+            },
+            analysisData: [],     // 详细数据（完整域名）
+            topAnalysisData: [],  // 聚合数据（顶级域名）
+            mediaChart: null,
+            
+            // 走势分析
+            trending: false,
+            trendData: null,
+            trendFilter: {
+                platform: '',
+                task_id: null,
+                dateRange: [],
+                top_n: 10,
+                domains: [],
+                level: 'top'
+            },
+            trendChart: null,
+            allDomains: [],       // 完整域名列表
+            allTopDomains: [],    // 顶级域名列表
+            
+            // 登录验证相关
+            loginDialogVisible: false,
+            checkingLogin: false,
+            quickChecking: false,
+            platformLoginStatus: [],  // 从 API 获取
+            
+            // 操作步骤
+            currentStep: 0,  // 0: 登录账号, 1: 创建任务, 2: 开始采集
+            
+            // 今日采集数量
+            todayCollectionCount: 0,
+            dailyLimit: 50,
+            collectionInterval: 30,
+            minInterval: 30,
+            maxInterval: 120,
+            limitSettingsVisible: false,
+            limitForm: {
+                daily_limit: 50,
+                min_interval: 30,
+                max_interval: 120
+            },
+            
+            taskForm: {
+                name: '',
+                brand_name: '',
+                brand_keywords: [],
+                competitor_brands: [],
+                questions: [],
+                platforms: [],
+                max_parallel_platforms: 3,
+                screenshot_config: {},
+                schedule_type: 'manual',
+                sentiment_config_id: null
+            },
+            
+            screenshotGlobalEnabled: true,
+            
+            questionsText: '',
+            keywordInput: '',
+            keywordInputVisible: false,
+            competitorInput: '',
+            competitorInputVisible: false,
+            
+            formRules: {
+                name: [
+                    { required: true, message: '请输入任务名称', trigger: 'blur' }
+                ],
+                brand_keywords: [
+                    { type: 'array', required: true, message: '请添加至少一个品牌曝光词', trigger: 'change' }
+                ],
+                questions: [
+                    { type: 'array', required: true, message: '请输入监控问题', trigger: 'change' }
+                ],
+                platforms: [
+                    { type: 'array', required: true, message: '请选择至少一个AI平台', trigger: 'change' }
+                ]
+            },
+            
+            // 平台列表（从 API 动态获取）
+            availablePlatforms: [],
+            
+            browserSettingsVisible: false,
+            savingBrowserConfig: false,
+            browserConfig: {
+                current_browser_path: '',
+                current_browser_type: '',
+                configured_path: ''
+            },
+            browserConfigForm: {
+                browser_path: ''
+            },
+            testResult: {
+                success: false,
+                message: ''
+            },
+            
+            // 调度配置
+            scheduleConfig: {
+                enable_schedule: false,
+                frequency: 'once',
+                run_time_1: '09:00',
+                run_time_2: '14:00',
+                run_time_3: '20:00',
+                run_time: '09:00',
+                run_weekdays: [0],
+                custom_times_text: '09:00\n14:00\n20:00'
+            },
+            
+            // GEO稿件分析
+            geoLoading: false,
+            geoFilter: {
+                task_id: null,
+                platform: 'doubao',
+                date: ''
+            },
+            geoCoverageData: [],
+            geoDialogVisible: false,
+            geoDialogTitle: '添加GEO稿件',
+            geoSubmitting: false,
+            geoForm: {
+                id: null,
+                task_ids: [],
+                title: '',
+                url: ''
+            },
+            geoDetailsVisible: false,
+            currentGeoDetails: [],
+            taskPollers: {},
+            taskCommanding: {},
+            
+            // 舆情配置
+            sentimentConfigs: [],
+            sentimentConfigDialogVisible: false,
+            editingSentimentConfig: null,
+            sentimentConfigForm: {
+                id: null,
+                name: '',
+                positiveWordsInput: '',
+                negativeWordsInput: '',
+                enable_ai_sentiment: false,
+                ai_platform: '',
+                ai_api_url: '',
+                ai_api_key: '',
+                ai_model_name: '',
+                ai_prompt: '',
+                is_default: false
+            }
+        };
+    },
+    computed: {
+        nextStep() {
+            if (this.getLoggedInCount && this.platformLoginStatus.length && this.getLoggedInCount() === 0) {
+                return {
+                    title: '先完成平台登录',
+                    detail: '打开登录检测，至少让一个 AI 平台保持可用登录态。'
+                };
+            }
+            if (!this.tasks.length) {
+                return {
+                    title: '创建第一个监测任务',
+                    detail: '选择品牌词、核心问题和 AI 平台，建立第一组 GEO 基线数据。'
+                };
+            }
+            if (!this.insights.summary.results) {
+                return {
+                    title: '运行一次采集',
+                    detail: '采集完成后，数据看板会展示曝光率、引用来源和 AI 建议。'
+                };
+            }
+            if (!this.insights.ai_config.ready) {
+                return {
+                    title: '配置 AI 分析',
+                    detail: '填写 API URL、Key 和模型名称，开启自动策略建议。'
+                };
+            }
+            return {
+                title: '生成下一步动作',
+                detail: '用 AI 汇总当前采集结果，输出观察、风险和下一轮内容实验。'
+            };
+        },
+        isDemoUser() {
+            return this.currentUser?.username === 'tuke';
+        },
+        filteredDomains() {
+            return this.trendFilter.level === 'top' ? this.allTopDomains : this.allDomains;
+        }
+    },
+    watch: {
+        questionsText(val) {
+            this.taskForm.questions = val.split('\n').filter(q => q.trim());
+        }
+    },
+    async mounted() {
+        await this.loadCurrentUser();
+        this.loadTasks();
+        this.loadDailyLimit();
+        this.loadTodayCollectionCount();
+        await this.loadPlatforms();     // 从 API 获取平台列表
+        await this.loadCachedLoginStatus();   // 加载当前用户缓存的登录状态
+        this.showWelcomeGuideIfNeeded();
+        this.loadBrowserConfig();      // 加载浏览器配置
+        this.initAnalysisFilter();     // 初始化引用参考源分析筛选（默认最近一月）
+        this.initTrendFilter();        // 初始化走势图筛选（默认最近一月）
+        this.initGeoFilter();          // 初始化GEO分析筛选
+        this.loadAnalysisData();       // 默认加载分析数据
+        this.loadSentimentConfigs();   // 加载舆情配置
+        this.loadInsightsOverview();   // 加载商业看板
+        this.loadInsightScorecard();   // 加载核心分析看板
+        this.loadTrendDomains();       // 初始化域名列表
+        this.loadTrendData();          // 默认加载走势数据
+        this.loadGeoCoverageData();    // 默认加载GEO分析数据
+        this.updateCurrentStep();
+    },
+    beforeUnmount() {
+        Object.keys(this.taskPollers).forEach(taskId => {
+            this.clearTaskPolling(taskId);
+        });
+        Object.values(this.insightCharts).forEach(chart => {
+            if (chart) chart.dispose();
+        });
+    },
+    methods: {
+        async loadCurrentUser() {
+            try {
+                const response = await axios.get('/api/current-user');
+                if (response.data.success) {
+                    this.currentUser = response.data.user;
+                    this.desktopMode = !!response.data.desktop_mode;
+                    this.appInfo = response.data.app || this.appInfo;
+                    this.dataDir = response.data.data_dir || '';
+                }
+            } catch (error) {
+                console.error('获取当前用户失败:', error);
+            }
+        },
+
+        async loadInsightsOverview() {
+            this.insightsLoading = true;
+            try {
+                const response = await axios.get('/api/insights/overview');
+                if (response.data.success) {
+                    this.insights = response.data.data;
+                    this.quickAiConfig.ai_platform = this.insights.ai_config.platform || this.quickAiConfig.ai_platform || 'openai';
+                    this.quickAiConfig.ai_api_url = this.insights.ai_config.api_url || this.quickAiConfig.ai_api_url;
+                    this.quickAiConfig.ai_model_name = this.insights.ai_config.model || this.quickAiConfig.ai_model_name;
+                }
+            } catch (error) {
+                console.error('加载数据看板失败:', error);
+            } finally {
+                this.insightsLoading = false;
+            }
+        },
+
+        async loadInsightScorecard() {
+            this.scorecardLoading = true;
+            try {
+                const response = await axios.get('/api/insights/scorecard');
+                if (response.data.success) {
+                    this.scorecard = response.data.data;
+                    this.$nextTick(() => this.renderInsightCharts());
+                }
+            } catch (error) {
+                console.error('加载核心分析看板失败:', error);
+            } finally {
+                this.scorecardLoading = false;
+            }
+        },
+
+        renderInsightCharts() {
+            this.renderScoreTrendChart();
+            this.renderPlatformExposureChart();
+            this.renderSourceDomainChart();
+        },
+
+        renderScoreTrendChart() {
+            const el = document.getElementById('scoreTrendChart');
+            if (!el || !window.echarts) return;
+            if (!this.insightCharts.trend) this.insightCharts.trend = echarts.init(el);
+            const rows = this.scorecard.charts?.trend || [];
+            this.insightCharts.trend.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { top: 0, data: ['品牌出现率', '回答数'] },
+                grid: { left: 36, right: 36, top: 48, bottom: 28 },
+                xAxis: { type: 'category', data: rows.map(row => row.date), axisTick: { show: false } },
+                yAxis: [
+                    { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
+                    { type: 'value', min: 0 }
+                ],
+                series: [
+                    { name: '回答数', type: 'bar', yAxisIndex: 1, data: rows.map(row => row.answers), itemStyle: { color: '#cbd5e1', borderRadius: [4, 4, 0, 0] } },
+                    { name: '品牌出现率', type: 'line', smooth: true, data: rows.map(row => row.exposure_rate), symbolSize: 8, lineStyle: { width: 3, color: '#1664ff' }, itemStyle: { color: '#1664ff' } }
+                ]
+            }, true);
+        },
+
+        renderPlatformExposureChart() {
+            const el = document.getElementById('platformExposureChart');
+            if (!el || !window.echarts) return;
+            if (!this.insightCharts.platforms) this.insightCharts.platforms = echarts.init(el);
+            const rows = this.scorecard.charts?.platforms || [];
+            this.insightCharts.platforms.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: 88, right: 24, top: 16, bottom: 24 },
+                xAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
+                yAxis: { type: 'category', data: rows.map(row => this.getPlatformName(row.platform)), axisTick: { show: false } },
+                series: [{
+                    type: 'bar',
+                    data: rows.map(row => row.exposure_rate),
+                    label: { show: true, formatter: '{c}%' },
+                    itemStyle: { color: '#00a6b2', borderRadius: [0, 6, 6, 0] }
+                }]
+            }, true);
+        },
+
+        renderSourceDomainChart() {
+            const el = document.getElementById('sourceDomainChart');
+            if (!el || !window.echarts) return;
+            if (!this.insightCharts.sources) this.insightCharts.sources = echarts.init(el);
+            const rows = this.scorecard.charts?.sources || [];
+            this.insightCharts.sources.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: ['48%', '72%'],
+                    center: ['50%', '50%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: { borderColor: '#fff', borderWidth: 3 },
+                    label: { formatter: '{b}\\n{c}次', color: '#334155' },
+                    data: rows.map(row => ({ name: row.domain, value: row.count }))
+                }]
+            }, true);
+        },
+
+        async runAiInsightAnalysis() {
+            this.aiAnalysisLoading = true;
+            this.aiAnalysisElapsed = 0;
+            if (this.aiAnalysisTimer) {
+                clearInterval(this.aiAnalysisTimer);
+            }
+            this.aiAnalysisTimer = setInterval(() => {
+                this.aiAnalysisElapsed += 1;
+            }, 1000);
+            try {
+                const response = await axios.post('/api/insights/ai-analysis', {}, { timeout: 90000 });
+                if (response.data.success) {
+                    this.aiInsight = response.data.analysis || this.aiInsight;
+                    ElMessage.success('AI 分析已生成');
+                }
+            } catch (error) {
+                const data = error.response?.data;
+                if (data?.needs_config) {
+                    ElMessage.warning(data.message);
+                    this.activeTab = 'sentiment_settings';
+                } else {
+                    ElMessage.error(data?.message || 'AI 分析失败');
+                }
+            } finally {
+                this.aiAnalysisLoading = false;
+                if (this.aiAnalysisTimer) {
+                    clearInterval(this.aiAnalysisTimer);
+                    this.aiAnalysisTimer = null;
+                }
+            }
+        },
+
+        async saveQuickAiConfig() {
+            if (!this.quickAiConfig.ai_api_url.trim() || !this.quickAiConfig.ai_api_key.trim() || !this.quickAiConfig.ai_model_name.trim()) {
+                ElMessage.warning('请填写 API URL、API Key 和模型名称');
+                return;
+            }
+            this.savingQuickAiConfig = true;
+            try {
+                const payload = {
+                    name: '默认 AI 分析配置',
+                    positive_words: [],
+                    negative_words: [],
+                    enable_ai_sentiment: true,
+                    ai_platform: this.quickAiConfig.ai_platform || 'openai',
+                    ai_api_url: this.quickAiConfig.ai_api_url.trim(),
+                    ai_api_key: this.quickAiConfig.ai_api_key.trim(),
+                    ai_model_name: this.quickAiConfig.ai_model_name.trim(),
+                    ai_prompt: '请基于输入内容输出严格 JSON，不要添加 Markdown。',
+                    is_default: true
+                };
+                const response = await axios.post('/api/sentiment/configs', payload);
+                if (response.data.success) {
+                    ElMessage.success('AI 分析配置已启用');
+                    this.quickAiConfig.ai_api_key = '';
+                    await this.loadSentimentConfigs();
+                    await this.loadInsightsOverview();
+                }
+            } catch (error) {
+                ElMessage.error(error.response?.data?.message || '保存 AI 配置失败');
+            } finally {
+                this.savingQuickAiConfig = false;
+            }
+        },
+
+        getPlatformName(platformId) {
+            return this.availablePlatforms.find(p => p.id === platformId)?.name || platformId;
+        },
+
+        loginStatusStorageKey() {
+            const userId = this.currentUser?.id || 'anonymous';
+            return `platformLoginStatus:${userId}`;
+        },
+
+        normalizeLoginStatus(value) {
+            if (value && typeof value === 'object') {
+                return {
+                    isLoggedIn: !!value.is_logged_in,
+                    checkedAt: value.checked_at || '',
+                    statusMessage: value.error || ''
+                };
+            }
+            return {
+                isLoggedIn: !!value,
+                checkedAt: '',
+                statusMessage: ''
+            };
+        },
+
+        applyPlatformLoginStatus(platformId, value) {
+            const platform = this.platformLoginStatus.find(p => p.id === platformId);
+            if (!platform) return;
+            const normalized = this.normalizeLoginStatus(value);
+            platform.isLoggedIn = normalized.isLoggedIn;
+            platform.checkedAt = normalized.checkedAt;
+            platform.statusMessage = normalized.statusMessage;
+        },
+
+        persistLoginStatus(platformId, payload) {
+            const loginStatus = JSON.parse(localStorage.getItem(this.loginStatusStorageKey()) || '{}');
+            loginStatus[platformId] = payload;
+            localStorage.setItem(this.loginStatusStorageKey(), JSON.stringify(loginStatus));
+            axios.post('/api/login-status-cache', { status: loginStatus }).catch(e => {
+                console.error('同步登录状态缓存失败:', e);
+            });
+        },
+
+        showWelcomeGuideIfNeeded() {
+            const params = new URLSearchParams(window.location.search);
+            const welcome = params.get('welcome') === '1';
+            const guideKey = `onboardingShown:${this.currentUser?.id || 'anonymous'}`;
+            const hasCache = !!localStorage.getItem(this.loginStatusStorageKey());
+            if (welcome || (!hasCache && !localStorage.getItem(guideKey))) {
+                localStorage.setItem(guideKey, '1');
+                setTimeout(() => {
+                    ElMessage.info('请先完成需要使用的 AI 平台账号登录，每个系统用户会保存独立登录状态。');
+                    this.quickCheckAndShowLogin();
+                }, 500);
+            }
+        },
+
+        async loadPlatforms() {
+            try {
+                const response = await axios.get('/api/platforms');
+                if (response.data.success) {
+                    const platforms = response.data.platforms;
+                    // 更新平台列表
+                    this.availablePlatforms = platforms;
+                    
+                    // 将 API 返回的平台列表转换为登录状态格式
+                    this.platformLoginStatus = platforms.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        url: p.url,
+                        isLoggedIn: false,
+                        checkedAt: '',
+                        statusMessage: '',
+                        checking: false
+                    }));
+                    console.log('平台列表已加载:', this.availablePlatforms);
+                }
+            } catch (error) {
+                console.error('获取平台列表失败:', error);
+            }
+        },
+        
+        handleTabClick(tab) {
+            if (tab.name === 'analysis') {
+                if (this.analysisData.length === 0) {
+                    this.loadAnalysisData();
+                } else {
+                    this.$nextTick(() => {
+                        this.renderMediaChart();
+                    });
+                }
+            } else if (tab.name === 'trends') {
+                if (this.allDomains.length === 0) {
+                    this.loadAnalysisData();
+                }
+                this.$nextTick(() => {
+                    this.renderTrendChart();
+                });
+            } else if (tab.name === 'geo_analysis') {
+                this.loadGeoCoverageData();
+            }
+        },
+
+        async loadGeoCoverageData() {
+            this.geoLoading = true;
+            try {
+                const params = {};
+                if (this.geoFilter.task_id) params.task_id = this.geoFilter.task_id;
+                if (this.geoFilter.platform) params.platform = this.geoFilter.platform;
+                if (this.geoFilter.date) params.date = this.geoFilter.date;
+                
+                const response = await axios.get('/api/analysis/geo-coverage', { params });
+                if (response.data.success) {
+                    this.geoCoverageData = response.data.data;
+                }
+            } catch (error) {
+                console.error('加载GEO分析数据失败:', error);
+                ElMessage.error('加载GEO分析数据失败');
+            } finally {
+                this.geoLoading = false;
+            }
+        },
+
+        async exportGeoAnalysis() {
+            try {
+                const params = new URLSearchParams();
+                if (this.geoFilter.task_id) params.append('task_id', this.geoFilter.task_id);
+                if (this.geoFilter.platform) params.append('platform', this.geoFilter.platform);
+                if (this.geoFilter.date) params.append('date', this.geoFilter.date);
+                
+                const url = `/api/analysis/geo-coverage/export?${params.toString()}`;
+                const response = await axios.get(url, {
+                    responseType: 'blob'
+                });
+                
+                // 创建下载链接
+                const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `GEO稿件被引用分析_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(downloadUrl);
+                
+                ElMessage.success('导出成功');
+            } catch (error) {
+                console.error('导出失败:', error);
+                ElMessage.error('导出失败');
+            }
+        },
+
+        initGeoFilter() {
+             // 默认展示今日
+             const today = new Date();
+             
+             const formatDate = (date) => {
+                 const y = date.getFullYear();
+                 const m = String(date.getMonth() + 1).padStart(2, '0');
+                 const d = String(date.getDate()).padStart(2, '0');
+                 return `${y}-${m}-${d}`;
+             };
+             
+             this.geoFilter.date = formatDate(today);
+             this.geoFilter.platform = 'doubao';
+         },
+        
+        showAddGeoManuscript() {
+            this.geoDialogTitle = '添加GEO稿件';
+            this.geoForm = {
+                id: null,
+                task_ids: this.geoFilter.task_id ? [this.geoFilter.task_id] : [],
+                title: '',
+                url: ''
+            };
+            this.geoDialogVisible = true;
+        },
+        
+        editGeoManuscript(row) {
+            this.geoDialogTitle = '编辑GEO稿件';
+            this.geoForm = {
+                id: row.id,
+                task_ids: row.task_ids || [],
+                title: row.title,
+                url: row.url
+            };
+            this.geoDialogVisible = true;
+        },
+        
+        async submitGeoManuscript() {
+            if (!this.geoForm.task_ids || this.geoForm.task_ids.length === 0 || !this.geoForm.title || !this.geoForm.url) {
+                ElMessage.warning('请填写完整信息');
+                return;
+            }
+            
+            // 解析多行URL
+            const urls = this.geoForm.url.split('\n')
+                .map(url => url.trim())
+                .filter(url => url.length > 0);
+            
+            if (urls.length === 0) {
+                ElMessage.warning('请输入至少一个URL');
+                return;
+            }
+            
+            this.geoSubmitting = true;
+            try {
+                // 如果是更新操作，只处理第一个URL
+                if (this.geoForm.id) {
+                    const response = await axios.post('/api/geo-manuscripts', {
+                        ...this.geoForm,
+                        url: urls[0]
+                    });
+                    if (response.data.success) {
+                        ElMessage.success('更新成功');
+                        this.geoDialogVisible = false;
+                        this.loadGeoCoverageData();
+                    }
+                } else {
+                    // 批量添加
+                    const response = await axios.post('/api/geo-manuscripts', {
+                        task_ids: this.geoForm.task_ids,
+                        title: this.geoForm.title,
+                        urls: urls
+                    });
+                    if (response.data.success) {
+                        ElMessage.success(`成功添加 ${response.data.count} 条记录`);
+                        this.geoDialogVisible = false;
+                        this.loadGeoCoverageData();
+                    }
+                }
+            } catch (error) {
+                ElMessage.error('保存失败');
+            } finally {
+                this.geoSubmitting = false;
+            }
+        },
+        
+        async confirmDeleteGeo(row) {
+            try {
+                await ElMessageBox.confirm('确定删除该GEO稿件吗？分析数据将不再显示此条目。', '提示', {
+                    type: 'warning'
+                });
+                
+                const response = await axios.delete(`/api/geo-manuscripts/${row.id}`);
+                if (response.data.success) {
+                    ElMessage.success('已删除');
+                    this.loadGeoCoverageData();
+                }
+            } catch (error) {
+                if (error !== 'cancel') ElMessage.error('删除失败');
+            }
+        },
+        
+        viewGeoDetails(row) {
+            this.currentGeoDetails = row.details;
+            this.geoDetailsVisible = true;
+        },
+
+        initTrendFilter() {
+            // 默认最近一月
+            const end = new Date();
+            const start = new Date();
+            start.setMonth(start.getMonth() - 1);
+            
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+            
+            this.trendFilter.dateRange = [formatDate(start), formatDate(end)];
+        },
+        
+        initAnalysisFilter() {
+            // 默认最近一月
+            const end = new Date();
+            const start = new Date();
+            start.setMonth(start.getMonth() - 1);
+            
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+            
+            this.analysisFilter.dateRange = [formatDate(start), formatDate(end)];
+        },
+
+        onTrendLevelChange() {
+            this.trendFilter.domains = [];
+            this.loadTrendDomains();
+            this.loadTrendData();
+        },
+
+        async loadTrendDomains() {
+            let params = {
+                level: this.trendFilter.level
+            };
+            
+            if (this.trendFilter.platform) {
+                params.platform = this.trendFilter.platform;
+            }
+            if (this.trendFilter.task_id) {
+                params.task_id = this.trendFilter.task_id;
+            }
+            if (this.trendFilter.dateRange && this.trendFilter.dateRange.length === 2) {
+                params.date_start = this.trendFilter.dateRange[0];
+                params.date_end = this.trendFilter.dateRange[1];
+            }
+
+            try {
+                const response = await axios.get('/api/analysis/domains', { params });
+                if (response.data.success) {
+                    if (this.trendFilter.level === 'top') {
+                        this.allTopDomains = response.data.domains;
+                    } else {
+                        this.allDomains = response.data.domains;
+                    }
+                }
+            } catch (error) {
+                console.error('加载域名列表失败:', error);
+            }
+        },
+
+        onTrendFilterChange() {
+            this.trendFilter.domains = [];
+            this.loadTrendDomains();
+        },
+
+        async loadTrendData() {
+            this.trending = true;
+            
+            let params = {
+                top_n: this.trendFilter.top_n,
+                level: this.trendFilter.level
+            };
+            
+            if (this.trendFilter.platform) {
+                params.platform = this.trendFilter.platform;
+            }
+            if (this.trendFilter.task_id) {
+                params.task_id = this.trendFilter.task_id;
+            }
+            // 处理日期范围：如果有完整的日期范围则传递，否则传递空字符串让后端使用默认值
+            if (this.trendFilter.dateRange && this.trendFilter.dateRange.length === 2 && 
+                this.trendFilter.dateRange[0] && this.trendFilter.dateRange[1]) {
+                params.date_start = this.trendFilter.dateRange[0];
+                params.date_end = this.trendFilter.dateRange[1];
+                console.log('使用用户选择的日期范围:', params.date_start, '至', params.date_end);
+            } else {
+                // 用户未选择日期或日期不完整，传递空参数让后端使用默认值
+                params.date_start = '';
+                params.date_end = '';
+                console.log('使用默认日期范围（近一年）');
+            }
+            if (this.trendFilter.domains && this.trendFilter.domains.length > 0) {
+                params.domains = this.trendFilter.domains;
+            }
+
+            console.log('loadTrendData params:', params);
+
+            try {
+                const response = await axios.get('/api/analysis/reference-trends', { params });
+                console.log('loadTrendData response:', response.data);
+                
+                if (response.data.success) {
+                    this.trendData = response.data; // 存储完整响应
+                    this.$nextTick(() => {
+                        this.renderTrendChart();
+                    });
+                } else {
+                    // API调用成功但返回失败状态
+                    console.error('loadTrendData: API returned failure:', response.data.message);
+                    ElMessage.error(response.data.message || '走势数据加载失败');
+                    // 清空趋势数据，显示暂无数据
+                    this.trendData = null;
+                    this.$nextTick(() => {
+                        this.renderTrendChart();
+                    });
+                }
+            } catch (error) {
+                console.error('loadTrendData error:', error);
+                ElMessage.error('走势数据加载失败');
+                // 清空趋势数据，显示暂无数据
+                this.trendData = null;
+                this.$nextTick(() => {
+                    this.renderTrendChart();
+                });
+            } finally {
+                this.trending = false;
+            }
+        },
+
+        renderTrendChart() {
+            const chartDom = document.getElementById('trendChart');
+            if (!chartDom) {
+                console.error('renderTrendChart: chartDom is null');
+                return;
+            }
+            
+            // 确保容器有正确的尺寸
+            if (chartDom.offsetWidth === 0 || chartDom.offsetHeight === 0) {
+                setTimeout(() => this.renderTrendChart(), 100);
+                return;
+            }
+            
+            if (!this.trendData) {
+                // 如果有图表实例，先清空
+                if (this.trendChart) {
+                    try {
+                        this.trendChart.clear();
+                    } catch (e) {
+                        console.warn('Failed to clear chart:', e);
+                    }
+                }
+                chartDom.innerHTML = '<div style="text-align: center; padding-top: 100px; color: #999;">暂无数据</div>';
+                return;
+            }
+            
+            // 检查是否有数据
+            if (!this.trendData.dates || !Array.isArray(this.trendData.dates) || this.trendData.dates.length === 0 || 
+                !this.trendData.series || !Array.isArray(this.trendData.series) || this.trendData.series.length === 0) {
+                // 如果有图表实例，先清空
+                if (this.trendChart) {
+                    try {
+                        this.trendChart.clear();
+                    } catch (e) {
+                        console.warn('Failed to clear chart:', e);
+                    }
+                }
+                // 没有数据时显示提示
+                chartDom.innerHTML = '<div style="text-align: center; padding-top: 100px; color: #999;">暂无数据</div>';
+                return;
+            }
+            
+            try {
+                // 如果已有图表实例，使用clear方法而不是dispose
+                if (this.trendChart) {
+                    try {
+                        this.trendChart.clear();
+                    } catch (e) {
+                        // 如果clear失败，说明实例已失效，重新创建
+                        console.warn('Failed to clear existing chart, will recreate:', e);
+                        this.trendChart = null;
+                    }
+                }
+                
+                // 如果没有实例或实例已失效，创建新实例
+                if (!this.trendChart) {
+                    this.trendChart = echarts.init(chartDom);
+                }
+                
+                const option = {
+                    title: {
+                        text: `顶级域名引用走势 (TOP ${this.trendFilter.top_n})`,
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: this.trendData.top_domains || [],
+                        bottom: 0,
+                        type: 'scroll'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '10%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: this.trendData.dates
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '引用次数'
+                    },
+                    series: this.trendData.series
+                };
+                
+                this.trendChart.setOption(option, true);
+                
+                // 添加resize监听（确保只添加一次）
+                const resizeHandler = () => {
+                    if (this.trendChart) {
+                        try {
+                            this.trendChart.resize();
+                        } catch (e) {
+                            console.warn('Failed to resize chart:', e);
+                        }
+                    }
+                };
+                
+                // 先移除旧的监听，避免重复添加
+                window.removeEventListener('resize', resizeHandler);
+                window.addEventListener('resize', resizeHandler);
+            } catch (error) {
+                console.error('renderTrendChart error:', error);
+                // 确保清空图表
+                if (this.trendChart) {
+                    try {
+                        this.trendChart.clear();
+                    } catch (e) {}
+                }
+                chartDom.innerHTML = `<div style="text-align: center; padding-top: 100px; color: #f5222d;">图表渲染失败: ${error.message}</div>`;
+            }
+        },
+
+        async loadAnalysisData() {
+            this.analyzing = true;
+            
+            let params = {
+                deduplicate: this.analysisFilter.deduplicate
+            };
+            
+            if (this.analysisFilter.platform) {
+                params.platform = this.analysisFilter.platform;
+            }
+            if (this.analysisFilter.task_id) {
+                params.task_id = this.analysisFilter.task_id;
+            }
+            if (this.analysisFilter.dateRange && this.analysisFilter.dateRange.length === 2) {
+                params.date_start = this.analysisFilter.dateRange[0];
+                params.date_end = this.analysisFilter.dateRange[1];
+            }
+
+            try {
+                const response = await axios.get('/api/analysis/references', { params });
+                if (response.data.success) {
+                    this.analysisData = response.data.full_data;
+                    this.topAnalysisData = response.data.top_data;
+                    
+                    // 更新走势图可选域名列表
+                    this.allDomains = this.analysisData.map(d => d.name);
+                    this.allTopDomains = this.topAnalysisData.map(d => d.name);
+                    
+                    this.$nextTick(() => {
+                        this.renderMediaChart();
+                    });
+                }
+            } catch (error) {
+                ElMessage.error('分析数据加载失败');
+            } finally {
+                this.analyzing = false;
+            }
+        },
+
+        renderMediaChart() {
+            const chartDom = document.getElementById('mediaChart');
+            if (!chartDom) return;
+            
+            // 如果容器还没有宽度（可能还在隐藏状态），则延迟重试
+            if (chartDom.offsetWidth === 0) {
+                setTimeout(() => this.renderMediaChart(), 100);
+                return;
+            }
+            
+            if (this.mediaChart) {
+                this.mediaChart.dispose();
+            }
+            
+            this.mediaChart = echarts.init(chartDom);
+            
+            // 取前 15 个顶级域名展示在图表中
+            const topData = this.topAnalysisData.slice(0, 15).reverse();
+            
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    boundaryGap: [0, 0.01]
+                },
+                yAxis: {
+                    type: 'category',
+                    data: topData.map(item => item.name)
+                },
+                series: [
+                    {
+                        name: '引用次数',
+                        type: 'bar',
+                        data: topData.map(item => item.count),
+                        itemStyle: {
+                            color: '#1890ff'
+                        },
+                        label: {
+                            show: true,
+                            position: 'right'
+                        }
+                    }
+                ]
+            };
+            
+            this.mediaChart.setOption(option);
+            
+            // 响应式调整
+            window.addEventListener('resize', () => {
+                this.mediaChart && this.mediaChart.resize();
+            });
+        },
+
+        async loadCachedLoginStatus() {
+            // 从localStorage加载缓存的登录状态（快速显示）
+            const cachedStatus = localStorage.getItem(this.loginStatusStorageKey());
+            if (cachedStatus) {
+                try {
+                    const loginStatus = JSON.parse(cachedStatus);
+                    this.platformLoginStatus.forEach(platform => {
+                        if (loginStatus[platform.id] !== undefined) {
+                            this.applyPlatformLoginStatus(platform.id, loginStatus[platform.id]);
+                        }
+                    });
+                    axios.post('/api/login-status-cache', { status: loginStatus }).catch(e => {
+                        console.error('同步本地登录状态缓存失败:', e);
+                    });
+                    this.updateCurrentStep();
+                } catch (e) {
+                    console.error('解析缓存登录状态失败:', e);
+                }
+            }
+
+            try {
+                const response = await axios.get('/api/login-status-cache');
+                if (response.data.success && response.data.status) {
+                    const serverStatus = response.data.status;
+                    const loginStatus = JSON.parse(localStorage.getItem(this.loginStatusStorageKey()) || '{}');
+                    Object.keys(serverStatus).forEach(platformId => {
+                        loginStatus[platformId] = serverStatus[platformId];
+                    });
+                    this.platformLoginStatus.forEach(platform => {
+                        if (loginStatus[platform.id] !== undefined) {
+                            this.applyPlatformLoginStatus(platform.id, loginStatus[platform.id]);
+                        }
+                    });
+                    if (Object.keys(loginStatus).length > 0) {
+                        localStorage.setItem(this.loginStatusStorageKey(), JSON.stringify(loginStatus));
+                    }
+                    this.updateCurrentStep();
+                }
+            } catch (e) {
+                console.error('读取后端登录状态缓存失败:', e);
+            }
+        },
+        
+        async loadTasks() {
+            this.loading = true;
+            try {
+                const response = await axios.get('/api/tasks');
+                this.tasks = response.data.tasks;
+                const activeTaskIds = new Set(
+                    this.tasks
+                        .filter(task => ['running', 'paused'].includes(task.status))
+                        .map(task => String(task.id))
+                );
+                Object.keys(this.taskPollers).forEach(taskId => {
+                    if (!activeTaskIds.has(taskId)) {
+                        this.clearTaskPolling(taskId);
+                    }
+                });
+                this.tasks.forEach(task => {
+                    if (['running', 'paused'].includes(task.status)) {
+                        this.startTaskPolling(task.id);
+                        
+                        // 检查是否已经达到目标状态，如果是则清除 commanding
+                        const cmd = this.taskCommanding[String(task.id)];
+                        if ((cmd === 'pause' && task.status === 'paused') || 
+                            (cmd === 'resume' && task.status === 'running') ||
+                            (cmd === 'stop' && task.status === 'stopped')) {
+                            this.clearTaskCommanding(task.id);
+                        }
+                    }
+                });
+                this.updateCurrentStep();
+                this.loadInsightsOverview();
+                this.loadInsightScorecard();
+            } catch (error) {
+                ElMessage.error('加载任务失败');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        loadDailyLimit() {
+            const limit = localStorage.getItem('dailyLimit');
+            if (limit) {
+                this.dailyLimit = parseInt(limit);
+                this.limitForm.daily_limit = this.dailyLimit;
+            }
+            const minInterval = localStorage.getItem('minInterval');
+            if (minInterval) {
+                this.minInterval = parseInt(minInterval);
+                this.limitForm.min_interval = this.minInterval;
+            }
+            const maxInterval = localStorage.getItem('maxInterval');
+            if (maxInterval) {
+                this.maxInterval = parseInt(maxInterval);
+                this.limitForm.max_interval = this.maxInterval;
+            }
+        },
+
+        showLimitSettings() {
+            this.limitForm.daily_limit = this.dailyLimit;
+            this.limitForm.min_interval = this.minInterval;
+            this.limitForm.max_interval = this.maxInterval;
+            this.limitSettingsVisible = true;
+        },
+
+        saveLimitSettings() {
+            this.dailyLimit = this.limitForm.daily_limit;
+            this.minInterval = this.limitForm.min_interval;
+            this.maxInterval = this.limitForm.max_interval;
+            localStorage.setItem('dailyLimit', this.dailyLimit);
+            localStorage.setItem('minInterval', this.minInterval);
+            localStorage.setItem('maxInterval', this.maxInterval);
+            this.limitSettingsVisible = false;
+            ElMessage.success('设置已更新');
+        },
+        
+        async loadTodayCollectionCount() {
+            // 从 localStorage 获取今日采集数量
+            const today = new Date().toDateString();
+            const storedData = localStorage.getItem('collectionCount');
+            
+            if (storedData) {
+                try {
+                    const data = JSON.parse(storedData);
+                    if (data.date === today) {
+                        this.todayCollectionCount = data.count || 0;
+                    } else {
+                        // 新的一天，重置计数
+                        this.todayCollectionCount = 0;
+                        localStorage.setItem('collectionCount', JSON.stringify({
+                            date: today,
+                            count: 0
+                        }));
+                    }
+                } catch (e) {
+                    this.todayCollectionCount = 0;
+                }
+            } else {
+                this.todayCollectionCount = 0;
+                localStorage.setItem('collectionCount', JSON.stringify({
+                    date: today,
+                    count: 0
+                }));
+            }
+        },
+        
+        incrementCollectionCount(count = 1) {
+            const today = new Date().toDateString();
+            this.todayCollectionCount += count;
+            localStorage.setItem('collectionCount', JSON.stringify({
+                date: today,
+                count: this.todayCollectionCount
+            }));
+        },
+        
+        updateCurrentStep() {
+            // 根据任务数量和登录状态更新当前步骤
+            const hasLoggedIn = this.platformLoginStatus.some(p => p.isLoggedIn);
+            
+            if (!hasLoggedIn) {
+                this.currentStep = 0;
+            } else if (this.tasks.length === 0) {
+                this.currentStep = 1;
+            } else {
+                this.currentStep = 2;
+            }
+        },
+        
+        showLoginDialog() {
+            this.loginDialogVisible = true;
+            if (!this.desktopMode) {
+                // 云端模式自动检测；单机版避免一次性打开多个本机 Chrome。
+                this.checkAllLoginStatus();
+            }
+        },
+        
+        async quickCheckAndShowLogin() {
+            // 快速检测登录状态并显示对话框
+            this.quickChecking = true;
+            
+            try {
+                // 快速检测（使用localStorage缓存）
+                const cachedStatus = localStorage.getItem(this.loginStatusStorageKey());
+                if (cachedStatus) {
+                    try {
+                        const loginStatus = JSON.parse(cachedStatus);
+                        this.platformLoginStatus.forEach(platform => {
+                            if (loginStatus[platform.id] !== undefined) {
+                                this.applyPlatformLoginStatus(platform.id, loginStatus[platform.id]);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('解析缓存登录状态失败:', e);
+                    }
+                }
+                
+                // 显示对话框
+                this.loginDialogVisible = true;
+                
+                // 云端模式后台异步检测真实状态；单机版由用户按平台手动检测。
+                if (!this.desktopMode) {
+                    this.checkAllLoginStatus();
+                }
+            } finally {
+                this.quickChecking = false;
+            }
+        },
+        
+        getLoggedInCount() {
+            return this.platformLoginStatus.filter(p => p.isLoggedIn).length;
+        },
+        
+        async checkAllLoginStatus() {
+            if (this.desktopMode) {
+                ElMessage.info('单机版请按平台逐个点击“重新检测”，避免一次性打开多个浏览器。');
+                await this.loadCachedLoginStatus();
+                return;
+            }
+
+            this.checkingLogin = true;
+            
+            try {
+                const response = await axios.get('/api/check-login/all');
+                
+                if (response.data.success) {
+                    // 更新登录状态
+                    const platforms = response.data.platforms;
+                    platforms.forEach(platform => {
+                        this.applyPlatformLoginStatus(platform.platform, {
+                            is_logged_in: platform.is_logged_in,
+                            checked_at: platform.checked_at || '',
+                            error: platform.error || ''
+                        });
+                    });
+                    
+                    // 保存到 localStorage
+                    const loginStatus = {};
+                    platforms.forEach(p => {
+                        loginStatus[p.platform] = {
+                            is_logged_in: p.is_logged_in,
+                            checked_at: p.checked_at || '',
+                            error: p.error || ''
+                        };
+                    });
+                    localStorage.setItem(this.loginStatusStorageKey(), JSON.stringify(loginStatus));
+                    
+                    this.updateCurrentStep();
+                    
+                    const loggedInCount = platforms.filter(p => p.is_logged_in).length;
+                    ElMessage.success(`检测完成，${loggedInCount} 个平台已登录`);
+                } else {
+                    ElMessage.error(response.data.message || '检测失败');
+                }
+            } catch (error) {
+                console.error('检测登录状态失败:', error);
+                ElMessage.error('检测失败: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.checkingLogin = false;
+            }
+        },
+        
+        async checkLoginStatus(platformId) {
+            const platform = this.platformLoginStatus.find(p => p.id === platformId);
+            if (!platform) return;
+            
+            ElMessage.info(`正在检测 ${platform.name} 登录状态...`);
+            platform.checking = true;
+            
+            try {
+                const response = await axios.get(`/api/check-login/${platformId}`);
+                
+                if (response.data.success) {
+                    const payload = {
+                        is_logged_in: response.data.is_logged_in,
+                        checked_at: response.data.checked_at || new Date().toLocaleString('zh-CN', { hour12: false }),
+                        error: response.data.error || ''
+                    };
+                    this.applyPlatformLoginStatus(platformId, payload);
+                    this.persistLoginStatus(platformId, payload);
+                    
+                    this.updateCurrentStep();
+                    
+                    if (platform.isLoggedIn) {
+                        ElMessage.success(`${platform.name} 已登录`);
+                    } else if (response.data.error) {
+                        ElMessage.warning(response.data.error);
+                    } else {
+                        ElMessage.warning(`${platform.name} 未登录，请先登录`);
+                    }
+                } else {
+                    ElMessage.error(response.data.message || '检测失败');
+                }
+            } catch (error) {
+                console.error('检测登录状态失败:', error);
+                ElMessage.error('检测失败: ' + (error.response?.data?.message || error.message));
+            } finally {
+                platform.checking = false;
+            }
+        },
+
+        async clearPlatformLogin(platformId) {
+            const platform = this.platformLoginStatus.find(p => p.id === platformId);
+            if (!platform) return;
+
+            try {
+                await ElMessageBox.confirm(
+                    `确认清除 ${platform.name} 的登录状态吗？清除后需要重新登录该平台账号。`,
+                    '清除登录状态',
+                    {
+                        confirmButtonText: '清除',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }
+                );
+
+                const response = await axios.delete(`/api/login/${platformId}`);
+                if (response.data.success) {
+                    const payload = {
+                        is_logged_in: false,
+                        checked_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+                        error: ''
+                    };
+                    this.applyPlatformLoginStatus(platformId, payload);
+                    this.persistLoginStatus(platformId, payload);
+                    this.updateCurrentStep();
+                    ElMessage.success(response.data.message || `${platform.name} 登录状态已清除`);
+                } else {
+                    ElMessage.error(response.data.message || '清除失败');
+                }
+            } catch (error) {
+                if (error === 'cancel') return;
+                console.error('清除登录状态失败:', error);
+                ElMessage.error('清除失败: ' + (error.response?.data?.message || error.message || error));
+            }
+        },
+
+        async exportTopDomainData() {
+            if (this.topAnalysisData.length === 0) return;
+            try {
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+                    document.head.appendChild(script);
+                    await new Promise(resolve => script.onload = resolve);
+                }
+                const task = this.tasks.find(t => t.id === this.analysisFilter.task_id);
+                const taskName = task ? task.name : '全部任务';
+                const platformName = this.availablePlatforms.find(p => p.id === this.analysisFilter.platform)?.name || '全部平台';
+                const domainData = this.topAnalysisData.map(item => ({
+                    '顶级域名': item.name,
+                    '引用次数': item.count
+                }));
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(domainData);
+                XLSX.utils.book_append_sheet(wb, ws, "顶级域名分布");
+                XLSX.writeFile(wb, `顶级域名分布_${taskName}_${platformName}.xlsx`);
+                ElMessage.success('导出成功');
+            } catch (error) {
+                ElMessage.error('导出失败');
+            }
+        },
+
+        async exportMediaRankingData() {
+            if (this.analysisData.length === 0) return;
+            try {
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+                    document.head.appendChild(script);
+                    await new Promise(resolve => script.onload = resolve);
+                }
+                const task = this.tasks.find(t => t.id === this.analysisFilter.task_id);
+                const taskName = task ? task.name : '全部任务';
+                const platformName = this.availablePlatforms.find(p => p.id === this.analysisFilter.platform)?.name || '全部平台';
+                const rankingData = this.analysisData.map(item => ({
+                    '域名/媒体': item.name,
+                    '引用次数': item.count
+                }));
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(rankingData);
+                XLSX.utils.book_append_sheet(wb, ws, "媒体引用排行");
+                XLSX.writeFile(wb, `媒体引用排行_${taskName}_${platformName}.xlsx`);
+                ElMessage.success('导出成功');
+            } catch (error) {
+                ElMessage.error('导出失败');
+            }
+        },
+        
+        async openLoginPage(platformId) {
+            const platform = this.platformLoginStatus.find(p => p.id === platformId);
+            if (!platform) return;
+            
+            try {
+                // 显示加载提示
+                const loadingMessage = ElMessage({
+                    message: `正在打开 ${platform.name} 登录浏览器，请稍候...`,
+                    type: 'info',
+                    duration: 0,
+                    iconClass: 'el-icon-loading'
+                });
+                
+                // 调用后端API打开浏览器
+                const response = await axios.post(`/api/login/${platformId}`, {
+                    wait_time: 300  // 等待300秒
+                });
+                
+                loadingMessage.close();
+                
+                if (response.data.success) {
+                    if (this.desktopMode) {
+                        ElMessageBox.alert(
+                            `<div style="line-height: 1.8;">
+                                <p>本机浏览器窗口已打开。</p>
+                                <p>请在弹出的浏览器中登录 ${platform.name} 账户。</p>
+                                <p style="margin-top: 10px;">登录完成后，请先关闭弹出的 ${platform.name} 浏览器窗口，再回到本窗口点击“重新检测”。</p>
+                            </div>`,
+                            `${platform.name} 登录提示`,
+                            {
+                                confirmButtonText: '我知道了',
+                                type: 'info',
+                                dangerouslyUseHTMLString: true
+                            }
+                        );
+                        return;
+                    }
+
+                    let seconds = 3;
+                    const vncPassword = window.GEO_VNC_PASSWORD ? `#password=${encodeURIComponent(window.GEO_VNC_PASSWORD)}` : '';
+                    const vncUrl = `${window.location.origin}/vnc/vnc.html?path=vnc/websockify&autoconnect=true&resize=scale${vncPassword}`;
+                    const countdownHtml = () => `
+                        <div style="line-height: 1.8;">
+                            <p>云端浏览器窗口已打开。</p>
+                            <p><strong><span id="login-vnc-countdown">${seconds}</span> 秒后会自动打开云端桌面</strong>，请在云端桌面中登录 ${platform.name} 账户。</p>
+                            <p style="margin-top: 10px;">如果没有自动打开，请点击下方按钮手动进入云端桌面。</p>
+                            <p style="margin-top: 10px;">登录完成后，回到本页面点击“重新检测”验证登录状态。</p>
+                        </div>
+                    `;
+                    const timer = setInterval(() => {
+                        seconds -= 1;
+                        const countdownEl = document.getElementById('login-vnc-countdown');
+                        if (countdownEl) countdownEl.textContent = seconds;
+                        if (seconds <= 0) clearInterval(timer);
+                    }, 1000);
+                    setTimeout(() => {
+                        window.open(vncUrl, '_blank');
+                    }, 3000);
+                    ElMessageBox.alert(countdownHtml(), `${platform.name} 登录提示`, {
+                        confirmButtonText: '打开云端桌面',
+                        type: 'info',
+                        dangerouslyUseHTMLString: true,
+                        beforeClose: (action, instance, done) => {
+                            clearInterval(timer);
+                            if (action === 'confirm') {
+                                window.open(vncUrl, '_blank');
+                            }
+                            done();
+                        }
+                    });
+                } else {
+                    ElMessage.error(response.data.message || '打开浏览器失败');
+                }
+            } catch (error) {
+                console.error('打开登录浏览器失败:', error);
+                ElMessage.error('打开浏览器失败: ' + (error.response?.data?.message || error.message));
+            }
+        },
+        
+        showCreateDialog() {
+            this.dialogTitle = '创建任务';
+            this.isEdit = false;
+            this.dialogVisible = true;
+        },
+        
+        editTask(task) {
+            this.dialogTitle = '编辑任务';
+            this.isEdit = true;
+            this.editingTaskId = task.id;
+            
+            this.taskForm = {
+                name: task.name,
+                brand_name: task.brand_name,
+                brand_keywords: [...task.brand_keywords],
+                competitor_brands: task.competitor_brands ? [...task.competitor_brands] : [],
+                questions: [...task.questions],
+                platforms: [...task.platforms],
+                max_parallel_platforms: task.max_parallel_platforms || 3,
+                screenshot_config: task.screenshot_config ? {...task.screenshot_config} : {},
+                schedule_type: task.schedule_type,
+                sentiment_config_id: task.sentiment_config_id || null
+            };
+            
+            // 初始化截图配置
+            this.initScreenshotConfig();
+            
+            // 检查全局截图状态
+            this.updateGlobalScreenshotState();
+            
+            // 加载调度配置
+            this.loadScheduleConfig(task);
+            
+            this.questionsText = task.questions.join('\n');
+            this.dialogVisible = true;
+        },
+        
+        loadScheduleConfig(task) {
+            // 加载调度配置到表单
+            const scheduleConfig = task.schedule_config || {};
+            this.scheduleConfig = {
+                enable_schedule: task.schedule_enabled || false,
+                frequency: 'once',
+                run_time_1: '09:00',
+                run_time_2: '14:00',
+                run_time_3: '20:00',
+                run_time: '09:00',
+                run_weekdays: [0],
+                custom_times_text: '09:00\n14:00\n20:00'
+            };
+            
+            if (task.schedule_type === 'daily') {
+                const run_times = scheduleConfig.run_times || ['09:00'];
+                this.scheduleConfig.run_times = run_times;
+                
+                if (run_times.length === 1) {
+                    this.scheduleConfig.frequency = 'once';
+                    this.scheduleConfig.run_time_1 = run_times[0];
+                } else if (run_times.length === 2) {
+                    this.scheduleConfig.frequency = 'twice';
+                    this.scheduleConfig.run_time_1 = run_times[0];
+                    this.scheduleConfig.run_time_2 = run_times[1];
+                } else if (run_times.length === 3) {
+                    this.scheduleConfig.frequency = 'three_times';
+                    this.scheduleConfig.run_time_1 = run_times[0];
+                    this.scheduleConfig.run_time_2 = run_times[1];
+                    this.scheduleConfig.run_time_3 = run_times[2];
+                } else {
+                    this.scheduleConfig.frequency = 'custom';
+                    this.scheduleConfig.custom_times_text = run_times.join('\n');
+                }
+            } else if (task.schedule_type === 'weekly') {
+                this.scheduleConfig.run_weekdays = scheduleConfig.run_weekdays || [0];
+                this.scheduleConfig.run_time = scheduleConfig.run_time || '09:00';
+            }
+        },
+        
+        async submitTask() {
+            const valid = await this.$refs.taskFormRef.validate().catch(() => false);
+            if (!valid) return;
+            
+            this.submitting = true;
+            
+            try {
+                const url = this.isEdit ? `/api/tasks/${this.editingTaskId}` : '/api/tasks';
+                const method = this.isEdit ? 'put' : 'post';
+                
+                // 构建提交数据
+                const submitData = {
+                    ...this.taskForm,
+                    schedule_enabled: this.scheduleConfig.enable_schedule,
+                    schedule_config: this.buildScheduleConfig()
+                };
+                
+                const response = await axios[method](url, submitData);
+                
+                if (response.data.success) {
+                    ElMessage.success(this.isEdit ? '任务更新成功' : '任务创建成功');
+                    this.dialogVisible = false;
+                    this.loadTasks();
+                    this.loadGeoCoverageData();
+                }
+            } catch (error) {
+                ElMessage.error(error.response?.data?.message || '操作失败');
+            } finally {
+                this.submitting = false;
+            }
+        },
+        
+        buildScheduleConfig() {
+            // 根据调度类型构建配置
+            if (this.taskForm.schedule_type === 'daily') {
+                const run_times = [];
+                if (this.scheduleConfig.frequency === 'once') {
+                    if (this.scheduleConfig.run_time_1) run_times.push(this.scheduleConfig.run_time_1);
+                } else if (this.scheduleConfig.frequency === 'twice') {
+                    if (this.scheduleConfig.run_time_1) run_times.push(this.scheduleConfig.run_time_1);
+                    if (this.scheduleConfig.run_time_2) run_times.push(this.scheduleConfig.run_time_2);
+                } else if (this.scheduleConfig.frequency === 'three_times') {
+                    if (this.scheduleConfig.run_time_1) run_times.push(this.scheduleConfig.run_time_1);
+                    if (this.scheduleConfig.run_time_2) run_times.push(this.scheduleConfig.run_time_2);
+                    if (this.scheduleConfig.run_time_3) run_times.push(this.scheduleConfig.run_time_3);
+                } else if (this.scheduleConfig.frequency === 'custom') {
+                    // 解析自定义时间
+                    const lines = (this.scheduleConfig.custom_times_text || '').split('\n');
+                    lines.forEach(line => {
+                        const time = line.trim();
+                        if (time && /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+                            run_times.push(time);
+                        }
+                    });
+                }
+                return { run_times };
+            } else if (this.taskForm.schedule_type === 'weekly') {
+                return {
+                    run_weekdays: this.scheduleConfig.run_weekdays,
+                    run_time: this.scheduleConfig.run_time || '09:00'
+                };
+            }
+            return {};
+        },
+        
+        async runTask(taskId) {
+            // 检查今日采集数量
+            if (this.todayCollectionCount >= this.dailyLimit) {
+                ElMessageBox.alert(
+                    `今日采集数量已达到建议上限（${this.dailyLimit}条），为避免触发AI平台反爬虫机制，建议明天再继续采集。`,
+                    '采集限制提醒',
+                    {
+                        confirmButtonText: '我知道了',
+                        type: 'warning'
+                    }
+                );
+                return;
+            }
+            
+            try {
+                // 计算本次将采集的数据量
+                const task = this.tasks.find(t => t.id === taskId);
+                const estimatedCount = task.questions.length * task.platforms.length;
+                const remainingQuota = this.dailyLimit - this.todayCollectionCount;
+                
+                let confirmMessage = `确定要开始采集数据吗？\n\n`;
+                confirmMessage += `本次预计采集：${estimatedCount} 条数据\n`;
+                confirmMessage += `今日已采集：${this.todayCollectionCount} 条\n`;
+                confirmMessage += `今日剩余额度：${remainingQuota} 条\n\n`;
+                
+                if (estimatedCount > remainingQuota) {
+                    confirmMessage += `⚠️ 警告：本次采集将超出今日建议额度！\n`;
+                    confirmMessage += `建议减少问题数量或平台数量。`;
+                }
+                
+                await ElMessageBox.confirm(confirmMessage, '确认采集', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: estimatedCount > remainingQuota ? 'warning' : 'info'
+                });
+                
+                // 立即更新本地状态为"执行中"
+                if (task) {
+                    task.status = 'running';
+                }
+                
+                ElMessage.info('任务已开始执行，请稍候...');
+                
+                // 发送采集请求
+                const response = await axios.post(`/api/tasks/${taskId}/run`, {
+                    min_interval: this.minInterval,
+                    max_interval: this.maxInterval
+                });
+                
+                if (response.data.success) {
+                    // 增加今日采集计数
+                    this.incrementCollectionCount(estimatedCount);
+                    
+                    // 开始轮询任务状态
+                    this.startTaskPolling(taskId);
+                }
+            } catch (error) {
+                if (error !== 'cancel') {
+                    ElMessage.error(error.response?.data?.message || '执行失败');
+                    // 重新加载任务列表
+                    this.loadTasks();
+                }
+            }
+        },
+
+        async controlTask(taskId, command) {
+            try {
+                if (command === 'stop') {
+                    await ElMessageBox.confirm(
+                        '确定要结束采集吗？结束后本次采集将停止。',
+                        '结束采集确认',
+                        {
+                            confirmButtonText: '确定结束',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    );
+                }
+
+                // 设置命令中状态
+                this.taskCommanding = { ...this.taskCommanding, [taskId]: command };
+
+                const response = await axios.post(`/api/tasks/${taskId}/control`, { command });
+                if (response.data.success) {
+                    ElMessage.success(response.data.message || '操作成功');
+                    this.startTaskPolling(taskId);
+                    // 只有暂停命令需要立即刷新以显示“暂停中”，其他命令由轮询更新
+                    this.loadTasks();
+                } else {
+                    // 失败时清除状态
+                    this.clearTaskCommanding(taskId);
+                }
+            } catch (error) {
+                // 清除状态
+                this.clearTaskCommanding(taskId);
+                if (error !== 'cancel') {
+                    ElMessage.error(error.response?.data?.message || '操作失败');
+                }
+            }
+        },
+
+        clearTaskCommanding(taskId) {
+            const key = String(taskId);
+            if (this.taskCommanding[key]) {
+                const newCommanding = { ...this.taskCommanding };
+                delete newCommanding[key];
+                this.taskCommanding = newCommanding;
+            }
+        },
+
+        clearTaskPolling(taskId) {
+            const key = String(taskId);
+            if (this.taskPollers[key]) {
+                clearInterval(this.taskPollers[key]);
+                delete this.taskPollers[key];
+            }
+        },
+
+        startTaskPolling(taskId) {
+            const key = String(taskId);
+            if (this.taskPollers[key]) {
+                return;
+            }
+
+            this.taskPollers[key] = setInterval(async () => {
+                try {
+                    const response = await axios.get(`/api/tasks/${taskId}`);
+                    const taskData = response.data.task;
+                    const task = this.tasks.find(t => t.id === taskId);
+                    if (task) {
+                        // 如果状态发生了变化，清除对应的 commanding 状态
+                        if (task.status !== taskData.status) {
+                            this.clearTaskCommanding(taskId);
+                        }
+                        task.status = taskData.status;
+                        task.last_run_at = taskData.last_run_at;
+                    }
+
+                    if (taskData.status === 'completed') {
+                        this.clearTaskPolling(taskId);
+                        ElMessage.success('采集完成！');
+                        this.loadTasks();
+                    } else if (taskData.status === 'failed') {
+                        this.clearTaskPolling(taskId);
+                        ElMessage.error('采集失败，请查看日志');
+                        this.loadTasks();
+                    } else if (taskData.status === 'stopped') {
+                        this.clearTaskPolling(taskId);
+                        ElMessage.info('采集已结束');
+                        this.loadTasks();
+                    }
+                } catch (error) {
+                    console.error('轮询任务状态失败:', error);
+                    this.clearTaskPolling(taskId);
+                    this.loadTasks();
+                }
+            }, 2000);
+        },
+        
+        viewResults(taskId) {
+            window.location.href = `/task/${taskId}/results`;
+        },
+        
+        async deleteTask(taskId) {
+            try {
+                await ElMessageBox.confirm('确定要删除这个任务吗？', '警告', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                
+                const response = await axios.delete(`/api/tasks/${taskId}`);
+                
+                if (response.data.success) {
+                    ElMessage.success('任务已删除');
+                    this.loadTasks();
+                    this.loadGeoCoverageData();
+                }
+            } catch (error) {
+                if (error !== 'cancel') {
+                    ElMessage.error('删除失败');
+                }
+            }
+        },
+        
+        async resetTaskStatus(taskId) {
+            try {
+                await ElMessageBox.confirm('确定要重置任务状态吗？这将允许您重新执行任务。', '确认', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                
+                // 设置命令中状态
+                this.taskCommanding = { ...this.taskCommanding, [taskId]: 'reset' };
+
+                const response = await axios.post(`/api/tasks/${taskId}/reset-status`);
+                
+                if (response.data.success) {
+                    ElMessage.success('状态已重置');
+                    this.loadTasks();
+                }
+            } catch (error) {
+                if (error !== 'cancel') {
+                    ElMessage.error('重置失败');
+                }
+            } finally {
+                this.clearTaskCommanding(taskId);
+            }
+        },
+        
+        showKeywordInput() {
+            this.keywordInputVisible = true;
+            this.$nextTick(() => {
+                this.$refs.keywordInputRef.focus();
+            });
+        },
+        
+        addKeyword() {
+            const keyword = this.keywordInput.trim();
+            if (keyword && !this.taskForm.brand_keywords.includes(keyword)) {
+                this.taskForm.brand_keywords.push(keyword);
+            }
+            this.keywordInput = '';
+            this.keywordInputVisible = false;
+        },
+        
+        removeKeyword(keyword) {
+            const index = this.taskForm.brand_keywords.indexOf(keyword);
+            if (index > -1) {
+                this.taskForm.brand_keywords.splice(index, 1);
+            }
+        },
+        
+        showCompetitorInput() {
+            this.competitorInputVisible = true;
+            this.$nextTick(() => {
+                this.$refs.competitorInputRef?.focus();
+            });
+        },
+        
+        addCompetitorBrand() {
+            const brand = this.competitorInput.trim();
+            if (brand && !this.taskForm.competitor_brands.includes(brand)) {
+                this.taskForm.competitor_brands.push(brand);
+            }
+            this.competitorInput = '';
+            this.competitorInputVisible = false;
+        },
+        
+        removeCompetitorBrand(brand) {
+            const index = this.taskForm.competitor_brands.indexOf(brand);
+            if (index > -1) {
+                this.taskForm.competitor_brands.splice(index, 1);
+            }
+        },
+        
+        resetForm() {
+            this.taskForm = {
+                name: '',
+                brand_name: '',
+                brand_keywords: [],
+                competitor_brands: [],
+                questions: [],
+                platforms: [],
+                screenshot_config: {},
+                schedule_type: 'manual',
+                sentiment_config_id: null
+            };
+            this.screenshotGlobalEnabled = true;
+            this.questionsText = '';
+            this.$refs.taskFormRef?.resetFields();
+            
+            // 重置调度配置
+            this.scheduleConfig = {
+                enable_schedule: false,
+                frequency: 'once',
+                run_time_1: '09:00',
+                run_time_2: '14:00',
+                run_time_3: '20:00',
+                run_time: '09:00',
+                run_weekdays: [0],
+                custom_times_text: '09:00\n14:00\n20:00'
+            };
+        },
+        
+        handlePlatformChange(platforms) {
+            // 当平台选择变化时，初始化截图配置
+            this.initScreenshotConfig();
+        },
+        
+        handleScheduleEnableChange(enabled) {
+            // 调度启用状态变化
+            if (!enabled) {
+                // 如果禁用，清空时间选择
+                this.scheduleConfig.run_time_1 = '09:00';
+                this.scheduleConfig.run_time_2 = '14:00';
+                this.scheduleConfig.run_time_3 = '20:00';
+                this.scheduleConfig.run_time = '09:00';
+            }
+        },
+        
+        initScreenshotConfig() {
+            // 为新选择的平台初始化截图配置（默认启用）
+            this.taskForm.platforms.forEach(platformId => {
+                if (!(platformId in this.taskForm.screenshot_config)) {
+                    this.taskForm.screenshot_config[platformId] = true;
+                }
+            });
+            
+            // 移除未选择平台的配置
+            Object.keys(this.taskForm.screenshot_config).forEach(platformId => {
+                if (!this.taskForm.platforms.includes(platformId)) {
+                    delete this.taskForm.screenshot_config[platformId];
+                }
+            });
+            
+            this.updateGlobalScreenshotState();
+        },
+        
+        handleGlobalScreenshotChange(enabled) {
+            // 全局开关：设置所有平台的截图状态
+            this.taskForm.platforms.forEach(platformId => {
+                this.taskForm.screenshot_config[platformId] = enabled;
+            });
+        },
+        
+        updateGlobalScreenshotState() {
+            // 更新全局开关状态：如果所有平台都启用，则全局开关为启用
+            if (this.taskForm.platforms.length === 0) {
+                this.screenshotGlobalEnabled = true;
+                return;
+            }
+            
+            const allEnabled = this.taskForm.platforms.every(
+                platformId => this.taskForm.screenshot_config[platformId] === true
+            );
+            this.screenshotGlobalEnabled = allEnabled;
+        },
+        
+        getPlatformName(platformId) {
+            const platform = this.availablePlatforms.find(p => p.id === platformId);
+            return platform ? platform.name : platformId;
+        },
+        
+        getStatusType(status) {
+            const types = {
+                pending: '',
+                running: 'warning',
+                paused: 'info',
+                completed: 'success',
+                failed: 'danger',
+                stopped: 'info'
+            };
+            return types[status] || '';
+        },
+        
+        getStatusText(status) {
+            const texts = {
+                pending: '待执行',
+                running: '执行中',
+                paused: '已暂停',
+                completed: '已完成',
+                failed: '失败',
+                stopped: '已结束'
+            };
+            return texts[status] || status;
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+        },
+        
+        handleLogout() {
+            window.location.href = '/logout';
+        },
+        
+        getScreenshotEnabledCount(task) {
+            // 计算启用截图的平台数量
+            if (!task.screenshot_config || Object.keys(task.screenshot_config).length === 0) {
+                return task.platforms.length; // 默认全部启用
+            }
+            return task.platforms.filter(p => task.screenshot_config[p] !== false).length;
+        },
+        
+        async showBrowserSettings() {
+            this.browserSettingsVisible = true;
+            this.testResult = { success: false, message: '' };
+            await this.loadBrowserConfig();
+        },
+        
+        async loadBrowserConfig() {
+            try {
+                const response = await axios.get('/api/browser/config');
+                if (response.data.success) {
+                    this.browserConfig = response.data.config;
+                    this.browserConfigForm.browser_path = response.data.config.configured_path || '';
+                }
+            } catch (error) {
+                console.error('加载浏览器配置失败:', error);
+            }
+        },
+        
+        testBrowserPath() {
+            const path = this.browserConfigForm.browser_path.trim();
+            if (!path) {
+                this.testResult = { success: false, message: '请输入浏览器路径' };
+                return;
+            }
+            
+            // 简单的本地路径验证（仅做基本格式检查）
+            if (!path.endsWith('.exe')) {
+                this.testResult = { success: false, message: '路径必须指向 .exe 可执行文件' };
+                return;
+            }
+            
+            // 检查是否包含 chrome 或 edge
+            const isChrome = path.toLowerCase().includes('chrome');
+            const isEdge = path.toLowerCase().includes('edge');
+            
+            if (!isChrome && !isEdge) {
+                this.testResult = { success: false, message: '警告: 仅支持 Chrome 和 Edge 浏览器' };
+                return;
+            }
+            
+            this.testResult = { 
+                success: true, 
+                message: `路径格式正确 (${isChrome ? 'Chrome' : 'Edge'})，点击保存生效` 
+            };
+        },
+        
+        async saveBrowserSettings() {
+            this.savingBrowserConfig = true;
+            
+            try {
+                const response = await axios.post('/api/browser/config', {
+                    browser_path: this.browserConfigForm.browser_path.trim()
+                });
+                
+                if (response.data.success) {
+                    ElMessage.success('浏览器配置已保存');
+                    this.browserSettingsVisible = false;
+                    await this.loadBrowserConfig();
+                } else {
+                    ElMessage.error(response.data.message || '保存失败');
+                }
+            } catch (error) {
+                ElMessage.error('保存配置失败');
+            } finally {
+                this.savingBrowserConfig = false;
+            }
+        },
+        
+        // ==================== 舆情配置相关方法 ====================
+        
+        async loadSentimentConfigs() {
+            try {
+                const response = await axios.get('/api/sentiment/configs');
+                if (response.data.success) {
+                    this.sentimentConfigs = response.data.configs;
+                }
+            } catch (error) {
+                ElMessage.error('加载舆情配置失败');
+            }
+        },
+        
+        showSentimentConfigDialog() {
+                this.editingSentimentConfig = null;
+                this.sentimentConfigForm = {
+                    id: null,
+                    name: '',
+                    positiveWordsInput: '',
+                    negativeWordsInput: '',
+                    enable_ai_sentiment: false,
+                    ai_platform: '',
+                    ai_api_url: '',
+                    ai_api_key: '',
+                    ai_model_name: '',
+                    ai_prompt: '请分析以下文本中关于"内容"的舆情倾向：\n\n文本：{text}\n\n判断规则：\n1. 如果文本中出现具体的价格信息（如"10万"、"15.5万"等），则判定为负面舆情\n2. 如果文本中没有价格信息，根据整体语气判断是正面、负面还是中性\n\n请判断是正面、负面还是中性，并给出简短理由。\n输出格式：{"sentiment": "positive|negative|neutral", "score": -1到1之间的数值, "label": "正面|负面|中性", "reason": "分析理由"}',
+                    is_default: false
+                };
+                this.sentimentConfigDialogVisible = true;
+            },
+        
+        editSentimentConfig(config) {
+            this.editingSentimentConfig = config;
+            this.sentimentConfigForm = {
+                id: config.id,
+                name: config.name,
+                positiveWordsInput: config.positive_words.join(','),
+                negativeWordsInput: config.negative_words.join(','),
+                enable_ai_sentiment: config.enable_ai_sentiment || false,
+                ai_platform: config.ai_platform || '',
+                ai_api_url: config.ai_api_url || '',
+                ai_api_key: config.ai_api_key || '',
+                ai_model_name: config.ai_model_name || '',
+                ai_prompt: config.ai_prompt || '',
+                is_default: config.is_default || false
+            };
+            this.sentimentConfigDialogVisible = true;
+        },
+        
+        toggleAiSentiment() {
+            if (!this.sentimentConfigForm.enable_ai_sentiment) {
+                this.sentimentConfigForm.ai_platform = '';
+                this.sentimentConfigForm.ai_api_url = '';
+                this.sentimentConfigForm.ai_api_key = '';
+                this.sentimentConfigForm.ai_model_name = '';
+                this.sentimentConfigForm.ai_prompt = '';
+            }
+        },
+        
+        onPlatformChange() {
+            // 根据选择的平台自动填充默认配置
+            const platformConfig = {
+                'openai': {
+                    api_url: 'https://api.openai.com/v1',
+                    model_name: 'gpt-4o-mini'
+                },
+                'anthropic': {
+                    api_url: 'https://api.anthropic.com',
+                    model_name: 'claude-sonnet-4-5'
+                },
+                'siliconflow': {
+                    api_url: 'https://api.siliconflow.cn/v1',
+                    model_name: 'Qwen/Qwen2-7B-Instruct'
+                },
+                'doubao': {
+                    api_url: 'https://api.doubao.com/v1',
+                    model_name: 'doubao-3.5'
+                }
+            };
+            
+            const config = platformConfig[this.sentimentConfigForm.ai_platform];
+            if (config) {
+                this.sentimentConfigForm.ai_api_url = config.api_url;
+                this.sentimentConfigForm.ai_model_name = config.model_name;
+            }
+        },
+        
+        async saveSentimentConfig() {
+            if (!this.sentimentConfigForm.name.trim()) {
+                ElMessage.error('请输入配置名称');
+                return;
+            }
+            
+            const data = {
+                name: this.sentimentConfigForm.name.trim(),
+                positive_words: this.sentimentConfigForm.positiveWordsInput.split(',').map(w => w.trim()).filter(w => w),
+                negative_words: this.sentimentConfigForm.negativeWordsInput.split(',').map(w => w.trim()).filter(w => w),
+                enable_ai_sentiment: this.sentimentConfigForm.enable_ai_sentiment,
+                ai_platform: this.sentimentConfigForm.ai_platform,
+                ai_api_url: this.sentimentConfigForm.ai_api_url.trim(),
+                ai_api_key: this.sentimentConfigForm.ai_api_key.trim(),
+                ai_model_name: this.sentimentConfigForm.ai_model_name.trim(),
+                ai_prompt: this.sentimentConfigForm.ai_prompt.trim(),
+                is_default: this.sentimentConfigForm.is_default
+            };
+            
+            try {
+                let response;
+                if (this.editingSentimentConfig) {
+                    response = await axios.put(`/api/sentiment/configs/${this.editingSentimentConfig.id}`, data);
+                } else {
+                    response = await axios.post('/api/sentiment/configs', data);
+                }
+                
+                if (response.data.success) {
+                    ElMessage.success(this.editingSentimentConfig ? '配置已更新' : '配置已添加');
+                    this.sentimentConfigDialogVisible = false;
+                    await this.loadSentimentConfigs();
+                } else {
+                    ElMessage.error(response.data.message || '保存失败');
+                }
+            } catch (error) {
+                ElMessage.error('保存配置失败');
+            }
+        },
+        
+        async confirmDeleteSentimentConfig(config) {
+            try {
+                await ElMessageBox.confirm('确定要删除这个舆情配置吗？', '警告', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                
+                const response = await axios.delete(`/api/sentiment/configs/${config.id}`);
+                
+                if (response.data.success) {
+                    ElMessage.success('配置已删除');
+                    await this.loadSentimentConfigs();
+                }
+            } catch (error) {
+                if (error !== 'cancel') {
+                    ElMessage.error('删除失败');
+                }
+            }
+        },
+        
+        async setDefaultSentimentConfig(config) {
+            try {
+                const response = await axios.put(`/api/sentiment/configs/${config.id}`, { is_default: true });
+                
+                if (response.data.success) {
+                    ElMessage.success('已设为默认配置');
+                    await this.loadSentimentConfigs();
+                }
+            } catch (error) {
+                ElMessage.error('操作失败');
+            }
+        }
+    }
+});
+
+app.use(ElementPlus);
+
+// 全局注册所有 Element Plus 图标
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component);
+}
+
+app.mount('#app');
+{% endblock %}

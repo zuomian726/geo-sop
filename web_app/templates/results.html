@@ -1,0 +1,2482 @@
+{% extends "base.html" %}
+
+{% block title %}采集结果 - AI答案采集平台{% endblock %}
+
+{% block styles %}
+.header {
+    background: white;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #8c8c8c;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.stat-unit {
+    font-size: 14px;
+    color: #8c8c8c;
+    margin-left: 4px;
+    font-weight: normal;
+}
+
+.result-card {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+    transition: box-shadow 0.3s;
+}
+
+.result-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.result-question {
+    font-size: 16px;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.result-content {
+    margin-bottom: 20px;
+}
+
+.result-content:last-child {
+    margin-bottom: 0;
+}
+
+.content-label {
+    font-size: 13px;
+    color: #8c8c8c;
+    margin-bottom: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.content-text {
+    font-size: 14px;
+    color: #262626;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.references-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reference-item {
+    padding: 8px 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid #f0f0f0;
+    transition: background 0.2s;
+}
+
+/* 排名列表样式 */
+.rankings-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid #f0f0f0;
+    transition: background 0.2s;
+}
+
+.ranking-item:hover {
+    background: #f5f5f5;
+}
+
+.rank-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.rank-badge.top3 {
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+}
+
+.ranking-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ranking-name {
+    font-weight: 600;
+    color: #262626;
+    margin-bottom: 2px;
+}
+
+.ranking-hospital {
+    font-size: 13px;
+    color: #8c8c8c;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ranking-group {
+    font-size: 12px;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+.reference-item:hover {
+    background: #f0f9ff;
+}
+
+.reference-item:last-child {
+    margin-bottom: 0;
+}
+
+.reference-title {
+    font-size: 13px;
+    color: #262626;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.reference-url {
+    font-size: 12px;
+    color: #1890ff;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* 百度指数风格 - 核心词卡片 */
+.index-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48%, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.index-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.index-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.index-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.index-keyword {
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.index-rank {
+    background: linear-gradient(135deg, #1890ff 0%, #69c0ff 100%);
+    color: white;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.index-rank.no1 {
+    background: linear-gradient(135deg, #fa8c16 0%, #ffa940 100%);
+}
+
+.index-rank.no2 {
+    background: linear-gradient(135deg, #8c8c8c 0%, #bfbfbf 100%);
+}
+
+.index-rank.no3 {
+    background: linear-gradient(135deg, #d46b08 0%, #fa8c16 100%);
+}
+
+.index-values {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 15px;
+}
+
+.index-value-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.index-value-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+}
+
+.index-value-number {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1890ff;
+    line-height: 1;
+}
+
+.index-value-number.success {
+    color: #52c41a;
+}
+
+.index-value-number.info {
+    color: #8c8c8c;
+}
+
+.index-value-diff {
+    font-size: 12px;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.index-value-diff.up {
+    color: #ff4d4f;
+}
+
+.index-value-diff.down {
+    color: #52c41a;
+}
+
+/* 舆情标签样式 */
+.sentiment-item .index-value-label {
+    margin-bottom: 8px;
+}
+
+.sentiment-content {
+    display: flex;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sentiment-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.sentiment-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sentiment-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.sentiment-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sentiment-num {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* 正面 */
+.sentiment-tag.positive {
+    background: rgba(82, 196, 26, 0.1);
+}
+
+.sentiment-tag.positive .sentiment-dot {
+    background: #52c41a;
+}
+
+.sentiment-tag.positive .sentiment-text,
+.sentiment-tag.positive .sentiment-num {
+    color: #52c41a;
+}
+
+/* 中性 */
+.sentiment-tag.neutral {
+    background: rgba(140, 140, 140, 0.1);
+}
+
+.sentiment-tag.neutral .sentiment-dot {
+    background: #8c8c8c;
+}
+
+.sentiment-tag.neutral .sentiment-text,
+.sentiment-tag.neutral .sentiment-num {
+    color: #8c8c8c;
+}
+
+/* 负面 */
+.sentiment-tag.negative {
+    background: rgba(255, 77, 79, 0.1);
+}
+
+.sentiment-tag.negative .sentiment-dot {
+    background: #ff4d4f;
+}
+
+.sentiment-tag.negative .sentiment-text,
+.sentiment-tag.negative .sentiment-num {
+    color: #ff4d4f;
+}
+
+/* 智慧舆情样式 */
+.ai-sentiment {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #8c8c8c;
+}
+
+.ai-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ai-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.ai-num {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.ai-item.positive .ai-dot {
+    background: #52c41a;
+}
+
+.ai-item.positive .ai-num {
+    color: #52c41a;
+}
+
+.ai-item.neutral .ai-dot {
+    background: #8c8c8c;
+}
+
+.ai-item.neutral .ai-num {
+    color: #8c8c8c;
+}
+
+.ai-item.negative .ai-dot {
+    background: #ff4d4f;
+}
+
+.ai-item.negative .ai-num {
+    color: #ff4d4f;
+}
+
+/* 舆情分隔符 */
+.sentiment-divider {
+    color: #e8e8e8;
+    margin: 0 8px;
+}
+
+.sentiment-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.index-chart-container {
+    height: 80px;
+    width: 100%;
+    margin-top: 10px;
+    position: relative;
+}
+
+.index-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.index-rate-bar {
+    flex: 1;
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-right: 15px;
+}
+
+.index-rate-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.index-rate-fill.high {
+    background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+}
+
+.index-rate-fill.medium {
+    background: linear-gradient(90deg, #fa8c16 0%, #ffa940 100%);
+}
+
+.index-rate-fill.low {
+    background: linear-gradient(90deg, #8c8c8c 0%, #bfbfbf 100%);
+}
+
+.index-rate-text {
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: right;
+}
+
+.index-detail-btn {
+    color: #1890ff;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.index-detail-btn:hover {
+    text-decoration: underline;
+}
+}
+
+.reference-url:hover {
+    text-decoration: underline;
+}
+
+.screenshot-preview {
+    max-width: 100%;
+    cursor: pointer;
+    transition: transform 0.3s;
+    display: block;
+}
+
+.screenshot-preview:hover {
+    transform: scale(1.01);
+}
+
+.exposure-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.exposure-yes {
+    background: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+}
+
+.exposure-no {
+    background: #fafafa;
+    color: #8c8c8c;
+    border: 1px solid #d9d9d9;
+}
+
+.keyword-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #1890ff;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.platform-stats {
+    margin-top: 16px;
+}
+
+.platform-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border: 1px solid #f0f0f0;
+}
+
+.platform-stat-item:last-child {
+    margin-bottom: 0;
+}
+
+/* 平台筛选器 */
+.platform-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.platform-btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 6px;
+    border: 1px solid #d9d9d9;
+    background: white;
+    color: #595959;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 30px;
+    white-space: nowrap;
+}
+
+.platform-btn:hover {
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.platform-btn.active {
+    background: #1890ff;
+    border-color: #1890ff;
+    color: white;
+    font-weight: 500;
+}
+
+.task-info-card {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.task-info-card h2 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.task-info-card .info-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #595959;
+}
+
+.task-info-card .info-row:last-child {
+    margin-bottom: 0;
+}
+
+.task-info-card .info-label {
+    color: #8c8c8c;
+    margin-right: 8px;
+}
+
+.task-info-card .info-divider {
+    color: #d9d9d9;
+    margin: 0 16px;
+}
+
+.section-card {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.section-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #262626;
+}
+{% endblock %}
+
+{% block content %}
+<div>
+    <div class="header">
+        <div>
+            <el-button @click="goBack" v-if="currentView === 'keywords'">
+                <el-icon><ArrowLeft /></el-icon>
+                返回
+            </el-button>
+            <el-breadcrumb separator="/" v-else style="display: inline-flex; align-items: center;">
+                <el-breadcrumb-item>
+                    <el-button link @click="goToKeywords">核心词列表</el-button>
+                </el-breadcrumb-item>
+                <el-breadcrumb-item v-if="currentView === 'questions'">
+                    问题列表
+                </el-breadcrumb-item>
+                <el-breadcrumb-item v-if="currentView === 'answer'">
+                    <el-button link @click="goToQuestions">问题列表</el-button>
+                </el-breadcrumb-item>
+                <el-breadcrumb-item v-if="currentView === 'answer'">
+                    答案浏览
+                </el-breadcrumb-item>
+            </el-breadcrumb>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <!-- 时间筛选 -->
+            <el-date-picker
+                v-model="dateRange"
+                type="daterange"
+                range-separator="—"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                size="default"
+                style="width: 230px;"
+                :shortcuts="dateShortcuts"
+                @change="onDateChange">
+            </el-date-picker>
+            <!-- 平台筛选器 -->
+            <div class="platform-filter">
+                <button
+                    class="platform-btn"
+                    :class="{ active: selectedPlatform === '' }"
+                    @click="setPlatform('')">
+                    全部
+                </button>
+                <button
+                    v-for="p in activePlatforms"
+                    :key="p.id"
+                    class="platform-btn"
+                    :class="{ active: selectedPlatform === p.id }"
+                    @click="setPlatform(p.id)">
+                    [[ p.name ]]
+                </button>
+            </div>
+            <el-button type="primary" @click="exportGeoResults" :loading="exportingGeo" :disabled="exportingScreenshots" style="height: 32px;">
+                <el-icon><Download /></el-icon>
+                导出GEO效果
+            </el-button>
+            <el-button type="success" @click="exportGeoScreenshotsZip" :loading="exportingScreenshots" :disabled="exportingGeo" style="height: 32px;">
+                <i class="el-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path fill="currentColor" d="M160 160v704h704V160zm-32-64h768a32 32 0 0 1 32 32v768a32 32 0 0 1-32 32H128a32 32 0 0 1-32-32V128a32 32 0 0 1 32-32"></path><path fill="currentColor" d="M384 288q64 0 64 64t-64 64q-64 0-64-64t64-64M185.408 876.992l-50.816-38.912L350.72 556.032a96 96 0 0 1 134.592-17.856l1.856 1.472 122.88 99.136a32 32 0 0 0 44.992-4.864l216-269.888 49.92 39.936-215.808 269.824-.256.32a96 96 0 0 1-135.04 14.464l-122.88-99.072-.64-.512a32 32 0 0 0-44.8 5.952z"></path></svg></i>
+                GEO长截图下载
+            </el-button>
+            <el-button v-if="task && task.competitor_brands && task.competitor_brands.length > 0" type="warning" @click="goToCompetitorAnalysis" style="height: 32px;">
+                <el-icon><Histogram /></el-icon>
+                竞品分析
+            </el-button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 视图1: 核心词列表 -->
+        <div v-if="currentView === 'keywords'">
+            <!-- 任务信息 -->
+            <div v-if="task" class="task-info-card">
+                <h2>[[ task.name ]]</h2>
+                <div class="info-row">
+                    <span class="info-label">品牌名称：</span>
+                    <span>[[ task.brand_name || '-' ]]</span>
+                    <span class="info-divider">|</span>
+                    <span class="info-label">监控平台：</span>
+                    <span>[[ task.platforms.length ]] 个</span>
+                    <span class="info-divider">|</span>
+                    <span class="info-label">监控问题：</span>
+                    <span>[[ task.questions.length ]] 个</span>
+                    <span class="info-divider">|</span>
+                    <span class="info-label">舆情配置：</span>
+                    <span>
+                        <el-tag v-if="task.sentiment_config_id" type="primary" size="small">
+                            [[ task.sentiment_config_name || '已绑定' ]]
+                        </el-tag>
+                        <el-tag v-else type="info" size="small">使用系统配置</el-tag>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">品牌曝光词：</span>
+                    <span>[[ task.brand_keywords.join(', ') ]]</span>
+                </div>
+            </div>
+            
+            <!-- 统计数据 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总采集数</div>
+                    <div class="stat-value">
+                        [[ filteredStats.total_answers ]]
+                        <span class="stat-unit">条</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">品牌曝光数</div>
+                    <div class="stat-value" style="color: #52c41a;">
+                        [[ filteredStats.exposure_count ]]
+                        <span class="stat-unit">条</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">品牌曝光率</div>
+                    <div class="stat-value" style="color: #1890ff;">
+                        [[ filteredStats.exposure_rate ]]
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 核心词列表 - 百度指数风格 -->
+            <div class="section-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <el-icon style="color: #1890ff;"><TrendCharts /></el-icon>
+                        品牌曝光指数
+                    </h3>
+                    <el-tag type="info">共 [[ keywordTableData.length ]] 个核心词</el-tag>
+                </div>
+                
+                <div v-if="keywordTableData.length > 0" class="index-cards-container">
+                    <div 
+                        v-for="(item, index) in keywordTableDataSorted" 
+                        :key="item.keyword"
+                        class="index-card"
+                        @click="viewQuestions(item.keyword)">
+                        
+                        <!-- 卡片头部：关键词 + 排名 -->
+                        <div class="index-card-header">
+                            <div class="index-keyword">
+                                [[ item.keyword ]]
+                            </div>
+                            <span 
+                                class="index-rank"
+                                :class="{
+                                    'no1': index === 0,
+                                    'no2': index === 1,
+                                    'no3': index === 2
+                                }">
+                                TOP [[ index + 1 ]]
+                            </span>
+                        </div>
+                        
+                        <!-- 核心数据 -->
+                        <div class="index-values">
+                            <div class="index-value-item">
+                                <span class="index-value-label">品牌提及数</span>
+                                <span class="index-value-number" :class="item.exposure_count > 0 ? 'success' : 'info'">
+                                    [[ item.exposure_count ]]
+                                    <span class="index-value-diff" :class="item.exposure_count > 0 ? 'up' : ''">
+                                        [[ item.exposure_count > 0 ? '↑' : '-' ]]
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="index-value-item">
+                                <span class="index-value-label">提问总数</span>
+                                <span class="index-value-number">[[ item.total_count ]]</span>
+                            </div>
+                            <div class="index-value-item">
+                                <span class="index-value-label">平均排名</span>
+                                <span class="index-value-number" style="color: #fa8c16;">
+                                    #[[ item.rank ]]
+                                </span>
+                            </div>
+                            <div class="index-value-item sentiment-item">
+                                <span class="index-value-label">舆情
+                                    <span v-if="item.ai_sentiment_positive + item.ai_sentiment_neutral + item.ai_sentiment_negative > 0" 
+                                          class="ai-sentiment">
+                                        （智慧舆情
+                                        <span class="ai-item positive">
+                                            <span class="ai-dot"></span>
+                                            <span class="ai-num">[[ item.ai_sentiment_positive ]]</span>
+                                        </span>
+                                        <span class="ai-item neutral">
+                                            <span class="ai-dot"></span>
+                                            <span class="ai-num">[[ item.ai_sentiment_neutral ]]</span>
+                                        </span>
+                                        <span class="ai-item negative">
+                                            <span class="ai-dot"></span>
+                                            <span class="ai-num">[[ item.ai_sentiment_negative ]]</span>
+                                        </span>
+                                        ）
+                                    </span>
+                                </span>
+                                <span class="index-value-number sentiment-content">
+                                    <span class="sentiment-tag positive">
+                                        <span class="sentiment-dot"></span>
+                                        <span class="sentiment-text">正</span>
+                                        <span class="sentiment-num">[[ item.sentiment_positive ]]</span>
+                                    </span>
+                                    <span class="sentiment-tag neutral">
+                                        <span class="sentiment-dot"></span>
+                                        <span class="sentiment-text">中</span>
+                                        <span class="sentiment-num">[[ item.sentiment_neutral ]]</span>
+                                    </span>
+                                    <span class="sentiment-tag negative">
+                                        <span class="sentiment-dot"></span>
+                                        <span class="sentiment-text">负</span>
+                                        <span class="sentiment-num">[[ item.sentiment_negative ]]</span>
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 趋势图容器 -->
+                        <div 
+                            class="index-chart-container"
+                            :id="'chart-' + item.keyword.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')">
+                        </div>
+                        
+                        <!-- 底部进度条 -->
+                        <div class="index-card-footer">
+                            <div class="index-rate-bar">
+                                <div 
+                                    class="index-rate-fill"
+                                    :class="getRateClass(item.exposure_rate)"
+                                    :style="{ width: Math.min(item.exposure_rate, 100) + '%' }">
+                                </div>
+                            </div>
+                            <span class="index-rate-text" :style="{color: getProgressColor(item.exposure_rate)}">
+                                [[ item.exposure_rate ]]% 提及率
+                            </span>
+                            <span class="index-detail-btn">
+                                查看详情
+                                <el-icon><ArrowRight /></el-icon>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-else style="text-align: center; padding: 60px 20px; color: #999;">
+                    <el-icon style="font-size: 64px; color: #ddd;"><Document /></el-icon>
+                    <div style="margin-top: 20px; font-size: 16px;">暂无品牌曝光词数据</div>
+                    <div style="font-size: 13px; margin-top: 8px;">请在任务设置中配置品牌曝光词</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 视图2: 问题列表 -->
+        <div v-if="currentView === 'questions'">
+            <div class="section-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">问题列表 - [[ selectedKeyword ]]</h3>
+                    <el-tag type="info">共 [[ questionTableData.length ]] 个问题</el-tag>
+                </div>
+                <el-table :data="questionTableData" style="width: 100%" stripe>
+                    <el-table-column label="序号" width="60" align="center">
+                        <template #default="scope">
+                            [[ scope.$index + 1 ]]
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="question" label="监控问题" min-width="250">
+                        <template #default="scope">
+                            <strong>[[ scope.row.question ]]</strong>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="exposure_count" label="提及次数" width="120" align="center" sortable>
+                        <template #default="scope">
+                            <el-tag :type="scope.row.exposure_count > 0 ? 'success' : 'info'">
+                                [[ scope.row.exposure_count ]]
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="total_count" label="提问次数" width="120" align="center">
+                        <template #default="scope">
+                            [[ scope.row.total_count ]]
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="exposure_rate" label="提及率" width="120" align="center" sortable>
+                        <template #default="scope">
+                            <span :style="{color: getProgressColor(scope.row.exposure_rate)}">
+                                [[ scope.row.exposure_rate ]]%
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="screenshot_count" label="长截图" width="120" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.screenshot_count > 0 ? 'success' : 'info'">
+                                [[ scope.row.screenshot_count ]]
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="rank" label="平均排名" width="120" align="center">
+                        <template #default="scope">
+                            #[[ scope.row.rank ]]
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="舆情" width="120" align="center">
+                        <template #default="scope">
+                            <template v-if="scope.row.local_dominant_sentiment">
+                                <el-tag 
+                                    :type="scope.row.local_dominant_sentiment.label === '正面' ? 'success' : (scope.row.local_dominant_sentiment.label === '负面' ? 'danger' : 'warning')"
+                                    size="small">
+                                    [[ scope.row.local_dominant_sentiment.label ]]
+                                </el-tag>
+                            </template>
+                            <span v-else style="color: #d9d9d9; font-size: 12px;">
+                                -
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="智慧舆情" width="120" align="center">
+                        <template #default="scope">
+                            <template v-if="scope.row.ai_dominant_sentiment">
+                                <el-tag 
+                                    :type="scope.row.ai_dominant_sentiment.label === '正面' ? 'success' : (scope.row.ai_dominant_sentiment.label === '负面' ? 'danger' : 'warning')"
+                                    size="small">
+                                    [[ scope.row.ai_dominant_sentiment.label ]]
+                                </el-tag>
+                            </template>
+                            <span v-else style="color: #d9d9d9; font-size: 12px;">
+                                -
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button link type="primary" @click="viewAnswer(scope.row.question)">
+                                查看详情
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+        
+        <!-- 视图3: 答案浏览 -->
+        <div v-if="currentView === 'answer'">
+            <div class="section-card" style="margin-bottom: 20px;">
+                <h3 style="margin-bottom: 16px;">[[ selectedQuestion ]]</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <el-tag>共 [[ filteredAnswerList.length ]] 个答案</el-tag>
+                    <span v-if="selectedPlatform" style="font-size: 12px; color: #8c8c8c;">
+                        已筛选：[[ getPlatformName(selectedPlatform) ]]
+                    </span>
+                </div>
+            </div>
+            
+            <!-- 翻页答案 -->
+            <div v-if="filteredAnswerList.length > 0">
+                <!-- 当前答案卡片 -->
+                <div class="result-card" v-if="currentAnswer">
+                    <div class="result-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <el-tag size="small">[[ getPlatformName(currentAnswer.platform) ]]</el-tag>
+                            <!-- 截图链接 -->
+                            <a 
+                                v-if="currentAnswer.screenshot_url"
+                                :href="'/screenshots/' + currentAnswer.screenshot_url" 
+                                target="_blank"
+                                style="display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; background: #f0f9ff; border: 1px solid #91d5ff; border-radius: 4px; color: #1890ff; text-decoration: none; font-size: 12px; line-height: 1;"
+                                onmouseover="this.style.background='#e6f7ff';"
+                                onmouseout="this.style.background='#f0f9ff';">
+                                <i class="el-icon" style="font-size: 12px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><path fill="currentColor" d="M160 160v704h704V160zm-32-64h768a32 32 0 0 1 32 32v768a32 32 0 0 1-32 32H128a32 32 0 0 1-32-32V128a32 32 0 0 1 32-32"></path><path fill="currentColor" d="M384 288q64 0 64 64t-64 64q-64 0-64-64t64-64M185.408 876.992l-50.816-38.912L350.72 556.032a96 96 0 0 1 134.592-17.856l1.856 1.472 122.88 99.136a32 32 0 0 0 44.992-4.864l216-269.888 49.92 39.936-215.808 269.824-.256.32a96 96 0 0 1-135.04 14.464l-122.88-99.072-.64-.512a32 32 0 0 0-44.8 5.952z"></path></svg></i>
+                                查看截图 ↗
+                            </a>
+                            <!-- 翻页控件 -->
+                            <div style="display: inline-flex; align-items: center; gap: 4px;">
+                                <el-button 
+                                    size="small" 
+                                    :disabled="answerPage <= 1" 
+                                    @click="answerPage--"
+                                    style="padding: 0 8px;">
+                                    ‹ 
+                                </el-button>
+                                <span style="font-size: 13px; color: #595959; padding: 0 6px; white-space: nowrap;">
+                                    [[ answerPage ]] / [[ filteredAnswerList.length ]]
+                                </span>
+                                <el-button 
+                                    size="small" 
+                                    :disabled="answerPage >= filteredAnswerList.length" 
+                                    @click="answerPage++"
+                                    style="padding: 0 8px;">
+                                    ›
+                                </el-button>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <div :class="['exposure-badge', checkBrandExposure(currentAnswer) ? 'exposure-yes' : 'exposure-no']">
+                                <el-icon v-if="checkBrandExposure(currentAnswer)"><Check /></el-icon>
+                                <el-icon v-else><Close /></el-icon>
+                                [[ checkBrandExposure(currentAnswer) ? '有品牌曝光' : '无品牌曝光' ]]
+                            </div>
+                            
+                            <el-button
+                                v-if="isLatestAnswer(currentAnswer)"
+                                size="small"
+                                type="primary"
+                                :loading="recollecting[currentAnswer.platform]"
+                                @click="recollect(currentAnswer.platform, currentAnswer.id)">
+                                <el-icon v-if="!recollecting[currentAnswer.platform]"><Refresh /></el-icon>
+                                重新采集
+                            </el-button>
+                            <el-button
+                                size="small"
+                                type="danger"
+                                plain
+                                @click="deleteAnswer(currentAnswer.id)">
+                                <el-icon><Delete /></el-icon>
+                                删除
+                            </el-button>
+                        </div>
+                    </div>
+                    
+                    <!-- 曝光关键词和舆情 -->
+                    <div v-if="getExposedKeywords(currentAnswer).length > 0 || currentAnswer.ai_sentiment" style="margin-bottom: 15px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <!-- 曝光关键词 -->
+                        <span style="color: #8c8c8c; font-size: 14px;">曝光关键词：</span>
+                        <span 
+                            v-for="keyword in getExposedKeywords(currentAnswer)" 
+                            :key="keyword"
+                            class="keyword-tag">
+                            [[ keyword ]] 
+                        </span>
+                        
+                        <!-- 舆情 -->
+                        <span style="color: #8c8c8c; font-size: 14px;">舆情：</span>
+                        <el-tag
+                                v-for="kw in getExposedKeywords(currentAnswer)"
+                                :key="kw"
+                                size="small"
+                                :style="{
+                                    backgroundColor: analyzeSentiment(currentAnswer, kw).color + '15',
+                                    borderColor: analyzeSentiment(currentAnswer, kw).color,
+                                    color: analyzeSentiment(currentAnswer, kw).color,
+                                    marginRight: '6px'
+                                }">
+                            [[ kw ]]
+                            <span style="margin-left: 4px; font-weight: bold;">
+                                    [[ analyzeSentiment(currentAnswer, kw).label ]]
+                            </span>
+                        </el-tag>
+                        
+                        <!-- 智慧舆情 -->
+                        <template v-if="currentAnswer.ai_sentiment">
+                            <span style="color: #8c8c8c; font-size: 14px;">智慧舆情：</span>
+                            <span style="font-size: 14px; font-weight: 600; color: #f5222d;">
+                                [[ currentAnswer.ai_sentiment.label ]] ([[ (currentAnswer.ai_sentiment.score * 100).toFixed(0) ]]%)
+                            </span>
+                            <span 
+                                style="cursor: pointer; color: #1890ff; font-size: 14px; font-weight: bold;"
+                                @click="toggleSentimentReason(currentAnswer.id)"
+                                title="点击展开/收起分析理由">
+                                ?
+                            </span>
+                            <span v-if="currentAnswer.ai_sentiment_updated_at" style="color: #8c8c8c; font-size: 12px;">
+                                更新于 [[ currentAnswer.ai_sentiment_updated_at ]]
+                            </span>
+                            <el-button 
+                                size="mini" 
+                                type="primary"
+                                @click="updateSentiment(currentAnswer.id)"
+                                :loading="updatingSentiment === currentAnswer.id">
+                                更新智慧舆情
+                            </el-button>
+                        </template>
+                    </div>
+                    
+                    <!-- 可展开/收起的智慧舆情分析理由 -->
+                    <div 
+                        v-if="currentAnswer.ai_sentiment && expandedSentimentReasons.includes(currentAnswer.id)" 
+                        style="margin-bottom: 15px; padding: 12px; background: #fff1f0; border-radius: 6px; border-left: 4px solid #f5222d;">
+                        <div style="color: #595959; font-size: 14px; line-height: 1.6;">
+                            <strong style="color: #f5222d;">分析理由：</strong>[[ currentAnswer.ai_sentiment.reason ]]
+                        </div>
+                    </div>
+                    
+                    <!-- AI回答 -->
+                    <div class="result-content">
+                        <div class="content-label">
+                            <el-icon><ChatDotRound /></el-icon>
+                            AI回答
+                        </div>
+                        <div class="content-text" v-html="highlightKeywords(currentAnswer.answer || '暂无回答')"></div>
+                    </div>
+                    
+                    <!-- 引用参考 -->
+                    <div v-if="currentAnswer.references && currentAnswer.references.length > 0" class="result-content">
+                        <div class="content-label" style="cursor: pointer; user-select: none;" @click="toggleRefs">
+                            <el-icon><Link /></el-icon>
+                            引用参考（[[ currentAnswer.references.length ]] 篇）
+                            <el-icon style="margin-left: 4px; font-size: 11px; color: #8c8c8c; transition: transform 0.2s;"
+                                     :style="refsExpanded ? 'transform: rotate(180deg)' : ''">
+                                <ArrowDown />
+                            </el-icon>
+                        </div>
+                        <ul class="references-list">
+                            <li v-for="(ref, refIndex) in (refsExpanded ? currentAnswer.references : currentAnswer.references.slice(0, 3))"
+                                :key="refIndex" class="reference-item">
+                                <div class="reference-title" :title="ref.title || '无标题'">
+                                    [[ refIndex + 1 ]]. [[ ref.title || '无标题' ]]
+                                    <span v-if="getGeoMatchCount(ref) > 0" 
+                                          style="background-color: #10b981; color: white; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 8px;">
+                                        匹配GEO稿件: [[ getGeoMatchCount(ref) ]]
+                                    </span>
+                                </div>
+                                <a :href="ref.url" target="_blank" class="reference-url" :title="ref.url">
+                                    [[ ref.url ]]
+                                </a>
+                            </li>
+                        </ul>
+                        <div v-if="currentAnswer.references.length > 3"
+                             style="text-align: center; margin-top: 6px;">
+                            <el-button link size="small" type="primary" @click="toggleRefs">
+                                [[ refsExpanded ? '收起' : `展开全部 ${currentAnswer.references.length} 条` ]]
+                            </el-button>
+                        </div>
+                    </div>
+                    
+                    <!-- 排名信息（已隐藏） -->
+                    <!-- <div v-if="currentAnswer.rankings && currentAnswer.rankings.length > 0" class="result-content">
+                        <div class="content-label">
+                            <el-icon><Trophy /></el-icon>
+                            排名信息（[[ currentAnswer.rankings.length ]] 人）
+                        </div>
+                        <ul class="rankings-list">
+                            <li v-for="(rank, rankIndex) in currentAnswer.rankings"
+                                :key="rankIndex" class="ranking-item">
+                                <div :class="['rank-badge', rank.rank <= 3 ? 'top3' : '']">
+                                    [[ rank.rank ]]
+                                </div>
+                                <div class="ranking-info">
+                                    <div class="ranking-name">
+                                        [[ rank.name ]]
+                                        <span v-if="rank.group" class="ranking-group">[[ rank.group ]]</span>
+                                        <span v-if="rank.sub_group" class="ranking-group">[[ rank.sub_group ]]</span>
+                                    </div>
+                                    <div class="ranking-hospital">[[ rank.hospital ]]</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div> -->
+                    
+                    <div style="color: #8c8c8c; font-size: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+                        <el-icon><Clock /></el-icon>
+                        采集时间：[[ formatDate(currentAnswer.created_at) ]]
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 空状态 -->
+            <div v-else style="text-align: center; padding: 60px; color: #999;">
+                <el-icon style="font-size: 64px; color: #ddd;"><Document /></el-icon>
+                <div style="margin-top: 20px;">暂无答案数据</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+const taskId = {{ task_id }};
+
+const app = createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            task: null,
+            results: [],
+            exposureStats: {
+                total_answers: 0,
+                exposure_count: 0,
+                exposure_rate: 0,
+                platform_stats: {},
+                keyword_stats: {}
+            },
+            expandedSentimentReasons: [],
+            updatingSentiment: null,
+            
+            chartInstances: {},
+            
+            // 视图控制
+            currentView: 'keywords', // keywords | questions | answer
+            selectedKeyword: '',
+            selectedQuestion: '',
+            
+            // 平台筛选
+            selectedPlatform: '',
+            
+            // 时间筛选 [startDate, endDate] 或 null
+            dateRange: null,
+            dateShortcuts: [
+                { text: '今天',   value: () => { const d = new Date(); return [d, d]; } },
+                { text: '近7天',  value: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate()-6); return [s, e]; } },
+                { text: '近30天', value: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate()-29); return [s, e]; } },
+                { text: '近90天', value: () => { const e = new Date(); const s = new Date(); s.setDate(s.getDate()-89); return [s, e]; } },
+            ],
+            
+            // 答案浏览
+            answerList: [],
+            answerPage: 1,  // 当前页（1-based）
+            refsExpanded: false,  // 引用参考是否展开
+            geoManuscripts: [],  // GEO稿件列表（用于匹配引用参考）
+            
+            // 重新采集状态 { platform_id: true/false }
+            recollecting: {},
+            exportingGeo: false,
+            exportingScreenshots: false,
+            
+            // 平台列表（从 API 动态获取）
+            availablePlatforms: []
+        };
+    },
+    computed: {
+        // 实际有数据的平台列表（用于筛选按钮）
+        activePlatforms() {
+            const ids = [...new Set(this.results.map(r => r.platform))];
+            return this.availablePlatforms.filter(p => ids.includes(p.id));
+        },
+        
+        // 按提及率降序排序的核心词数据
+        keywordTableDataSorted() {
+            return [...this.keywordTableData].sort((a, b) => b.exposure_rate - a.exposure_rate);
+        },
+        
+        // 按平台+时间筛选后的结果集（所有视图共用）
+        filteredResults() {
+            let list = this.results;
+            if (this.selectedPlatform) {
+                list = list.filter(r => r.platform === this.selectedPlatform);
+            }
+            if (this.dateRange && this.dateRange[0] && this.dateRange[1]) {
+                const start = new Date(this.dateRange[0]);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(this.dateRange[1]);
+                end.setHours(23, 59, 59, 999);
+                
+                console.log('[日期筛选] 开始日期:', start.toISOString());
+                console.log('[日期筛选] 结束日期:', end.toISOString());
+                console.log('[日期筛选] 筛选前数量:', list.length);
+                
+                list = list.filter(r => {
+                    const t = new Date(r.created_at);
+                    const match = t >= start && t <= end;
+                    console.log('[日期筛选] 检查:', r.created_at, '->', t.toISOString(), '匹配:', match);
+                    return match;
+                });
+                
+                console.log('[日期筛选] 筛选后数量:', list.length);
+            }
+            return list;
+        },
+        
+        // 筛选后的统计数据
+        filteredStats() {
+            const results = this.filteredResults;
+            const keywords = this.task ? this.task.brand_keywords : [];
+            const total = results.length;
+            let exposed = 0;
+            const keywordStats = {};
+            results.forEach(r => {
+                const text = r.answer || '';
+                let hasExp = false;
+                keywords.forEach(kw => {
+                    if (text.includes(kw)) {
+                        hasExp = true;
+                        keywordStats[kw] = (keywordStats[kw] || 0) + 1;
+                    }
+                });
+                if (hasExp) exposed++;
+            });
+            return {
+                total_answers: total,
+                exposure_count: exposed,
+                exposure_rate: total > 0 ? Math.round(exposed / total * 100) : 0,
+                keyword_stats: keywordStats
+            };
+        },
+        
+        // 核心词表格数据（基于筛选后结果）
+        keywordTableData() {
+            if (!this.task || !this.task.brand_keywords) return [];
+            const keywordStats = this.filteredStats.keyword_stats || {};
+            const total_count = this.filteredResults.length;
+            
+            return this.task.brand_keywords.map(keyword => {
+                const exposure_count = keywordStats[keyword] || 0;
+                const exposure_rate = total_count > 0 ? Math.round((exposure_count / total_count) * 100) : 0;
+                
+                // 计算该关键词的平均排名
+                let avgRank = '-';
+                const ranks = [];
+                
+                this.filteredResults
+                    .filter(r => r.rankings && r.rankings.length > 0)
+                    .forEach(r => {
+                        r.rankings.forEach(rankInfo => {
+                            if (rankInfo.name && (keyword.includes(rankInfo.name) || rankInfo.name.includes(keyword))) {
+                                ranks.push(rankInfo.rank);
+                            }
+                        });
+                    });
+                
+                if (ranks.length > 0) {
+                    const sum = ranks.reduce((a, b) => a + b, 0);
+                    avgRank = Math.round(sum / ranks.length);
+                } else if (exposure_count > 0) {
+                    // 如果没有解析排名但有曝光，根据提及位置估算排名
+                    let estimatedRank = 1;
+                    this.filteredResults
+                        .filter(r => r.rankings && r.rankings.length > 0 && (r.answer || '').includes(keyword))
+                        .forEach(r => {
+                            const allRanks = r.rankings.map(ri => ri.rank).filter(rk => rk <= 100);
+                            if (allRanks.length > 0) {
+                                const avgPosition = Math.round(allRanks.reduce((a, b) => a + b, 0) / allRanks.length);
+                                ranks.push(avgPosition);
+                            }
+                        });
+                    if (ranks.length > 0) {
+                        const sum = ranks.reduce((a, b) => a + b, 0);
+                        avgRank = Math.round(sum / ranks.length);
+                    } else {
+                        avgRank = 1;
+                    }
+                }
+                
+                // 统计舆情（基于关键词的本地分析）
+                let sentiment_positive = 0;
+                let sentiment_neutral = 0;
+                let sentiment_negative = 0;
+                
+                // 统计智慧舆情（AI分析）
+                let ai_sentiment_positive = 0;
+                let ai_sentiment_neutral = 0;
+                let ai_sentiment_negative = 0;
+                
+                this.filteredResults
+                    .filter(r => (r.answer || '').includes(keyword))
+                    .forEach(r => {
+                        // 本地舆情分析
+                        const sentiment = this.analyzeSentiment(r, keyword);
+                        if (sentiment.label === '正面') {
+                            sentiment_positive++;
+                        } else if (sentiment.label === '负面') {
+                            sentiment_negative++;
+                        } else {
+                            sentiment_neutral++;
+                        }
+                        
+                        // 智慧舆情分析
+                        if (r.ai_sentiment && r.ai_sentiment.label) {
+                            const ai_label = r.ai_sentiment.label;
+                            if (ai_label === '正面') {
+                                ai_sentiment_positive++;
+                            } else if (ai_label === '负面') {
+                                ai_sentiment_negative++;
+                            } else {
+                                ai_sentiment_neutral++;
+                            }
+                        }
+                    });
+                
+                return {
+                    keyword,
+                    exposure_count,
+                    total_count,
+                    exposure_rate,
+                    rank: avgRank,
+                    sentiment_positive,
+                    sentiment_neutral,
+                    sentiment_negative,
+                    ai_sentiment_positive,
+                    ai_sentiment_neutral,
+                    ai_sentiment_negative
+                };
+            }).sort((a, b) => b.exposure_count - a.exposure_count);
+        },
+        
+        // 问题表格数据（基于筛选后结果）
+        questionTableData() {
+            if (!this.selectedKeyword || !this.task) return [];
+            const questionMap = {};
+            this.filteredResults.forEach(result => {
+                if (!questionMap[result.question]) {
+                    questionMap[result.question] = {
+                        question: result.question,
+                        exposure_count: 0,
+                        total_count: 0,
+                        screenshot_count: 0,
+                        // 舆情（基于关键词的本地分析）
+                        local_sentiment_stats: { positive: 0, negative: 0, neutral: 0, total: 0 },
+                        // 智慧舆情（AI分析）
+                        ai_sentiment_stats: { positive: 0, negative: 0, neutral: 0, total: 0 }
+                    };
+                }
+                questionMap[result.question].total_count++;
+                // 统计截图数量
+                if (result.screenshot_path && result.screenshot_path.trim()) {
+                    questionMap[result.question].screenshot_count++;
+                }
+                if ((result.answer || '').includes(this.selectedKeyword)) {
+                    questionMap[result.question].exposure_count++;
+                }
+                
+                // 统计舆情（基于关键词的本地分析）
+                const localSentiment = this.analyzeSentiment(result, this.selectedKeyword);
+                if (localSentiment.label === '正面') {
+                    questionMap[result.question].local_sentiment_stats.positive++;
+                } else if (localSentiment.label === '负面') {
+                    questionMap[result.question].local_sentiment_stats.negative++;
+                } else {
+                    questionMap[result.question].local_sentiment_stats.neutral++;
+                }
+                questionMap[result.question].local_sentiment_stats.total++;
+                
+                // 统计智慧舆情（AI分析）
+                if (result.ai_sentiment && result.ai_sentiment.label) {
+                    const label = result.ai_sentiment.label;
+                    if (label === '正面') {
+                        questionMap[result.question].ai_sentiment_stats.positive++;
+                    } else if (label === '负面') {
+                        questionMap[result.question].ai_sentiment_stats.negative++;
+                    } else {
+                        questionMap[result.question].ai_sentiment_stats.neutral++;
+                    }
+                    questionMap[result.question].ai_sentiment_stats.total++;
+                }
+            });
+            return Object.values(questionMap).map(item => {
+                const exposure_rate = item.total_count > 0 ? Math.round((item.exposure_count / item.total_count) * 100) : 0;
+                
+                // 计算平均排名（从解析的排名信息中提取）
+                let avgRank = '-';
+                const ranks = [];
+                
+                // 遍历该问题的所有采集结果，收集排名信息
+                this.filteredResults
+                    .filter(r => r.question === item.question && r.rankings && r.rankings.length > 0)
+                    .forEach(r => {
+                        // 尝试从排名中找到品牌关键词
+                        let foundRank = false;
+                        r.rankings.forEach(rankInfo => {
+                            if (rankInfo.name && this.task.brand_keywords.some(kw => kw.includes(rankInfo.name) || rankInfo.name.includes(kw))) {
+                                ranks.push(rankInfo.rank);
+                                foundRank = true;
+                            }
+                        });
+                        
+                        // 如果没有找到品牌关键词的排名，但有曝光，根据提及位置估算排名
+                        if (!foundRank && (r.answer || '').includes(this.selectedKeyword)) {
+                            // 策略 1：如果排名列表中有医院相关条目（如"长宁院区"、"浦东院区"等），取最小排名
+                            const hospitalRanks = r.rankings
+                                .filter(ri => ri.name && (
+                                    ri.name.includes('院区') || 
+                                    ri.name.includes('医院') ||
+                                    ri.name.includes('总院') ||
+                                    ri.name.includes('分院')
+                                ))
+                                .map(ri => ri.rank);
+                            
+                            if (hospitalRanks.length > 0) {
+                                // 取医院排名的最小值 +1 作为估算排名
+                                const minHospitalRank = Math.min(...hospitalRanks);
+                                ranks.push(minHospitalRank + 1);
+                            } else {
+                                // 策略 2：如果排名列表中有其他条目，取平均排名作为估算
+                                const allRanks = r.rankings.map(ri => ri.rank).filter(rk => rk <= 100);
+                                if (allRanks.length > 0) {
+                                    const avgPosition = Math.round(allRanks.reduce((a, b) => a + b, 0) / allRanks.length);
+                                    ranks.push(avgPosition);
+                                } else {
+                                    // 策略 3：默认显示为第 1 位（有曝光但未明确排名）
+                                    ranks.push(1);
+                                }
+                            }
+                        }
+                        
+                        // 注意：移除了策略4，因为如果没有匹配到品牌关键词且没有曝光，
+                        // 这个结果与品牌排名无关，不应该纳入平均排名计算
+                    });
+                
+                // 计算平均排名
+                if (ranks.length > 0) {
+                    const sum = ranks.reduce((a, b) => a + b, 0);
+                    avgRank = Math.round(sum / ranks.length);
+                }
+                
+                // 确定主导舆情（基于关键词的本地分析）
+                let localDominant = null;
+                if (item.local_sentiment_stats.total > 0) {
+                    const maxCount = Math.max(item.local_sentiment_stats.positive, item.local_sentiment_stats.negative, item.local_sentiment_stats.neutral);
+                    if (maxCount === item.local_sentiment_stats.positive) {
+                        localDominant = { label: '正面', color: '#52c41a' };
+                    } else if (maxCount === item.local_sentiment_stats.negative) {
+                        localDominant = { label: '负面', color: '#f5222d' };
+                    } else {
+                        localDominant = { label: '中性', color: '#fa8c16' };
+                    }
+                }
+                
+                // 确定主导智慧舆情（AI分析）
+                let aiDominant = null;
+                if (item.ai_sentiment_stats.total > 0) {
+                    const maxCount = Math.max(item.ai_sentiment_stats.positive, item.ai_sentiment_stats.negative, item.ai_sentiment_stats.neutral);
+                    if (maxCount === item.ai_sentiment_stats.positive) {
+                        aiDominant = { label: '正面', color: '#52c41a' };
+                    } else if (maxCount === item.ai_sentiment_stats.negative) {
+                        aiDominant = { label: '负面', color: '#f5222d' };
+                    } else {
+                        aiDominant = { label: '中性', color: '#fa8c16' };
+                    }
+                }
+                
+                return {
+                    ...item,
+                    exposure_rate,
+                    rank: avgRank,
+                    local_dominant_sentiment: localDominant,
+                    ai_dominant_sentiment: aiDominant
+                };
+            }).sort((a, b) => b.exposure_count - a.exposure_count);
+        },
+        
+        // 答案浏览列表（基于筛选后结果）
+        filteredAnswerList() {
+            if (!this.selectedPlatform) return this.answerList;
+            return this.answerList.filter(r => r.platform === this.selectedPlatform);
+        },
+        
+        // 当前翻页显示的答案
+        currentAnswer() {
+            if (!this.filteredAnswerList.length) return null;
+            const idx = Math.min(this.answerPage, this.filteredAnswerList.length) - 1;
+            return this.filteredAnswerList[idx];
+        }
+    },
+    watch: {
+        // 翻页时重置引用折叠状态
+        answerPage() {
+            this.refsExpanded = false;
+        }
+    },
+    created() {
+        this.loadResults();
+    },
+    mounted() {
+        this.fetchPlatforms();
+    },
+    methods: {
+        async fetchPlatforms() {
+            try {
+                const response = await axios.get('/api/platforms');
+                if (response.data.success) {
+                    this.availablePlatforms = response.data.platforms;
+                    console.log('平台列表已加载:', this.availablePlatforms);
+                }
+            } catch (error) {
+                console.error('获取平台列表失败:', error);
+                // 失败时使用空数组，activePlatforms 会基于实际数据自动生成
+            }
+        },
+        
+        toggleSentimentReason(id) {
+            const index = this.expandedSentimentReasons.indexOf(id);
+            if (index > -1) {
+                this.expandedSentimentReasons.splice(index, 1);
+            } else {
+                this.expandedSentimentReasons.push(id);
+            }
+        },
+        async updateSentiment(resultId) {
+            this.updatingSentiment = resultId;
+            try {
+                const response = await axios.post(`/api/results/${resultId}/update-sentiment`);
+                if (response.data.success) {
+                    // 更新本地数据
+                    const result = this.results.find(r => r.id === resultId);
+                    if (result) {
+                        result.ai_sentiment = response.data.ai_sentiment;
+                        result.ai_sentiment_updated_at = response.data.updated_at;
+                    }
+                    ElMessage.success('舆情分析已更新');
+                } else {
+                    ElMessage.error(response.data.message || '更新失败');
+                }
+            } catch (error) {
+                console.error('更新舆情失败:', error);
+                ElMessage.error('更新失败: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.updatingSentiment = null;
+            }
+        },
+        async loadResults() {
+            try {
+                console.log('开始加载数据...');
+                const response = await axios.get(`/api/tasks/${taskId}/results`);
+                console.log('API 响应:', response.data);
+                
+                this.task = response.data.task;
+                this.results = response.data.results;
+                this.exposureStats = response.data.exposure_stats;
+                
+                // 只有在首次加载且没有设置日期范围时，才设置默认的7天日期范围
+                if (!this.dateRange) {
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(startDate.getDate() - 6); // 近7天（包含今天）
+                    this.dateRange = [startDate, endDate];
+                    console.log('设置默认日期范围:', this.dateRange);
+                }
+                
+                console.log('任务数据:', this.task);
+                console.log('采集结果数:', this.results.length);
+                console.log('品牌曝光词:', this.task ? this.task.brand_keywords : 'null');
+                console.log('当前日期范围:', this.dateRange);
+                
+                // 如果当前视图是answer但没有选择问题，自动选择第一个问题
+                if (this.currentView === 'answer' && !this.selectedQuestion && this.results.length > 0) {
+                    // 获取第一个不重复的问题
+                    const questions = [...new Set(this.results.map(r => r.question))];
+                    if (questions.length > 0) {
+                        this.selectedQuestion = questions[0];
+                        this.answerList = this.filteredResults.filter(r => r.question === this.selectedQuestion);
+                        console.log('自动选择第一个问题:', this.selectedQuestion);
+                    }
+                }
+                
+                // 加载GEO稿件数据用于匹配引用参考
+                await this.loadGeoManuscripts();
+                
+                // 等待 Vue 更新 DOM
+                await this.$nextTick();
+                console.log('核心词表格数据:', this.keywordTableData);
+                
+                // 初始化百度指数图表
+                if (this.currentView === 'keywords') {
+                    this.initIndexCharts();
+                }
+                
+                if (this.results.length === 0) {
+                    ElMessage.warning('暂无采集数据');
+                } else {
+                    ElMessage.success(`加载成功，共 ${this.results.length} 条数据`);
+                }
+            } catch (error) {
+                console.error('加载结果失败:', error);
+                ElMessage.error('加载结果失败: ' + (error.response?.data?.message || error.message));
+            }
+        },
+        
+        // 导航方法
+        goToKeywords() {
+            this.currentView = 'keywords';
+            this.selectedKeyword = '';
+            this.selectedQuestion = '';
+            this.$nextTick(() => {
+                this.initIndexCharts();
+            });
+        },
+        
+        goToQuestions() {
+            this.currentView = 'questions';
+            this.selectedQuestion = '';
+        },
+        
+        viewQuestions(keyword) {
+            this.selectedKeyword = keyword;
+            this.currentView = 'questions';
+        },
+        
+        viewAnswer(question) {
+            this.selectedQuestion = question;
+            this.currentView = 'answer';
+            this.answerPage = 1;
+            this.refsExpanded = false;
+            this.answerList = this.filteredResults.filter(r => r.question === question);
+        },
+        
+        setPlatform(platformId) {
+            this.selectedPlatform = platformId;
+            this.answerPage = 1;
+            this.refsExpanded = false;
+            if (this.currentView === 'keywords') {
+                this.$nextTick(() => {
+                    this.initIndexCharts();
+                });
+            }
+            if (this.currentView === 'answer' && this.selectedQuestion) {
+                this.answerList = this.filteredResults.filter(r => r.question === this.selectedQuestion);
+            }
+        },
+        
+        toggleRefs() {
+            this.refsExpanded = !this.refsExpanded;
+        },
+        
+        async deleteAnswer(resultId) {
+            try {
+                await ElMessageBox.confirm(
+                    '确定要删除这条 AI 答案吗？删除后无法恢复。',
+                    '删除确认',
+                    { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'warning' }
+                );
+            } catch {
+                return;
+            }
+            
+            try {
+                await axios.delete(`/api/results/${resultId}`);
+                this.answerList = this.answerList.filter(r => r.id !== resultId);
+                const idx = this.results.findIndex(r => r.id === resultId);
+                if (idx !== -1) this.results.splice(idx, 1);
+                // 删除后页码不超出范围
+                if (this.answerPage > this.filteredAnswerList.length && this.answerPage > 1) {
+                    this.answerPage--;
+                }
+                ElMessage.success('已删除');
+            } catch (e) {
+                ElMessage.error('删除失败：' + (e.response?.data?.message || e.message));
+            }
+        },
+        
+        // 判断是否为该平台在当前问题下的最新一条记录
+        isLatestAnswer(answer) {
+            const samePlatform = this.answerList
+                .filter(r => r.platform === answer.platform)
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            return samePlatform.length > 0 && samePlatform[0].id === answer.id;
+        },
+        
+        // 重新采集（覆盖最新一条）
+        async recollect(platformId, resultId) {
+            if (this.recollecting[platformId]) return;
+            
+            const platformName = this.getPlatformName(platformId);
+            try {
+                await ElMessageBox.confirm(
+                    `将对「${this.selectedQuestion}」在 ${platformName} 重新采集，新结果将替换当前这条答案。确认继续？`,
+                    '重新采集',
+                    { confirmButtonText: '确认替换', cancelButtonText: '取消', type: 'warning' }
+                );
+            } catch {
+                return;
+            }
+            
+            this.recollecting = { ...this.recollecting, [platformId]: true };
+            
+            try {
+                const res = await axios.post(`/api/tasks/${taskId}/recollect`, {
+                    question: this.selectedQuestion,
+                    platform: platformId,
+                    result_id: resultId
+                });
+                
+                if (!res.data.success) {
+                    ElMessage.error(res.data.message || '重新采集失败');
+                    return;
+                }
+                
+                const jobId = res.data.job_id;
+                ElMessage.info(`${platformName} 正在采集中...`);
+                
+                // 轮询状态，每 3 秒查一次，最多等 5 分钟
+                const maxWait = 300000;
+                const interval = 3000;
+                const startTime = Date.now();
+                
+                const poll = async () => {
+                    if (Date.now() - startTime > maxWait) {
+                        ElMessage.warning('采集超时，请手动刷新页面');
+                        this.recollecting = { ...this.recollecting, [platformId]: false };
+                        return;
+                    }
+                    
+                    try {
+                        const statusRes = await axios.get(`/api/recollect-status/${jobId}`);
+                        const job = statusRes.data;
+                        
+                        if (job.status === 'done') {
+                            // 用返回的新数据直接更新本地 answerList，无需刷新页面
+                            const newResult = job.result;
+                            const idx = this.answerList.findIndex(r => r.id === newResult.id);
+                            if (idx !== -1) {
+                                this.answerList.splice(idx, 1, newResult);
+                            }
+                            // 同步更新 results 全量数据
+                            const ridx = this.results.findIndex(r => r.id === newResult.id);
+                            if (ridx !== -1) {
+                                this.results.splice(ridx, 1, newResult);
+                            }
+                            ElMessage.success(`${platformName} 重新采集完成`);                            this.recollecting = { ...this.recollecting, [platformId]: false };
+                        } else if (job.status === 'error') {
+                            ElMessage.error(`采集失败：${job.error}`);
+                            this.recollecting = { ...this.recollecting, [platformId]: false };
+                        } else {
+                            // 还在运行，继续轮询
+                            setTimeout(poll, interval);
+                        }
+                    } catch (e) {
+                        setTimeout(poll, interval);
+                    }
+                };
+                
+                setTimeout(poll, interval);
+                
+            } catch (e) {
+                ElMessage.error('请求失败：' + (e.response?.data?.message || e.message));
+                this.recollecting = { ...this.recollecting, [platformId]: false };
+            }
+        },
+        
+        getPlatformName(platformId) {
+            const platform = this.availablePlatforms.find(p => p.id === platformId);
+            return platform ? platform.name : platformId;
+        },
+        
+        getProgressColor(rate) {
+            if (rate >= 70) return '#52c41a';
+            if (rate >= 40) return '#faad14';
+            return '#f5222d';
+        },
+        
+        getRateClass(rate) {
+            if (rate >= 70) return 'high';
+            if (rate >= 40) return 'medium';
+            return 'low';
+        },
+        
+        // 初始化百度指数风格的图表
+        initIndexCharts() {
+            if (typeof echarts === 'undefined') return;
+            
+            Object.values(this.chartInstances).forEach(chart => {
+                chart && chart.dispose && chart.dispose();
+            });
+            this.chartInstances = {};
+            
+            const dateStats = {};
+            const allDates = new Set();
+            
+            this.filteredResults.forEach(r => {
+                if (!r.created_at) return;
+                const date = new Date(r.created_at);
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                allDates.add(dateStr);
+                
+                if (!dateStats[dateStr]) {
+                    dateStats[dateStr] = {};
+                }
+                const answer = r.answer || '';
+                this.task.brand_keywords.forEach(kw => {
+                    if (answer.includes(kw)) {
+                        dateStats[dateStr][kw] = (dateStats[dateStr][kw] || 0) + 1;
+                    }
+                });
+            });
+            
+            const dateList = [...allDates].sort();
+            console.log('[图表] 日期列表:', dateList);
+            
+            this.$nextTick(() => {
+                this.keywordTableDataSorted.forEach((item, idx) => {
+                    const chartId = 'chart-' + item.keyword.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+                    const dom = document.getElementById(chartId);
+                    if (!dom) return;
+                    
+                    const chart = echarts.init(dom);
+                    this.chartInstances[chartId] = chart;
+                    
+                    const trendData = dateList.map(date => {
+                        return dateStats[date]?.[item.keyword] || 0;
+                    });
+                    
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            borderColor: '#1890ff',
+                            borderWidth: 1,
+                            textStyle: {
+                                color: '#333',
+                                fontSize: 12
+                            },
+                            formatter: function(params) {
+                                return `
+                                    <div style="padding: 5px;">
+                                        <div style="font-weight: bold; margin-bottom: 5px;">${item.keyword}</div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-block; width: 8px; height: 8px; background: #1890ff; border-radius: 50%;"></span>
+                                            <span>${params[0].name}：</span>
+                                            <span style="font-weight: bold; color: #1890ff;">${params[0].value} 次提及</span>
+                                        </div>
+                                    </div>
+                                `;
+                            },
+                            axisPointer: {
+                                type: 'line',
+                                lineStyle: {
+                                    color: '#1890ff',
+                                    type: 'dashed'
+                                }
+                            }
+                        },
+                        grid: {
+                            top: 10,
+                            right: 0,
+                            bottom: 10,
+                            left: 0
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: dateList,
+                            show: false,
+                            axisPointer: {
+                                show: true
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            show: false
+                        },
+                        series: [{
+                            data: trendData,
+                            type: 'line',
+                            smooth: true,
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            emphasis: {
+                                scale: true,
+                                itemStyle: {
+                                    color: '#1890ff',
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                }
+                            },
+                            lineStyle: {
+                                width: 2,
+                                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    { offset: 0, color: '#1890ff' },
+                                    { offset: 1, color: '#69c0ff' }
+                                ])
+                            },
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(24, 144, 255, 0.02)' }
+                                ])
+                            }
+                        }]
+                    };
+                    
+                    chart.setOption(option);
+                });
+            });
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+        },
+        
+        goBack() {
+            window.location.href = '/dashboard';
+        },
+        
+        exportData() {
+            const platform = this.selectedPlatform || '';
+            const platformName = platform ? this.getPlatformName(platform) : '全部平台';
+            
+            let url = `/api/tasks/${taskId}/export?platform=${platform}`;
+            
+            if (this.dateRange && this.dateRange[0] && this.dateRange[1]) {
+                const fmt = d => d.toISOString().slice(0, 10);
+                url += `&date_start=${fmt(new Date(this.dateRange[0]))}`;
+                url += `&date_end=${fmt(new Date(this.dateRange[1]))}`;
+            }
+            
+            ElMessage.info(`正在导出 ${platformName} 的数据...`);
+            window.open(url, '_blank');
+        },
+        
+        async downloadFile(url, fallbackFilename, successMessage = '导出成功！') {
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                let errorMsg = '导出失败';
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) {
+                    // 响应不是 JSON
+                }
+                throw new Error(errorMsg);
+            }
+
+            const contentType = response.headers.get('Content-Type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || data.error || '导出失败');
+                }
+                const savedPath = data.path || data.filename || '';
+                if (savedPath) {
+                    ElMessage.success('导出成功');
+                    ElMessageBox.alert(`文件已保存到：\n${savedPath}`, '导出成功', {
+                        confirmButtonText: '知道了'
+                    });
+                } else {
+                    ElMessage.success(successMessage);
+                }
+                return data;
+            }
+
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = fallbackFilename;
+            const utf8Match = disposition && /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+            const asciiMatch = disposition && /filename="?([^";]+)"?/i.exec(disposition);
+            if (utf8Match && utf8Match[1]) {
+                filename = decodeURIComponent(utf8Match[1]);
+            } else if (asciiMatch && asciiMatch[1]) {
+                filename = asciiMatch[1];
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+            ElMessage.success(successMessage);
+        },
+
+        async exportGeoResults() {
+            if (this.exportingGeo) return;
+            this.exportingGeo = true;
+            let url = `/api/tasks/${taskId}/export-geo`;
+            const params = [];
+            
+            // 添加日期范围参数
+            if (this.dateRange && this.dateRange[0] && this.dateRange[1]) {
+                // 使用本地日期格式，避免时区偏移问题
+                const fmt = d => {
+                    const date = new Date(d);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                params.push(`date_start=${fmt(this.dateRange[0])}`);
+                params.push(`date_end=${fmt(this.dateRange[1])}`);
+            }
+            
+            // 添加平台筛选参数
+            console.log('[导出GEO] selectedPlatform:', this.selectedPlatform);
+            console.log('[导出GEO] selectedPlatform类型:', typeof this.selectedPlatform);
+            if (this.selectedPlatform && this.selectedPlatform !== '') {
+                params.push(`platform=${encodeURIComponent(this.selectedPlatform)}`);
+                console.log('[导出GEO] 已添加平台参数:', this.selectedPlatform);
+            } else {
+                console.log('[导出GEO] 未添加平台参数（selectedPlatform为空或空字符串）');
+            }
+            params.push('save_to_downloads=1');
+            
+            // 拼接参数
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            console.log('[导出GEO] 完整URL:', url);
+            ElMessage.info('正在导出GEO效果...');
+            try {
+                await this.downloadFile(url, 'GEO效果.xlsx');
+            } catch (error) {
+                console.error('[导出GEO] 错误:', error);
+                ElMessage.error('导出失败：' + (error.message || '网络错误'));
+            } finally {
+                this.exportingGeo = false;
+            }
+        },
+        
+        async exportGeoScreenshotsZip() {
+            if (this.exportingScreenshots) return;
+            this.exportingScreenshots = true;
+            try {
+                const params = [];
+                
+                // 添加日期范围参数
+                if (this.dateRange && this.dateRange[0] && this.dateRange[1]) {
+                    // 使用本地日期格式，避免时区偏移问题
+                    const fmt = d => {
+                        const date = new Date(d);
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    params.push(`date_start=${fmt(this.dateRange[0])}`);
+                    params.push(`date_end=${fmt(this.dateRange[1])}`);
+                }
+                
+                // 添加平台筛选参数
+                if (this.selectedPlatform && this.selectedPlatform !== '') {
+                    params.push(`platform=${encodeURIComponent(this.selectedPlatform)}`);
+                }
+                params.push('save_to_downloads=1');
+                
+                // 拼接URL
+                let url = `/api/tasks/${taskId}/export-screenshots-zip`;
+                if (params.length > 0) {
+                    url += '?' + params.join('&');
+                }
+                
+                console.log('[导出GEO长截图] URL:', url);
+                ElMessage.info('正在导出GEO长截图，请稍候...');
+                
+                await this.downloadFile(url, 'GEO长截图.zip');
+            } catch (error) {
+                console.error('[导出GEO长截图] 错误:', error);
+                ElMessage.error('导出失败：' + (error.message || '网络错误'));
+            } finally {
+                this.exportingScreenshots = false;
+            }
+        },
+        
+        // 跳转到竞品分析页面
+        goToCompetitorAnalysis() {
+            let url = `/task/${taskId}/competitor-analysis`;
+            window.location.href = url;
+        },
+        
+        // 加载GEO稿件数据
+        async loadGeoManuscripts() {
+            try {
+                const response = await axios.get('/api/geo-manuscripts', {
+                    params: { task_id: taskId }
+                });
+                if (response.data.success) {
+                    this.geoManuscripts = response.data.manuscripts;
+                    console.log('GEO稿件数据:', this.geoManuscripts);
+                }
+            } catch (error) {
+                console.error('加载GEO稿件失败:', error);
+            }
+        },
+        
+        // 检查引用参考是否匹配GEO稿件，返回匹配数量
+        getGeoMatchCount(ref) {
+            if (!ref || !this.geoManuscripts.length) {
+                return 0;
+            }
+            
+            const refUrl = (ref.url || '').toLowerCase().trim();
+            
+            let matchCount = 0;
+            for (const manuscript of this.geoManuscripts) {
+                const msUrl = (manuscript.url || '').toLowerCase().trim();
+                
+                // URL匹配规则：
+                // 1. 引用URL包含稿件URL（去掉扩展名后）
+                // 2. 稿件URL包含引用URL的关键部分
+                // 3. 域名相同
+                // 4. 路径中的数字/关键部分匹配
+                const urlMatch = this.urlMatch(refUrl, msUrl);
+                
+                if (urlMatch) {
+                    matchCount++;
+                }
+            }
+            return matchCount;
+        },
+        
+        // URL匹配核心逻辑：引用参考URL必须包含GEO稿件URL分割后的所有部分
+        urlMatch(refUrl, msUrl) {
+            if (!refUrl || !msUrl) return false;
+            
+            // 规则：将GEO稿件URL用"/"分割，引用参考URL必须包含所有分割后的部分
+            // 例如：GEO稿件URL是"39.net/a/260511/d6wkqfi.html"
+            // 分割后：['39.net', 'a', '260511', 'd6wkqfi.html']
+            // 引用参考URL必须同时包含所有这些部分才算匹配成功
+            
+            // 分割GEO稿件URL
+            const parts = msUrl.split('/').filter(part => part.trim() !== '');
+            
+            // 如果分割后没有部分，返回false
+            if (parts.length === 0) return false;
+            
+            // 检查引用参考URL是否包含所有分割后的部分
+            for (const part of parts) {
+                if (!refUrl.includes(part)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        },
+        
+        // 清理URL：去掉协议、扩展名、末尾斜杠
+        cleanUrl(url) {
+            let clean = url;
+            // 去掉协议
+            clean = clean.replace(/^https?:\/\//, '');
+            // 去掉www.和m.前缀
+            clean = clean.replace(/^(www|m)\./, '');
+            // 去掉文件扩展名
+            clean = clean.replace(/\.(html?|htm|php|aspx|jsp)$/, '');
+            // 去掉末尾斜杠
+            clean = clean.replace(/\/$/, '');
+            return clean;
+        },
+        
+        // 提取URL中的数字串
+        extractNumbers(url) {
+            const matches = url.match(/\d{5,}/g); // 提取5位以上的数字串
+            return matches || [];
+        },
+        
+        // 提取URL的域名部分
+        extractDomain(url) {
+            try {
+                // 处理没有协议的URL
+                if (!url.startsWith('http')) {
+                    url = 'http://' + url;
+                }
+                const urlObj = new URL(url);
+                return urlObj.hostname.toLowerCase();
+            } catch {
+                return '';
+            }
+        },
+        
+        onDateChange() {
+            // 切换时间后，如果在答案浏览视图，重新过滤 answerList
+            if (this.currentView === 'answer' && this.selectedQuestion) {
+                this.answerList = this.filteredResults.filter(r => r.question === this.selectedQuestion);
+                this.answerPage = 1;
+            }
+            // 问题列表视图：不需要额外处理，因为 questionTableData 是 computed 属性会自动更新
+            // 核心词视图：重新渲染趋势图表
+            if (this.currentView === 'keywords') {
+                this.$nextTick(() => {
+                    this.initIndexCharts();
+                });
+            }
+            // 重置翻页状态
+            if (this.currentView === 'questions') {
+                // questionTableData 会自动更新，这里不需要额外操作
+            }
+        },
+        
+        // 检查答案中是否包含品牌曝光词
+        checkBrandExposure(answer) {
+            if (!answer || !answer.answer || !this.task || !this.task.brand_keywords) {
+                return false;
+            }
+            
+            const answerText = answer.answer.toLowerCase();
+            return this.task.brand_keywords.some(keyword => 
+                answerText.includes(keyword.toLowerCase())
+            );
+        },
+        
+        // 获取答案中曝光的品牌曝光词列表
+        getExposedKeywords(answer) {
+            if (!answer || !answer.answer || !this.task || !this.task.brand_keywords) {
+                return [];
+            }
+            
+            const answerText = answer.answer.toLowerCase();
+            return this.task.brand_keywords.filter(keyword => 
+                answerText.includes(keyword.toLowerCase())
+            );
+        },
+        
+        // 情感分析：判断舆情倾向
+        analyzeSentiment(answer, keyword) {
+            if (!answer || !answer.answer) {
+                return { sentiment: 'neutral', score: 0, label: '中性', color: '#8c8c8c' };
+            }
+            
+            const positiveWords = [
+                '好', '不错', '优秀', '棒', '赞', '推荐', '喜欢', '满意', '靠谱', '推荐',
+                '好评', '出色', '卓越', '完美', '理想', '满意', '认可', '信赖', '放心',
+                '值得', '划算', '实惠', '优质', '高端', '专业', '有效', '神奇', '见效',
+                '吸收', '补水', '保湿', '美白', '抗衰', '修复', '温和', '清爽', '不油腻',
+                '无刺激', '抗过敏', '口碑好', '效果好', '质量好', '性价比高', '回购',
+                '正品', '放心', '安全', '健康', '自然', '纯正', '地道', '正宗'
+            ];
+            
+            const negativeWords = [
+                '差', '不好', '烂', '垃圾', '失望', '后悔', '差评', '糟糕', '骗人',
+                '虚假', '没效果', '无用', '无效', '过敏', '刺激', '油腻', '干燥',
+                '紧绷', '爆痘', '泛红', '瘙痒', '副作用', '假货', '劣质', '粗糙',
+                '廉价', '智商税', '智商税', '坑人', '受骗', '上当', '不推荐', '避雷',
+                '踩坑', '鸡肋', '失望', '不值', '浪费', '昂贵', '伤皮肤', '有问题',
+                '不合格', '超标', '有害', '致癌', '激素', '荧光剂', '重金属'
+            ];
+            
+            let text = answer.answer;
+            if (keyword) {
+                const kwIndex = text.indexOf(keyword);
+                if (kwIndex !== -1) {
+                    const start = Math.max(0, kwIndex - 50);
+                    const end = Math.min(text.length, kwIndex + keyword.length + 50);
+                    text = text.substring(start, end);
+                }
+            }
+            
+            let positiveScore = 0;
+            let negativeScore = 0;
+            
+            positiveWords.forEach(word => {
+                const regex = new RegExp(word, 'g');
+                const matches = text.match(regex);
+                if (matches) positiveScore += matches.length;
+            });
+            
+            negativeWords.forEach(word => {
+                const regex = new RegExp(word, 'g');
+                const matches = text.match(regex);
+                if (matches) negativeScore += matches.length;
+            });
+            
+            const total = positiveScore + negativeScore;
+            if (total === 0) {
+                return { sentiment: 'neutral', score: 0, label: '中性', color: '#8c8c8c' };
+            }
+            
+            const ratio = (positiveScore - negativeScore) / total;
+            
+            if (ratio > 0.3) {
+                return { sentiment: 'positive', score: ratio, label: '正面', color: '#52c41a' };
+            } else if (ratio < -0.3) {
+                return { sentiment: 'negative', score: ratio, label: '负面', color: '#ff4d4f' };
+            } else {
+                return { sentiment: 'neutral', score: ratio, label: '中性', color: '#fa8c16' };
+            }
+        },
+        
+        // 高亮显示品牌曝光词
+        highlightKeywords(text) {
+            if (!text || !this.task || !this.task.brand_keywords) {
+                return text;
+            }
+            
+            let highlightedText = text;
+            
+            // 对每个品牌曝光词进行高亮处理
+            this.task.brand_keywords.forEach(keyword => {
+                // 使用正则表达式进行全局替换，保持大小写
+                const regex = new RegExp(`(${keyword})`, 'gi');
+                highlightedText = highlightedText.replace(regex, 
+                    '<span style="background-color: #fff566; padding: 2px 4px; border-radius: 2px; font-weight: 600; color: #d48806;">$1</span>'
+                );
+            });
+            
+            return highlightedText;
+        }
+    }
+});
+
+app.use(ElementPlus);
+
+// 全局注册所有 Element Plus 图标
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component);
+}
+
+app.mount('#app');
+{% endblock %}

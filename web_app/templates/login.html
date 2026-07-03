@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - GEO-SOP{% endblock %}
+
+{% block styles %}
+.login-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 16% 18%, rgba(82, 103, 246, 0.18), transparent 34%),
+        radial-gradient(circle at 82% 82%, rgba(23, 105, 255, 0.12), transparent 32%),
+        linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+    color: #1b2332;
+}
+
+.login-brand-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 72px 7vw;
+}
+
+.login-logo {
+    width: 148px;
+    height: auto;
+    margin-bottom: 54px;
+}
+
+.login-kicker {
+    color: #0ea5b7;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    margin-bottom: 16px;
+}
+
+.login-brand-panel h1 {
+    font-size: 48px;
+    line-height: 1.12;
+    margin: 0 0 18px;
+    letter-spacing: 0;
+}
+
+.login-brand-panel p {
+    max-width: 660px;
+    color: #667085;
+    font-size: 17px;
+    line-height: 1.8;
+    margin: 0 0 28px;
+}
+
+.login-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 720px;
+}
+
+.login-feature {
+    border: 1px solid #dce5f2;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 16px;
+}
+
+.login-feature strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.login-feature span {
+    display: block;
+    color: #7b8aa0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.login-form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 6vw 48px 24px;
+}
+
+.login-box {
+    background: white;
+    padding: 34px;
+    border: 1px solid #dce5f2;
+    border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(16, 32, 55, 0.12);
+    width: 430px;
+}
+
+.login-title {
+    margin-bottom: 8px;
+    color: #1b2332;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.login-subtitle {
+    margin: 0 0 26px;
+    color: #667085;
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+.login-box .el-button {
+    border-radius: 6px;
+    font-weight: 800;
+}
+
+.register-link {
+    text-align: left;
+    margin-top: 18px;
+    color: #666;
+    line-height: 1.7;
+}
+
+.register-link a {
+    color: #1769ff;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+.sync-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #f3f7ff;
+    color: #5d6f8a;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+@media (max-width: 980px) {
+    .login-container {
+        grid-template-columns: 1fr;
+    }
+    .login-brand-panel {
+        padding: 38px 22px 18px;
+    }
+    .login-logo {
+        margin-bottom: 28px;
+    }
+    .login-brand-panel h1 {
+        font-size: 34px;
+    }
+    .login-feature-grid {
+        grid-template-columns: 1fr;
+    }
+    .login-form-panel {
+        padding: 18px 22px 38px;
+        align-items: flex-start;
+    }
+    .login-box {
+        width: 100%;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <section class="login-brand-panel">
+        <img class="login-logo" src="/static/img/geo-sop-wordmark.png" alt="GEO-SOP">
+        <div class="login-kicker">GEO-SOP WORKSPACE</div>
+        <h1>监测 AI 平台如何回答你的品牌。</h1>
+        <p>GEO-SOP 将本机浏览器采集、截图留证、引用来源分析和云端任务同步放在同一套工作流里，帮助团队看清品牌在 AI 回答中的曝光、风险和下一步动作。</p>
+        <div class="login-feature-grid">
+            <div class="login-feature">
+                <strong>本机采集</strong>
+                <span>浏览器登录态留在本机，采集过程可追踪。</span>
+            </div>
+            <div class="login-feature">
+                <strong>证据留存</strong>
+                <span>保留回答、截图、来源和导出文件。</span>
+            </div>
+            <div class="login-feature">
+                <strong>云端同步</strong>
+                <span>账号、任务和结果通过安全 API 打通。</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="login-form-panel">
+        <div class="login-box">
+            <h1 class="login-title">登录 GEO-SOP</h1>
+            <p class="login-subtitle">使用 geo.allgood.cn 云端账号登录桌面端。</p>
+            
+            <el-form :model="loginForm" :rules="rules" ref="loginFormRef">
+                <el-form-item prop="username">
+                    <el-input 
+                        v-model="loginForm.username" 
+                        placeholder="用户名 / 邮箱"
+                        size="large"
+                        prefix-icon="User">
+                    </el-input>
+                </el-form-item>
+                
+                <el-form-item prop="password">
+                    <el-input 
+                        v-model="loginForm.password" 
+                        type="password"
+                        placeholder="密码"
+                        size="large"
+                        prefix-icon="Lock"
+                        @keyup.enter="handleLogin">
+                    </el-input>
+                </el-form-item>
+
+                {% if not (config.DESKTOP_MODE and config.REQUIRE_LOGIN) %}
+                <el-form-item>
+                    <el-checkbox v-model="loginForm.cloud_login">
+                        使用 geo.allgood.cn 云端账号登录并同步
+                    </el-checkbox>
+                </el-form-item>
+                {% endif %}
+                
+                <el-form-item>
+                    <el-button 
+                        type="primary" 
+                        size="large"
+                        style="width: 100%"
+                        :loading="loading"
+                        @click="handleLogin">
+                        登录并同步
+                    </el-button>
+                </el-form-item>
+            </el-form>
+            
+            <div class="register-link">
+                还没有账号？<a href="https://geo.allgood.cn/register/" target="_blank">创建 GEO-SOP 账号</a>
+            </div>
+            <div class="sync-note">
+                {% if config.DESKTOP_MODE and config.REQUIRE_LOGIN %}
+                登录后，本机数据会通过 HTTPS API 与云端工作台同步。
+                {% else %}
+                如需只在本机使用，可关闭上方同步选项后登录本机账号。
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+const app = createApp({
+    data() {
+        return {
+            loginForm: {
+                username: '',
+                password: '',
+                cloud_login: {{ 'true' if (config.DESKTOP_MODE and config.REQUIRE_LOGIN) else 'true' }}
+            },
+            rules: {
+                username: [
+                    { required: true, message: '请输入用户名', trigger: 'blur' }
+                ],
+                password: [
+                    { required: true, message: '请输入密码', trigger: 'blur' }
+                ]
+            },
+            loading: false
+        };
+    },
+    methods: {
+        async handleLogin() {
+            const valid = await this.$refs.loginFormRef.validate().catch(() => false);
+            if (!valid) return;
+            
+            this.loading = true;
+            
+            try {
+                const response = await axios.post('/login', this.loginForm);
+                
+                if (response.data.success) {
+                    ElMessage.success('登录成功');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 500);
+                }
+            } catch (error) {
+                ElMessage.error(error.response?.data?.message || '登录失败');
+            } finally {
+                this.loading = false;
+            }
+        }
+    }
+});
+
+app.use(ElementPlus);
+app.mount('#app');
+{% endblock %}
