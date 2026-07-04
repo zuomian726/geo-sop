@@ -49,9 +49,24 @@ def _free_port() -> int:
 def _init_database():
     from app import app
     from models import db
+    from sqlalchemy import inspect
 
     with app.app_context():
         db.create_all()
+        inspector = inspect(db.engine)
+        existing_tables = set(inspector.get_table_names())
+        required_tables = {"users", "monitor_tasks", "collection_results"}
+        missing_tables = sorted(required_tables - existing_tables)
+        if missing_tables:
+            db.session.remove()
+            db.engine.dispose()
+            db.create_all()
+            inspector = inspect(db.engine)
+            existing_tables = set(inspector.get_table_names())
+            missing_tables = sorted(required_tables - existing_tables)
+        if missing_tables:
+            raise RuntimeError(f"Local database initialization failed, missing tables: {', '.join(missing_tables)}")
+        _boot_log(f"database initialized tables={len(existing_tables)}")
 
 
 def _start_remote_worker():

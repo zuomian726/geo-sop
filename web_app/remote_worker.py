@@ -12,6 +12,8 @@ import os
 import threading
 import time
 
+from sqlalchemy import inspect
+
 from cloud_sync import (
     cloud_sync_enabled,
     load_cloud_account,
@@ -28,6 +30,20 @@ logger = logging.getLogger("remote_worker")
 _worker_started = False
 _worker_lock = threading.Lock()
 _running_task_ids: set[int] = set()
+
+
+def _ensure_local_schema() -> None:
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    required_tables = {"users", "monitor_tasks", "collection_results"}
+    if required_tables.issubset(existing_tables):
+        return
+    db.create_all()
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    missing = sorted(required_tables - existing_tables)
+    if missing:
+        raise RuntimeError(f"local database is not ready, missing tables: {', '.join(missing)}")
 
 
 def _poll_seconds() -> int:
@@ -114,6 +130,7 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
 
 
 def _tick(app) -> None:
+    _ensure_local_schema()
     if not cloud_sync_enabled():
         return
 
