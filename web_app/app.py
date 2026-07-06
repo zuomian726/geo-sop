@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 import json
 import threading
 import logging
+import time
 from urllib.parse import urlparse
 import requests
 
@@ -187,32 +188,71 @@ _cloud_sync_lock = threading.Lock()
 _cloud_sync_running_users = set()
 
 
-def _queue_cloud_sync(user_id, reason='workspace_change'):
-    """后台同步当前用户工作区到云端 MySQL 镜像库。"""
-    if not CLOUD_SYNC_AVAILABLE or not app.config.get('CLOUD_SYNC_ENABLED'):
+def _sync_user_workspace_blocking(user_id, reason='workspace_change', wait=False):
+    """同步当前用户工作区；后台采集完成时用 wait=True 避免跳过最终结果。"""
+    if not CLOUD_SYNC_AVAILABLE:
         return False
     if not cloud_sync_enabled():
         return False
 
     user_id = int(user_id)
-    with _cloud_sync_lock:
-        if user_id in _cloud_sync_running_users:
+    while True:
+        with _cloud_sync_lock:
+            if user_id not in _cloud_sync_running_users:
+                _cloud_sync_running_users.add(user_id)
+                break
+        if not wait:
             return False
-        _cloud_sync_running_users.add(user_id)
+        time.sleep(1)
+
+    try:
+        with app.app_context():
+            result = sync_user_workspace(user_id)
+            logger.info("[CloudSync] %s user=%s result=%s", reason, user_id, result)
+        return True
+    except Exception as e:
+        logger.exception("[CloudSync] 同步失败 user=%s reason=%s: %s", user_id, reason, e)
+        return False
+    finally:
+        with _cloud_sync_lock:
+            _cloud_sync_running_users.discard(user_id)
+
+
+def _queue_cloud_sync(user_id, reason='workspace_change'):
+    """后台同步当前用户工作区到云端 MySQL 镜像库。"""
+    if not CLOUD_SYNC_AVAILABLE:
+        return False
+    if not cloud_sync_enabled():
+        return False
 
     def worker():
-        try:
-            with app.app_context():
-                result = sync_user_workspace(user_id)
-                logger.info("[CloudSync] %s user=%s result=%s", reason, user_id, result)
-        except Exception as e:
-            logger.exception("[CloudSync] 同步失败 user=%s reason=%s: %s", user_id, reason, e)
-        finally:
-            with _cloud_sync_lock:
-                _cloud_sync_running_users.discard(user_id)
+        _sync_user_workspace_blocking(user_id, reason, wait=False)
 
     threading.Thread(target=worker, daemon=True).start()
     return True
+
+
+def _adopt_local_workspace_for_cloud_user(user):
+    """首次云端登录时，把旧单机 local 工作区迁移到当前云端账号。"""
+    local_user = User.query.filter_by(username='local').first()
+    if not local_user or local_user.id == user.id:
+        return 0
+
+    changed = 0
+    for task in MonitorTask.query.filter_by(user_id=local_user.id).all():
+        task.user_id = user.id
+        changed += 1
+    for manuscript in GeoManuscript.query.filter_by(user_id=local_user.id).all():
+        manuscript.user_id = user.id
+        changed += 1
+    for config in SentimentConfig.query.filter_by(user_id=local_user.id).all():
+        config.user_id = user.id
+        changed += 1
+
+    if changed:
+        db.session.commit()
+        logger.info("[CloudSync] adopted %s local workspace records for cloud user=%s", changed, user.id)
+    return changed
 
 
 def _get_cached_login_status(user_id):
@@ -391,6 +431,7 @@ def login():
                     db.session.add(user)
                 user.set_password(password)
                 db.session.commit()
+                adopted_count = _adopt_local_workspace_for_cloud_user(user)
 
                 cloud_sync_url_value = payload.get('cloud_sync_url') or cloud_url
                 cloud_sync_token_value = payload.get('token') or ''
@@ -408,7 +449,7 @@ def login():
                 app.config['CLOUD_SYNC_TOKEN'] = cloud_sync_token_value
 
                 login_user(user)
-                _queue_cloud_sync(user.id, 'cloud_login')
+                _queue_cloud_sync(user.id, 'cloud_login_adopted' if adopted_count else 'cloud_login')
                 return jsonify({'success': True, 'message': '云端账号登录成功'})
             except Exception as e:
                 logger.exception("云端账号登录失败: %s", e)
@@ -475,6 +516,8 @@ def dashboard():
 @login_required
 def get_current_user():
     """获取当前登录用户，用于前端按用户隔离本地缓存和首次引导"""
+    if app.config.get('DESKTOP_MODE') and current_user.username != 'local':
+        _adopt_local_workspace_for_cloud_user(current_user)
     try:
         cloud_status = sync_status(current_user.id) if CLOUD_SYNC_AVAILABLE else {'enabled': False}
     except Exception as e:
@@ -778,6 +821,7 @@ def run_task(task_id):
         return jsonify({'success': False, 'message': '任务已暂停，请点击继续采集'}), 400
     
     # 更新任务状态为执行中
+    task_user_id = int(task.user_id)
     task.status = 'running'
     task.last_run_at = now_cst()
     db.session.commit()
@@ -795,6 +839,8 @@ def run_task(task_id):
                 if task:
                     task.status = 'failed'
                     db.session.commit()
+        finally:
+            _sync_user_workspace_blocking(task_user_id, 'task_run_finished', wait=True)
     
     thread = threading.Thread(target=run_in_background)
     thread.daemon = True
