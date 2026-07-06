@@ -1,5 +1,15 @@
 # GEO-SOP Release Notes
 
+## v0.3.4-dev - 2026-07-06
+
+Desktop/cloud sync reliability patch.
+
+### Fixed
+
+- Desktop task completion now triggers a final blocking cloud sync, so finished tasks and collected results appear on geo.allgood.cn.
+- Existing local-only workspace records are adopted into the signed-in cloud account, preventing old single-user tasks from staying invisible online.
+- Cloud sync no longer depends on a volatile runtime flag after the desktop app restarts; a saved cloud URL and token are enough to keep sync active.
+
 ## v0.3.3-dev - 2026-07-03
 
 Brand identity alignment patch.
