@@ -1,6 +1,6 @@
 # GEO-SOP Windows Build Package
 
-Version: 0.3.5-dev
+Version: 0.3.6-dev
 
 This ZIP is a Windows development/build package, not a signed commercial installer.
 

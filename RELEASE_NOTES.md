@@ -1,5 +1,15 @@
 # GEO-SOP Release Notes
 
+## v0.3.6-dev - 2026-07-06
+
+Desktop update distribution patch.
+
+### Added
+
+- Stable macOS and Windows download URLs for long-term distribution.
+- Desktop update check against the geo.allgood.cn update manifest.
+- In-app update notification with a direct download button when a newer version is available.
+
 ## v0.3.5-dev - 2026-07-06
 
 Cloud restore and legacy data migration patch.

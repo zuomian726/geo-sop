@@ -543,6 +543,14 @@ body {
             <el-tag v-if="desktopMode" size="small" type="success" style="margin-left: 8px;">
                 单机版
             </el-tag>
+            <el-button
+                v-if="updateInfo.has_update"
+                size="small"
+                type="warning"
+                style="margin-left: 10px;"
+                @click="openUpdateDownload">
+                发现新版本 [[ updateInfo.latest_version ]]
+            </el-button>
         </div>
         <div>
             <el-button @click="showLimitSettings" :type="todayCollectionCount >= dailyLimit ? 'danger' : 'default'">
@@ -1927,6 +1935,12 @@ const app = createApp({
                 build_number: '',
                 build_date: ''
             },
+            updateInfo: {
+                has_update: false,
+                latest_version: '',
+                download_url: '',
+                notes: []
+            },
             dataDir: '',
             activeTab: 'insights',
             tasks: [],
@@ -2212,11 +2226,29 @@ const app = createApp({
                     this.currentUser = response.data.user;
                     this.desktopMode = !!response.data.desktop_mode;
                     this.appInfo = response.data.app || this.appInfo;
+                    this.updateInfo = response.data.update || this.updateInfo;
                     this.dataDir = response.data.data_dir || '';
+                    if (this.updateInfo.has_update) {
+                        const notes = Array.isArray(this.updateInfo.notes) ? this.updateInfo.notes.slice(0, 2).join('；') : '';
+                        ElNotification({
+                            title: `发现新版本 ${this.updateInfo.latest_version}`,
+                            message: notes || '可以下载新版安装包更新本地客户端。',
+                            type: 'warning',
+                            duration: 9000
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('获取当前用户失败:', error);
             }
+        },
+
+        openUpdateDownload() {
+            if (!this.updateInfo.download_url) {
+                ElMessage.warning('暂时没有可用的更新下载链接');
+                return;
+            }
+            window.open(this.updateInfo.download_url, '_blank');
         },
 
         async loadInsightsOverview() {

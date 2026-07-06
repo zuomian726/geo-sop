@@ -16,6 +16,7 @@ import json
 import threading
 import logging
 import time
+import platform
 from urllib.parse import urlparse
 import requests
 
@@ -115,6 +116,54 @@ def _normalize_anthropic_messages_url(api_url):
 def _ai_api_mode(config):
     mode = (config.ai_platform or 'openai').strip().lower()
     return 'anthropic' if mode == 'anthropic' else 'openai'
+
+
+def _version_parts(version):
+    base = str(version or '').lstrip('v').split('-', 1)[0]
+    parts = []
+    for item in base.split('.'):
+        try:
+            parts.append(int(item))
+        except ValueError:
+            parts.append(0)
+    while len(parts) < 3:
+        parts.append(0)
+    return parts[:3]
+
+
+def _check_latest_update():
+    info = app_info()
+    update_url = app.config.get('GEO_UPDATE_URL') or os.environ.get('GEO_UPDATE_URL') or 'https://geo.allgood.cn/update.json'
+    current_version = info.get('version') or ''
+    status = {
+        'current_version': current_version,
+        'latest_version': current_version,
+        'has_update': False,
+        'update_url': update_url,
+    }
+    try:
+        response = requests.get(update_url, timeout=8)
+        response.raise_for_status()
+        manifest = response.json()
+        latest_version = str(manifest.get('version') or current_version)
+        system_name = platform.system().lower()
+        platform_key = 'windows' if system_name.startswith('win') else 'macos' if system_name == 'darwin' else 'linux'
+        downloads = manifest.get('downloads') if isinstance(manifest.get('downloads'), dict) else {}
+        package = downloads.get(platform_key) if isinstance(downloads.get(platform_key), dict) else {}
+        status.update({
+            'latest_version': latest_version,
+            'has_update': _version_parts(latest_version) > _version_parts(current_version),
+            'channel': manifest.get('channel'),
+            'released_at': manifest.get('released_at'),
+            'notes': manifest.get('notes') or [],
+            'download_url': package.get('url'),
+            'download_name': package.get('name'),
+            'download_size': package.get('size'),
+            'platform': platform_key,
+        })
+    except Exception as e:
+        status['error'] = str(e)
+    return status
 
 
 def _extract_json_text(text):
@@ -562,6 +611,7 @@ def get_current_user():
         'require_login': app.config.get('REQUIRE_LOGIN', False),
         'cloud_sync': cloud_status,
         'app': app_info(),
+        'update': _check_latest_update() if app.config.get('DESKTOP_MODE', False) else {'has_update': False},
         'data_dir': app_data_dir() if app.config.get('DESKTOP_MODE', False) else app.config.get('DATA_DIR')
     })
 
@@ -570,12 +620,14 @@ def get_current_user():
 @login_required
 def get_app_info():
     """获取应用版本、运行模式和本地数据目录。"""
+    desktop_mode = app.config.get('DESKTOP_MODE', False)
     return jsonify({
         'success': True,
         'app': app_info(),
-        'desktop_mode': app.config.get('DESKTOP_MODE', False),
-        'data_dir': app_data_dir() if app.config.get('DESKTOP_MODE', False) else app.config.get('DATA_DIR'),
-        'answers_dir': app.config.get('ANSWERS_DIR')
+        'desktop_mode': desktop_mode,
+        'data_dir': app_data_dir() if desktop_mode else app.config.get('DATA_DIR'),
+        'answers_dir': app.config.get('ANSWERS_DIR'),
+        'update': _check_latest_update() if desktop_mode else {'has_update': False}
     })
 
 
