@@ -1,5 +1,19 @@
 # GEO-SOP Release Notes
 
+## v0.3.5-dev - 2026-07-06
+
+Cloud restore and legacy data migration patch.
+
+### Added
+
+- Desktop login can restore cloud history into a fresh local workspace.
+- Cloud restore API returns synced tasks, results, manuscripts, and sentiment settings for the signed-in account.
+- Legacy single-user SQLite data can be uploaded to a cloud account without exposing old local AI API keys.
+
+### Fixed
+
+- Restored tasks keep cloud source metadata so repeated installs do not duplicate the same historical task set.
+
 ## v0.3.4-dev - 2026-07-06
 
 Desktop/cloud sync reliability patch.

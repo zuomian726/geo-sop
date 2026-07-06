@@ -38,7 +38,14 @@ from local_paths import app_data_dir, answers_dir
 from version import app_info
 
 try:
-    from cloud_sync import cloud_sync_enabled, pull_remote_tasks, save_cloud_account, sync_status, sync_user_workspace
+    from cloud_sync import (
+        cloud_sync_enabled,
+        pull_remote_tasks,
+        restore_workspace_from_cloud,
+        save_cloud_account,
+        sync_status,
+        sync_user_workspace,
+    )
     CLOUD_SYNC_AVAILABLE = True
 except Exception as e:
     logger.warning(f"云端同步模块不可用: {e}")
@@ -255,6 +262,19 @@ def _adopt_local_workspace_for_cloud_user(user):
     return changed
 
 
+def _restore_cloud_workspace_if_empty(user):
+    """新安装桌面端登录云端账号后，自动恢复云端历史记录。"""
+    if not CLOUD_SYNC_AVAILABLE or not cloud_sync_enabled():
+        return {'restored': False, 'enabled': False}
+    try:
+        result = restore_workspace_from_cloud(user.id, only_if_empty=True)
+        logger.info("[CloudSync] restore user=%s result=%s", user.id, result)
+        return result
+    except Exception as e:
+        logger.exception("[CloudSync] 自动恢复云端历史失败 user=%s: %s", user.id, e)
+        return {'restored': False, 'error': str(e)}
+
+
 def _get_cached_login_status(user_id):
     cache = _read_login_status_cache()
     user_cache = cache.get(str(user_id), {})
@@ -449,8 +469,15 @@ def login():
                 app.config['CLOUD_SYNC_TOKEN'] = cloud_sync_token_value
 
                 login_user(user)
+                restore_result = {'restored': False}
+                if not adopted_count:
+                    restore_result = _restore_cloud_workspace_if_empty(user)
                 _queue_cloud_sync(user.id, 'cloud_login_adopted' if adopted_count else 'cloud_login')
-                return jsonify({'success': True, 'message': '云端账号登录成功'})
+                message = '云端账号登录成功'
+                if restore_result.get('restored'):
+                    counts = restore_result.get('counts') or {}
+                    message = f"云端账号登录成功，已恢复历史记录：{counts.get('tasks', 0)} 个任务、{counts.get('results', 0)} 条结果"
+                return jsonify({'success': True, 'message': message, 'restore': restore_result})
             except Exception as e:
                 logger.exception("云端账号登录失败: %s", e)
                 return jsonify({'success': False, 'message': f'云端账号登录失败: {str(e)}'}), 500

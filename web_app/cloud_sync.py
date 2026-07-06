@@ -87,6 +87,49 @@ def _dt(value):
     return value
 
 
+def _parse_dt(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    for suffix in ("+08:00", "Z"):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)]
+            break
+    text = text.replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _json_text(value, default):
+    if value is None:
+        value = default
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _source_key(row: dict) -> tuple[str, int]:
+    return (str(row.get("source_install_id") or row.get("install_id") or ""), int(row.get("source_local_id") or row.get("local_id") or 0))
+
+
+def _task_cloud_source(task: MonitorTask) -> tuple[str, int] | None:
+    try:
+        config = json.loads(task.schedule_config or "{}")
+    except Exception:
+        config = {}
+    install_id = str(config.get("cloud_source_install_id") or "")
+    local_id = int(config.get("cloud_source_local_id") or 0)
+    return (install_id, local_id) if install_id and local_id else None
+
+
 def _user_key(user: User) -> str:
     return (user.email or user.username or f"user-{user.id}").strip().lower()
 
@@ -168,6 +211,172 @@ def sync_user_workspace(user_id: int) -> dict:
         raise RuntimeError(f"cloud sync failed: {data}")
     data["enabled"] = True
     return data
+
+
+def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> dict:
+    """Restore cloud mirrored history into an empty local desktop workspace."""
+    if not cloud_sync_enabled():
+        return {"enabled": False, "restored": False, "message": "cloud api sync is disabled"}
+
+    user = db.session.get(User, int(user_id))
+    if not user:
+        raise ValueError(f"user {user_id} not found")
+
+    local_counts = {
+        "tasks": MonitorTask.query.filter_by(user_id=user.id).count(),
+        "manuscripts": GeoManuscript.query.filter_by(user_id=user.id).count(),
+        "sentiment_configs": SentimentConfig.query.filter_by(user_id=user.id).count(),
+    }
+    if only_if_empty and any(local_counts.values()):
+        return {"enabled": True, "restored": False, "skipped": "local workspace is not empty", "local_counts": local_counts}
+
+    query = urlencode({"user_key": _user_key(user)})
+    response = requests.get(
+        f"{cloud_sync_url()}/sync/restore/?{query}",
+        headers=_headers(),
+        timeout=45,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"cloud restore failed: HTTP {response.status_code} {response.text[:500]}")
+
+    data = response.json()
+    if not data.get("success"):
+        raise RuntimeError(f"cloud restore failed: {data}")
+
+    workspace = data.get("workspace") or {}
+    tasks = workspace.get("tasks") if isinstance(workspace.get("tasks"), list) else []
+    results = workspace.get("results") if isinstance(workspace.get("results"), list) else []
+    manuscripts = workspace.get("manuscripts") if isinstance(workspace.get("manuscripts"), list) else []
+    configs = workspace.get("sentiment_configs") if isinstance(workspace.get("sentiment_configs"), list) else []
+
+    if not any([tasks, results, manuscripts, configs]):
+        return {"enabled": True, "restored": False, "cloud_counts": data.get("counts") or {}}
+
+    task_map: dict[tuple[str, int], int] = {}
+    config_map: dict[tuple[str, int], int] = {}
+    restored_counts = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
+
+    for row in configs:
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
+        source = _source_key(row)
+        if not source[0] or not source[1]:
+            continue
+        existing = SentimentConfig.query.filter_by(user_id=user.id, name=payload.get("name") or "默认配置").first()
+        if existing:
+            config_map[source] = existing.id
+            continue
+        config = SentimentConfig(
+            user_id=user.id,
+            name=payload.get("name") or "默认配置",
+            positive_words=_json_text(payload.get("positive_words"), []),
+            negative_words=_json_text(payload.get("negative_words"), []),
+            enable_ai_sentiment=bool(payload.get("enable_ai_sentiment")),
+            ai_platform=payload.get("ai_platform"),
+            ai_api_url=payload.get("ai_api_url"),
+            ai_api_key=payload.get("ai_api_key"),
+            ai_model_name=payload.get("ai_model_name"),
+            ai_prompt=payload.get("ai_prompt"),
+            is_default=bool(payload.get("is_default")),
+            created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
+            updated_at=_parse_dt(payload.get("updated_at")) or datetime.now(),
+        )
+        db.session.add(config)
+        db.session.flush()
+        config_map[source] = config.id
+        restored_counts["sentiment_configs"] += 1
+
+    for row in tasks:
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
+        source = _source_key(row)
+        if not source[0] or not source[1]:
+            continue
+        existing = None
+        for task in MonitorTask.query.filter_by(user_id=user.id).all():
+            if _task_cloud_source(task) == source:
+                existing = task
+                break
+        if existing:
+            task_map[source] = existing.id
+            continue
+        schedule_config = payload.get("schedule_config") if isinstance(payload.get("schedule_config"), dict) else {}
+        schedule_config["cloud_source_install_id"] = source[0]
+        schedule_config["cloud_source_local_id"] = source[1]
+        old_config_id = payload.get("sentiment_config_id")
+        mapped_config_id = None
+        if old_config_id:
+            mapped_config_id = config_map.get((source[0], int(old_config_id)))
+        task = MonitorTask(
+            user_id=user.id,
+            name=payload.get("name") or f"恢复任务 {source[1]}",
+            brand_name=payload.get("brand_name"),
+            brand_keywords=_json_text(payload.get("brand_keywords"), []),
+            competitor_brands=_json_text(payload.get("competitor_brands"), []),
+            questions=_json_text(payload.get("questions"), []),
+            platforms=_json_text(payload.get("platforms"), []),
+            screenshot_config=_json_text(payload.get("screenshot_config"), {}),
+            collection_interval=int(payload.get("collection_interval") or 20),
+            max_parallel_platforms=int(payload.get("max_parallel_platforms") or 3),
+            schedule_type=payload.get("schedule_type") or "manual",
+            schedule_config=json.dumps(schedule_config, ensure_ascii=False),
+            schedule_enabled=bool(payload.get("schedule_enabled")),
+            sentiment_config_id=mapped_config_id,
+            status=payload.get("status") or "completed",
+            last_run_at=_parse_dt(payload.get("last_run_at")),
+            created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
+            updated_at=_parse_dt(payload.get("updated_at")) or datetime.now(),
+        )
+        db.session.add(task)
+        db.session.flush()
+        task_map[source] = task.id
+        restored_counts["tasks"] += 1
+
+    for row in results:
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
+        task_source = (str(row.get("source_install_id") or row.get("install_id") or ""), int(row.get("source_task_local_id") or payload.get("local_task_id") or payload.get("task_id") or 0))
+        local_task_id = task_map.get(task_source)
+        if not local_task_id:
+            continue
+        result = CollectionResult(
+            task_id=local_task_id,
+            question=payload.get("question") or "",
+            platform=payload.get("platform") or "",
+            answer=payload.get("answer"),
+            references=_json_text(payload.get("references"), []),
+            screenshot_path=payload.get("screenshot_path"),
+            has_brand_exposure=bool(payload.get("has_brand_exposure")),
+            exposed_keywords=_json_text(payload.get("exposed_keywords"), []),
+            ai_sentiment_result=_json_text(payload.get("ai_sentiment_result"), None) if payload.get("ai_sentiment_result") is not None else None,
+            ai_sentiment_updated_at=_parse_dt(payload.get("ai_sentiment_updated_at")),
+            rankings=_json_text(payload.get("rankings"), []),
+            created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
+        )
+        db.session.add(result)
+        restored_counts["results"] += 1
+
+    for row in manuscripts:
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
+        source_install = str(row.get("source_install_id") or row.get("install_id") or "")
+        mapped_task_id = None
+        if payload.get("task_id"):
+            mapped_task_id = task_map.get((source_install, int(payload.get("task_id"))))
+        mapped_task_ids = []
+        for task_id in payload.get("task_ids") or []:
+            mapped = task_map.get((source_install, int(task_id)))
+            if mapped:
+                mapped_task_ids.append(mapped)
+        manuscript = GeoManuscript(
+            user_id=user.id,
+            task_id=mapped_task_id,
+            task_ids=json.dumps(mapped_task_ids, ensure_ascii=False),
+            title=payload.get("title") or "恢复稿件",
+            url=payload.get("url") or "",
+            created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
+        )
+        db.session.add(manuscript)
+        restored_counts["manuscripts"] += 1
+
+    db.session.commit()
+    return {"enabled": True, "restored": True, "counts": restored_counts, "cloud_counts": data.get("counts") or {}}
 
 
 def sync_status(user_id: int | None = None) -> dict:
