@@ -11,6 +11,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from wsgiref.simple_server import make_server, WSGIServer
 from socketserver import TCPServer, ThreadingMixIn
 
@@ -123,6 +124,20 @@ def _wait_for_server(host: str, port: int, timeout: float = 10.0):
     return False
 
 
+def _startup_path_from_args() -> str:
+    for arg in sys.argv[1:]:
+        if not str(arg).lower().startswith("geo-sop://"):
+            continue
+        parsed = urlparse(arg)
+        target = (parse_qs(parsed.query).get("target") or ["dashboard"])[0]
+        if target in {"dashboard", "login"}:
+            return "/dashboard"
+        if target == "ai-settings":
+            return "/dashboard#ai-settings"
+        return "/dashboard"
+    return "/"
+
+
 def main():
     os.chdir(ROOT_DIR)
     _init_database()
@@ -130,7 +145,8 @@ def main():
 
     host = "127.0.0.1"
     port = _free_port()
-    url = f"http://{host}:{port}/"
+    startup_path = _startup_path_from_args()
+    url = f"http://{host}:{port}{startup_path}"
     server = ServerThread(host, port)
     server.start()
     if not _wait_for_server(host, port):

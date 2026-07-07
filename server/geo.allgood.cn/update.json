@@ -1,29 +1,29 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.7-dev",
+  "version": "0.3.8-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-07T11:30:00+08:00",
+  "released_at": "2026-07-07T13:40:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "新增一键上传云端。",
-    "本地统计数据会同步到当前登录账户。",
-    "本地采集截图会自动上传到云端，不需要手动选择图片。"
+    "macOS App 注册 geo-sop:// 协议。",
+    "云端 dashboard 的“打开本机 App”按钮可以唤起本机客户端。",
+    "客户端可识别云端传入的打开目标。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.7-dev-macOS.dmg",
-      "size": "166 MB",
-      "sha256": "dd4b4bbfd4d1f66f479a85034dd489770fdabc204b725ccd7847b4649eab59d8"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.8-dev-macOS.dmg",
+      "size": "165 MB",
+      "sha256": "2cee6633af6b286f9d8714f22a02b69258561282e793c43f4d5391520d37becf"
     },
     "windows": {
       "name": "GEO-SOP-Windows-dev.zip",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Windows-dev.zip",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.7-dev-Windows.zip",
-      "size": "3.0 MB",
-      "sha256": "7105f9f9129f107247bf4f8089cf4e4fd847bdc06d58c6455e330fb1f0cafe46"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.8-dev-Windows.zip",
+      "size": "3.1 MB",
+      "sha256": "542ea68cf9b797ca80db248b0e1bb8062f764b985ea34399965f1e893bd890d0"
     }
   }
 }

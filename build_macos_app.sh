@@ -44,6 +44,7 @@ fi
 PYINSTALLER_ARGS=(
   --noconfirm
   --windowed
+  --argv-emulation
   --name "${APP_NAME}"
   --add-data "web_app:web_app"
   --add-data "platforms:platforms"
@@ -93,6 +94,22 @@ print(BUILD_NUMBER)
 PY
 )" "${PLIST_PATH}"
   plutil -replace CFBundleIdentifier -string "com.tukemarketing.geosop" "${PLIST_PATH}"
+  python3 - "${PLIST_PATH}" <<'PY'
+import plistlib
+import sys
+
+path = sys.argv[1]
+with open(path, "rb") as f:
+    plist = plistlib.load(f)
+plist["CFBundleURLTypes"] = [
+    {
+        "CFBundleURLName": "GEO-SOP URL",
+        "CFBundleURLSchemes": ["geo-sop"],
+    }
+]
+with open(path, "wb") as f:
+    plistlib.dump(plist, f)
+PY
   codesign --force --deep --sign - "${DIST_DIR}/${APP_NAME}.app"
 fi
 

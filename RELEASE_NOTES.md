@@ -1,5 +1,14 @@
 # GEO-SOP Release Notes
 
+## v0.3.8-dev - 2026-07-07
+
+Desktop launch integration patch.
+
+### Fixed
+
+- macOS app now registers the `geo-sop://` URL scheme so cloud dashboard buttons can launch the local desktop app.
+- Desktop startup understands `geo-sop://open?target=...` links and opens the matching local workspace area.
+
 ## v0.3.7-dev - 2026-07-07
 
 Cloud result upload patch.
