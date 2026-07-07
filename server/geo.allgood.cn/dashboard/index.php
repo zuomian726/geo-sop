@@ -203,7 +203,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 <style>
 :root{--blue:#409eff;--blue2:#1769ff;--cyan:#00a6b2;--ink:#1f2937;--muted:#7b8aa0;--line:#dfe6f0;--soft:#f3f6fb;--card:#fff;--dark:#07111f;--good:#67c23a}
 *{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}}
-select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}}
+select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -351,11 +351,25 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
             <label>品牌曝光<select id="queryExposed"><option value="">全部</option><option value="1">已曝光</option><option value="0">未曝光</option></select></label>
         </div>
         <div class="query-actions">
-            <button class="primary" type="button" onclick="queryCloudResults()">查询数据</button>
+            <button class="primary" type="button" onclick="queryCloudResults(1)">查询数据</button>
             <button type="button" onclick="resetCloudQuery()">重置</button>
             <button type="button" onclick="exportCloudGeo()">导出GEO效果</button>
             <button class="primary" type="button" onclick="exportCloudScreenshots()">GEO长截图下载</button>
             <span class="query-count" id="queryCount">等待查询</span>
+        </div>
+        <div class="query-pagination">
+            <span class="query-count" id="queryPageInfo">第 1 页</span>
+            <div class="query-page-controls">
+                <span class="query-count">每页</span>
+                <select id="queryPageSize" onchange="queryCloudResults(1)">
+                    <option value="20">20 条</option>
+                    <option value="30" selected>30 条</option>
+                    <option value="50">50 条</option>
+                    <option value="100">100 条</option>
+                </select>
+                <button type="button" id="queryPrevBtn" onclick="queryCloudResults(queryState.page - 1)">上一页</button>
+                <button type="button" id="queryNextBtn" onclick="queryCloudResults(queryState.page + 1)">下一页</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
@@ -440,12 +454,28 @@ async function loadCloudTasks(){
     }
 }
 
-async function queryCloudResults(){
+var queryState = { page: 1, pageSize: 30, total: 0 };
+
+function updateQueryPagination(){
+    var totalPages = Math.max(1, Math.ceil(queryState.total / queryState.pageSize));
+    if (queryState.page > totalPages) queryState.page = totalPages;
+    var info = document.getElementById('queryPageInfo');
+    var prev = document.getElementById('queryPrevBtn');
+    var next = document.getElementById('queryNextBtn');
+    if (info) info.textContent = '第 ' + queryState.page + ' / ' + totalPages + ' 页';
+    if (prev) prev.disabled = queryState.page <= 1;
+    if (next) next.disabled = queryState.page >= totalPages || queryState.total === 0;
+}
+
+async function queryCloudResults(page){
     var task = document.getElementById('queryTask');
     var selected = task.options[task.selectedIndex];
+    queryState.pageSize = parseInt(document.getElementById('queryPageSize').value || '30', 10);
+    queryState.page = Math.max(1, parseInt(page || queryState.page || 1, 10));
     var params = {
         action: 'results',
-        limit: '80',
+        limit: String(queryState.pageSize),
+        offset: String((queryState.page - 1) * queryState.pageSize),
         task_id: task.value || '',
         install_id: selected ? (selected.dataset.installId || '') : '',
         platform: document.getElementById('queryPlatform').value,
@@ -458,9 +488,14 @@ async function queryCloudResults(){
     var count = document.getElementById('queryCount');
     rows.innerHTML = '<tr><td colspan="8"><div class="empty">正在查询云端数据...</div></td></tr>';
     count.textContent = '查询中';
+    updateQueryPagination();
     try {
         var data = await geoApi(params);
-        count.textContent = '共 ' + data.total + ' 条，当前显示 ' + data.results.length + ' 条';
+        queryState.total = data.total || 0;
+        updateQueryPagination();
+        var start = queryState.total ? ((queryState.page - 1) * queryState.pageSize + 1) : 0;
+        var end = Math.min(queryState.total, (queryState.page - 1) * queryState.pageSize + data.results.length);
+        count.textContent = '共 ' + queryState.total + ' 条，当前显示 ' + start + '-' + end + ' 条';
         if (!data.results.length) {
             rows.innerHTML = '<tr><td colspan="8"><div class="empty">没有匹配的数据。</div></td></tr>';
             return;
@@ -483,6 +518,8 @@ async function queryCloudResults(){
         }).join('');
     } catch (e) {
         count.textContent = '查询失败';
+        queryState.total = 0;
+        updateQueryPagination();
         rows.innerHTML = '<tr><td colspan="8"><div class="empty">' + h(e.message) + '</div></td></tr>';
     }
 }
@@ -492,7 +529,7 @@ function resetCloudQuery(){
         var el = document.getElementById(id);
         if (el) el.value = '';
     });
-    queryCloudResults();
+    queryCloudResults(1);
 }
 
 function buildCloudQueryParams(action){
@@ -530,7 +567,8 @@ function openLocalApp(target){
     }, 900);
 }
 document.addEventListener('DOMContentLoaded', function(){
-    loadCloudTasks().then(queryCloudResults);
+    updateQueryPagination();
+    loadCloudTasks().then(function(){ queryCloudResults(1); });
 });
 </script>
 </body>
