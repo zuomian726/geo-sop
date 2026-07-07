@@ -353,6 +353,8 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         <div class="query-actions">
             <button class="primary" type="button" onclick="queryCloudResults()">查询数据</button>
             <button type="button" onclick="resetCloudQuery()">重置</button>
+            <button type="button" onclick="exportCloudGeo()">导出GEO效果</button>
+            <button class="primary" type="button" onclick="exportCloudScreenshots()">GEO长截图下载</button>
             <span class="query-count" id="queryCount">等待查询</span>
         </div>
         <div class="table-wrap">
@@ -491,6 +493,29 @@ function resetCloudQuery(){
         if (el) el.value = '';
     });
     queryCloudResults();
+}
+
+function buildCloudQueryParams(action){
+    var task = document.getElementById('queryTask');
+    var selected = task.options[task.selectedIndex];
+    return new URLSearchParams({
+        action: action,
+        task_id: task.value || '',
+        install_id: selected ? (selected.dataset.installId || '') : '',
+        platform: document.getElementById('queryPlatform').value,
+        keyword: document.getElementById('queryKeyword').value.trim(),
+        start_date: document.getElementById('queryStart').value,
+        end_date: document.getElementById('queryEnd').value,
+        exposed: document.getElementById('queryExposed').value
+    });
+}
+
+function exportCloudGeo(){
+    window.location.href = '/api/dashboard/?' + buildCloudQueryParams('export_geo').toString();
+}
+
+function exportCloudScreenshots(){
+    window.location.href = '/api/dashboard/?' + buildCloudQueryParams('export_screenshots_zip').toString();
 }
 
 function openLocalApp(target){
