@@ -46,6 +46,7 @@ try:
         save_cloud_account,
         sync_status,
         sync_user_workspace,
+        upload_workspace_assets,
     )
     CLOUD_SYNC_AVAILABLE = True
 except Exception as e:
@@ -662,6 +663,30 @@ def run_cloud_sync_now():
         return jsonify({
             'success': False,
             'message': '云端同步失败',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/cloud-sync/upload-assets', methods=['POST'])
+@login_required
+def upload_cloud_assets_now():
+    """一键上传统计数据和本地截图文件到云端。"""
+    if not CLOUD_SYNC_AVAILABLE or not cloud_sync_enabled():
+        return jsonify({'success': False, 'message': '云端同步未启用'}), 400
+    try:
+        sync_result = sync_user_workspace(current_user.id)
+        assets_result = upload_workspace_assets(current_user.id, _resolve_screenshot_path)
+        return jsonify({
+            'success': True,
+            'message': '云端上传完成',
+            'cloud_sync': sync_result,
+            'assets': assets_result
+        })
+    except Exception as e:
+        logger.exception("[CloudSync] 上传云端资源失败: %s", e)
+        return jsonify({
+            'success': False,
+            'message': '上传云端失败',
             'error': str(e)
         }), 500
 

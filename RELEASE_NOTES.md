@@ -1,5 +1,16 @@
 # GEO-SOP Release Notes
 
+## v0.3.7-dev - 2026-07-07
+
+Cloud result upload patch.
+
+### Added
+
+- One-click cloud upload for the signed-in desktop workspace.
+- Local collection statistics are uploaded with the current account, install ID, task count, result count, platform coverage, and screenshot coverage.
+- Local screenshot evidence is uploaded automatically from saved collection results, without requiring users to choose image files manually.
+- Server-side asset storage API for deduplicated screenshot uploads.
+
 ## v0.3.6-dev - 2026-07-06
 
 Desktop update distribution patch.

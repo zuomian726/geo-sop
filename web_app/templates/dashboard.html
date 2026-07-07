@@ -565,6 +565,10 @@ body {
                 <el-icon><Histogram /></el-icon>
                 智慧舆情设置
             </el-button>
+            <el-button :loading="uploadingCloudAssets" @click="uploadCloudAssets">
+                <el-icon><Upload /></el-icon>
+                上传云端
+            </el-button>
             <el-button type="primary" @click="showCreateDialog">
                 <el-icon><Plus /></el-icon>
                 创建任务
@@ -1945,6 +1949,7 @@ const app = createApp({
             activeTab: 'insights',
             tasks: [],
             loading: false,
+            uploadingCloudAssets: false,
             insightsLoading: false,
             scorecardLoading: false,
             aiAnalysisLoading: false,
@@ -2249,6 +2254,33 @@ const app = createApp({
                 return;
             }
             window.open(this.updateInfo.download_url, '_blank');
+        },
+
+        async uploadCloudAssets() {
+            this.uploadingCloudAssets = true;
+            try {
+                const response = await axios.post('/api/cloud-sync/upload-assets');
+                if (!response.data.success) {
+                    ElMessage.error(response.data.message || '上传云端失败');
+                    return;
+                }
+                const screenshots = response.data.assets?.screenshots || {};
+                const stats = response.data.assets?.stats || {};
+                ElNotification({
+                    title: '云端上传完成',
+                    message: `统计已同步；截图上传 ${screenshots.uploaded || 0} 张，已存在 ${screenshots.skipped || 0} 张，缺失 ${screenshots.missing || 0} 张。`,
+                    type: (screenshots.failed || 0) > 0 ? 'warning' : 'success',
+                    duration: 9000
+                });
+                if (stats.counts) {
+                    console.info('Cloud stats uploaded:', stats.counts);
+                }
+            } catch (error) {
+                console.error('上传云端失败:', error);
+                ElMessage.error('上传云端失败: ' + (error.response?.data?.message || error.message));
+            } finally {
+                this.uploadingCloudAssets = false;
+            }
         },
 
         async loadInsightsOverview() {

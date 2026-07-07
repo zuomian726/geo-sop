@@ -8,6 +8,7 @@ server.
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import platform
 import uuid
@@ -211,6 +212,118 @@ def sync_user_workspace(user_id: int) -> dict:
         raise RuntimeError(f"cloud sync failed: {data}")
     data["enabled"] = True
     return data
+
+
+def upload_workspace_assets(user_id: int, resolve_path) -> dict:
+    """Upload local screenshot files and a stats snapshot for the signed-in user."""
+    if not cloud_sync_enabled():
+        return {"enabled": False, "message": "cloud api sync is disabled"}
+
+    user = db.session.get(User, int(user_id))
+    if not user:
+        raise ValueError(f"user {user_id} not found")
+
+    tasks = MonitorTask.query.filter_by(user_id=user.id).order_by(MonitorTask.id.asc()).all()
+    task_ids = [int(task.id) for task in tasks if task.id is not None]
+    results = (
+        CollectionResult.query.filter(CollectionResult.task_id.in_(task_ids)).order_by(CollectionResult.id.asc()).all()
+        if task_ids
+        else []
+    )
+    total_results = len(results)
+    exposed_results = sum(1 for result in results if result.has_brand_exposure)
+    screenshot_results = [result for result in results if result.screenshot_path]
+
+    stats_payload = {
+        "install_id": get_install_id(),
+        "user_key": _user_key(user),
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "counts": {
+            "tasks": len(tasks),
+            "results": total_results,
+            "brand_exposure_results": exposed_results,
+            "screenshots": len(screenshot_results),
+            "platforms": len({result.platform for result in results if result.platform}),
+        },
+    }
+    stats_response = requests.post(
+        f"{cloud_sync_url()}/sync/assets/",
+        data=json.dumps({"kind": "stats", "payload": stats_payload}, ensure_ascii=False).encode("utf-8"),
+        headers=_headers(),
+        timeout=30,
+    )
+    if stats_response.status_code >= 400:
+        raise RuntimeError(f"stats upload failed: HTTP {stats_response.status_code} {stats_response.text[:500]}")
+    stats_data = stats_response.json()
+    if not stats_data.get("success"):
+        raise RuntimeError(f"stats upload failed: {stats_data}")
+
+    uploaded = 0
+    skipped = 0
+    missing = 0
+    failed = 0
+    bytes_uploaded = 0
+    errors = []
+
+    for result in screenshot_results:
+        path = resolve_path(result.screenshot_path)
+        if not path:
+            missing += 1
+            continue
+        file_path = Path(path)
+        if not file_path.is_file():
+            missing += 1
+            continue
+
+        metadata = {
+            "kind": "screenshot",
+            "install_id": get_install_id(),
+            "user_key": _user_key(user),
+            "local_result_id": result.id,
+            "local_task_id": result.task_id,
+            "platform": result.platform,
+            "question": result.question,
+            "created_at": _dt(result.created_at),
+            "original_path": result.screenshot_path,
+        }
+        mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+        try:
+            with file_path.open("rb") as f:
+                response = requests.post(
+                    f"{cloud_sync_url()}/sync/assets/",
+                    headers={k: v for k, v in _headers().items() if k.lower() != "content-type"},
+                    data={"metadata": json.dumps(metadata, ensure_ascii=False)},
+                    files={"file": (file_path.name, f, mime_type)},
+                    timeout=60,
+                )
+            if response.status_code >= 400:
+                raise RuntimeError(f"HTTP {response.status_code} {response.text[:300]}")
+            data = response.json()
+            if not data.get("success"):
+                raise RuntimeError(str(data))
+            if data.get("deduped"):
+                skipped += 1
+            else:
+                uploaded += 1
+                bytes_uploaded += int(data.get("size") or 0)
+        except Exception as exc:
+            failed += 1
+            if len(errors) < 5:
+                errors.append({"result_id": result.id, "error": str(exc)})
+
+    return {
+        "enabled": True,
+        "stats": stats_data.get("stats") or {},
+        "screenshots": {
+            "total": len(screenshot_results),
+            "uploaded": uploaded,
+            "skipped": skipped,
+            "missing": missing,
+            "failed": failed,
+            "bytes_uploaded": bytes_uploaded,
+            "errors": errors,
+        },
+    }
 
 
 def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> dict:
