@@ -1,5 +1,14 @@
 # GEO-SOP Release Notes
 
+## v0.3.10-dev - 2026-07-09
+
+Windows batch compatibility patch.
+
+### Fixed
+
+- Windows launcher scripts now use ASCII-only command text and Windows CRLF line endings in the distribution ZIP.
+- Fixed `cmd.exe` parsing failures where commands such as `pause`, `pip`, and `set` could be read incorrectly on Windows.
+
 ## v0.3.9-dev - 2026-07-09
 
 Windows launcher patch.

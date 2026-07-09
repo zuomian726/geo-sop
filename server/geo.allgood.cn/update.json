@@ -1,14 +1,14 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.9-dev",
+  "version": "0.3.10-dev",
   "channel": "desktop-dev",
   "released_at": "2026-07-09T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "Windows 包新增“Start GEO-SOP.bat”用户启动入口。",
-    "Windows 启动脚本修复路径解析问题，避免误报“系统找不到指定的路径”。",
-    "启动前会检查是否完整解压、Python 是否可用，并给出可读提示。"
+    "Windows 启动脚本改为 ASCII-only 和 CRLF 格式。",
+    "修复 cmd.exe 将 pause、pip、set 等命令解析错误的问题。",
+    "保留 Start GEO-SOP.bat 作为用户启动入口。"
   ],
   "downloads": {
     "macos": {
@@ -21,11 +21,11 @@
     },
     "windows": {
       "name": "GEO-SOP-Windows-dev.zip",
-      "version": "0.3.9-dev",
+      "version": "0.3.10-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Windows-dev.zip",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.9-dev-Windows.zip",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.10-dev-Windows.zip",
       "size": "3.1 MB",
-      "sha256": "5b5be4aa5834447531067a073abdd052afba3bf6d146e22c36806de464897744"
+      "sha256": "c9e5636b460f5a520364a8d2c100a18db03dd8d2de8a6e4c5150dbbcac0cb4f8"
     }
   }
 }
