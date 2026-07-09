@@ -2293,6 +2293,7 @@ const app = createApp({
         }
     },
     async mounted() {
+        this.applyDashboardHash();
         await this.loadCurrentUser();
         this.loadTasks();
         this.loadDailyLimit();
@@ -2322,6 +2323,24 @@ const app = createApp({
         });
     },
     methods: {
+        applyDashboardHash() {
+            const hash = (window.location.hash || '').replace('#', '');
+            const tabMap = {
+                'ai-settings': 'sentiment_settings',
+                'sentiment_settings': 'sentiment_settings',
+                'insights': 'insights',
+                'tasks': 'tasks',
+                'analysis': 'analysis',
+                'trend': 'trend',
+                'geo': 'geo',
+                'geo-coverage': 'geo_coverage',
+                'sentiment-settings': 'sentiment_settings'
+            };
+            if (tabMap[hash]) {
+                this.activeTab = tabMap[hash];
+            }
+        },
+
         async loadCurrentUser() {
             try {
                 const response = await axios.get('/api/current-user');

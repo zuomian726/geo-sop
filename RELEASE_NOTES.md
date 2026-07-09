@@ -1,5 +1,15 @@
 # GEO-SOP Release Notes
 
+## v0.3.13-dev - 2026-07-09
+
+Cloud-to-desktop AI settings routing patch.
+
+### Fixed
+
+- Cloud dashboard AI settings button now opens the real desktop "智慧舆情设置" tab.
+- Desktop dashboard now accepts both `#ai-settings` and `#sentiment_settings` hashes for backward compatibility.
+- Cloud dashboard copy now explains that AI API URL, key, and model are configured locally for security.
+
 ## v0.3.12-dev - 2026-07-09
 
 Windows bootstrap installer patch.

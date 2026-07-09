@@ -133,7 +133,7 @@ def _startup_path_from_args() -> str:
         if target in {"dashboard", "login"}:
             return "/dashboard"
         if target == "ai-settings":
-            return "/dashboard#ai-settings"
+            return "/dashboard#sentiment_settings"
         return "/dashboard"
     return "/"
 

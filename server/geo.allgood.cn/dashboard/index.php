@@ -253,8 +253,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
             </div>
             <div class="side-card" id="ai-settings">
                 <span class="kicker">AI Analysis</span>
-                <strong>等待配置 API Key</strong>
-                <p class="muted">配置 API URL、Key 和模型后，可自动生成观察、风险和下一步动作。</p>
+                <strong>在本机 App 配置智慧舆情</strong>
+                <p class="muted">API URL、Key 和模型保存在本机客户端。配置完成后，可生成观察、风险和下一步动作，并随采集结果同步到云端看板。</p>
                 <button class="btn small primary" onclick="openLocalApp('ai-settings')">在本机配置 AI</button>
             </div>
         </div>

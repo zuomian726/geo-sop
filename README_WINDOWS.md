@@ -1,6 +1,6 @@
 # GEO-SOP Windows Package
 
-Version: 0.3.12-dev
+Version: 0.3.13-dev
 
 This ZIP is a Windows desktop package, not a signed commercial installer yet.
 

@@ -1,15 +1,14 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.12-dev",
+  "version": "0.3.13-dev",
   "channel": "desktop-dev",
   "released_at": "2026-07-09T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "新增 Install GEO-SOP.bat / Install GEO-SOP.ps1 引导安装器。",
-    "缺少 Python 时会优先通过 winget 自动安装 Python 3.12。",
-    "Start、install 和 Install 三个入口统一走同一套首次安装流程。",
-    "新增 Windows setup EXE 构建脚本，后续可在 Windows 上生成正式安装包。"
+    "修复云端“智慧舆情设置”唤起本机后没有进入正确设置页的问题。",
+    "桌面端兼容 #ai-settings 和 #sentiment_settings 两种链接。",
+    "云端文案明确 API Key 需要在本机 App 保存配置。"
   ],
   "downloads": {
     "macos": {
@@ -22,9 +21,9 @@
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.12-dev",
+      "version": "0.3.13-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.12-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.13-dev.exe",
       "size": "4.2 MB",
       "sha256": "04f2e4199cb6c24b903e32019d620d5e5f054bcbdf1e9b9b0f93d94a62524ed7"
     }

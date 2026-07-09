@@ -6,7 +6,7 @@ on:
       app_version:
         description: "GEO-SOP version"
         required: true
-        default: "0.3.12-dev"
+        default: "0.3.13-dev"
   push:
     branches:
       - main
@@ -34,7 +34,7 @@ jobs:
       - name: Build setup EXE
         shell: cmd
         env:
-          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.12-dev' }}
+          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.13-dev' }}
         run: build_windows_installer.bat
 
       - name: Verify installer
