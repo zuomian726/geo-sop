@@ -21,12 +21,12 @@
       "sha256": "2cee6633af6b286f9d8714f22a02b69258561282e793c43f4d5391520d37becf"
     },
     "windows": {
-      "name": "GEO-SOP-Windows-dev.zip",
+      "name": "GEO-SOP-Setup-dev.exe",
       "version": "0.3.12-dev",
-      "url": "https://geo.allgood.cn/downloads/GEO-SOP-Windows-dev.zip",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.12-dev-Windows.zip",
-      "size": "3.1 MB",
-      "sha256": "046ba248b9b929ebd02f60073ddf85b9553decb6988cfd301c41fcbadc4f2eb7"
+      "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.12-dev.exe",
+      "size": "4.2 MB",
+      "sha256": "04f2e4199cb6c24b903e32019d620d5e5f054bcbdf1e9b9b0f93d94a62524ed7"
     }
   }
 }
