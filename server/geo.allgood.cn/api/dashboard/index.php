@@ -46,6 +46,51 @@ function geo_dashboard_domain(string $url): string {
     return strtolower((string)preg_replace('/^www\./', '', $host));
 }
 
+function geo_dashboard_url_key(string $url, bool $stripQuery = false): string {
+    $url = trim(strtolower($url));
+    if ($url === '') return '';
+    $url = preg_replace('#^https?://#i', '', $url);
+    $url = preg_replace('#^www\.#i', '', (string)$url);
+    $url = preg_replace('/#.*$/', '', (string)$url);
+    if ($stripQuery) $url = preg_replace('/\?.*$/', '', (string)$url);
+    return trim((string)$url, " \t\n\r\0\x0B/");
+}
+
+function geo_dashboard_url_matches(string $targetUrl, string $referenceUrl): bool {
+    $targetKeys = array_values(array_unique(array_filter([
+        geo_dashboard_url_key($targetUrl, false),
+        geo_dashboard_url_key($targetUrl, true),
+    ])));
+    $referenceKeys = array_values(array_unique(array_filter([
+        geo_dashboard_url_key($referenceUrl, false),
+        geo_dashboard_url_key($referenceUrl, true),
+    ])));
+    foreach ($targetKeys as $targetKey) {
+        if (mb_strlen($targetKey, 'UTF-8') < 6) continue;
+        foreach ($referenceKeys as $referenceKey) {
+            if ($referenceKey === '') continue;
+            if ($targetKey === $referenceKey || str_contains($referenceKey, $targetKey) || str_contains($targetKey, $referenceKey)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function geo_dashboard_main_domain_from_url(string $url): string {
+    $key = geo_dashboard_url_key($url, true);
+    if ($key === '') return '';
+    $host = explode('/', $key, 2)[0] ?? '';
+    $parts = array_values(array_filter(explode('.', $host)));
+    $count = count($parts);
+    if ($count < 2) return $host;
+    $lastTwo = implode('.', array_slice($parts, -2));
+    if (in_array($lastTwo, ['com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn'], true) && $count >= 3) {
+        return implode('.', array_slice($parts, -3));
+    }
+    return $lastTwo;
+}
+
 function geo_dashboard_platform_name(string $platform): string {
     $map = [
         'doubao' => '豆包',
@@ -106,7 +151,7 @@ function geo_dashboard_asset_map(PDO $pdo, int $cloudUserId, array $pairs): arra
     return $assets;
 }
 
-function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = null): array {
+function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = null, int $answerLimit = 0): array {
     $payload = geo_dashboard_payload($row['payload'] ?? '');
     $taskKey = (string)$row['install_id'] . ':' . (int)$row['local_task_id'];
     $task = $taskMap[$taskKey] ?? null;
@@ -115,6 +160,10 @@ function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = n
     if (is_string($aiSentiment)) {
         $decoded = json_decode($aiSentiment, true);
         $aiSentiment = is_array($decoded) ? $decoded : null;
+    }
+    $answer = (string)($payload['answer'] ?? '');
+    if ($answerLimit > 0) {
+        $answer = mb_substr($answer, 0, $answerLimit, 'UTF-8');
     }
     return [
         'id' => (int)$row['id'],
@@ -125,7 +174,7 @@ function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = n
         'platform' => (string)$row['platform'],
         'platform_name' => geo_dashboard_platform_name((string)$row['platform']),
         'question' => (string)$row['question'],
-        'answer' => (string)($payload['answer'] ?? ''),
+        'answer' => $answer,
         'has_brand_exposure' => ((int)$row['has_brand_exposure']) === 1,
         'exposed_keywords' => is_array($payload['exposed_keywords'] ?? null) ? array_values($payload['exposed_keywords']) : [],
         'references' => $refs,
@@ -169,18 +218,91 @@ function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 50
     }
     $start = trim((string)($_GET['start_date'] ?? ''));
     if ($start !== '') {
-        $where[] = 'COALESCE(local_created_at, synced_at) >= ?';
+        $where[] = 'result_at >= ?';
         $params[] = $start . ' 00:00:00';
     }
     $end = trim((string)($_GET['end_date'] ?? ''));
     if ($end !== '') {
-        $where[] = 'COALESCE(local_created_at, synced_at) <= ?';
+        $where[] = 'result_at <= ?';
         $params[] = $end . ' 23:59:59';
     }
-    $sql = 'SELECT * FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY platform ASC, question ASC, COALESCE(local_created_at, synced_at) ASC, id ASC LIMIT ' . max(1, min(10000, $limit));
+    $sql = 'SELECT * FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY platform ASC, question ASC, result_at ASC, id ASC LIMIT ' . max(1, min(10000, $limit));
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll() ?: [];
+}
+
+function geo_dashboard_filtered_stmt(PDO $pdo, int $cloudUserId, int $limit = 5000, string $columns = '*'): PDOStatement {
+    $where = ['cloud_user_id=?'];
+    $params = [$cloudUserId];
+    $taskId = trim((string)($_GET['task_id'] ?? ''));
+    $installId = trim((string)($_GET['install_id'] ?? ''));
+    if ($taskId !== '') {
+        $where[] = 'local_task_id=?';
+        $params[] = (int)$taskId;
+    }
+    if ($installId !== '') {
+        $where[] = 'install_id=?';
+        $params[] = $installId;
+    }
+    $platform = trim((string)($_GET['platform'] ?? ''));
+    if ($platform !== '') {
+        $where[] = 'platform=?';
+        $params[] = $platform;
+    }
+    $keyword = trim((string)($_GET['keyword'] ?? ''));
+    if ($keyword !== '') {
+        $where[] = '(question LIKE ? OR payload LIKE ?)';
+        $params[] = '%' . $keyword . '%';
+        $params[] = '%' . $keyword . '%';
+    }
+    $exposed = trim((string)($_GET['exposed'] ?? ''));
+    if ($exposed === '1' || $exposed === '0') {
+        $where[] = 'has_brand_exposure=?';
+        $params[] = (int)$exposed;
+    }
+    $start = trim((string)($_GET['start_date'] ?? ''));
+    if ($start !== '') {
+        $where[] = 'result_at >= ?';
+        $params[] = $start . ' 00:00:00';
+    }
+    $end = trim((string)($_GET['end_date'] ?? ''));
+    if ($end !== '') {
+        $where[] = 'result_at <= ?';
+        $params[] = $end . ' 23:59:59';
+    }
+    $safeColumns = preg_replace('/[^a-zA-Z0-9_.*, ()]/', '', $columns) ?: '*';
+    $sql = 'SELECT ' . $safeColumns . ' FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY platform ASC, question ASC, result_at ASC, id ASC LIMIT ' . max(1, min(20000, $limit));
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt;
+}
+
+function geo_dashboard_task_name_map(PDO $pdo, int $cloudUserId): array {
+    $stmt = $pdo->prepare('SELECT install_id,local_id,name FROM geo_sync_tasks WHERE cloud_user_id=?');
+    $stmt->execute([$cloudUserId]);
+    $map = [];
+    foreach ($stmt->fetchAll() ?: [] as $row) {
+        $map[(string)$row['install_id'] . ':' . (int)$row['local_id']] = (string)$row['name'];
+    }
+    return $map;
+}
+
+function geo_dashboard_task_ids_from_payload(array $payload): array {
+    $ids = [];
+    foreach (['task_ids', 'task_id'] as $key) {
+        $value = $payload[$key] ?? null;
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : preg_split('/[,，\s]+/', $value);
+        }
+        if (!is_array($value)) $value = $value === null ? [] : [$value];
+        foreach ($value as $id) {
+            $id = (int)$id;
+            if ($id > 0) $ids[$id] = true;
+        }
+    }
+    return array_keys($ids);
 }
 
 function geo_dashboard_xml(string $value): string {
@@ -204,6 +326,61 @@ function geo_dashboard_xlsx_sheet(array $rows): string {
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         . '<sheetData>' . implode('', $xmlRows) . '</sheetData></worksheet>';
+}
+
+function geo_dashboard_xlsx_write_row($handle, int $index, array $row): void {
+    $cells = array_map('geo_dashboard_xlsx_cell', $row);
+    fwrite($handle, '<row r="' . $index . '">' . implode('', $cells) . '</row>');
+}
+
+function geo_dashboard_xlsx_open_sheet(string $path) {
+    $handle = fopen($path, 'wb');
+    if (!$handle) {
+        geo_json(['success' => false, 'message' => 'failed to create xlsx sheet'], 500);
+    }
+    fwrite($handle, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>');
+    return $handle;
+}
+
+function geo_dashboard_xlsx_close_sheet($handle): void {
+    fwrite($handle, '</sheetData></worksheet>');
+    fclose($handle);
+}
+
+function geo_dashboard_send_xlsx_files(string $filename, array $sheetFiles): void {
+    if (!class_exists('ZipArchive')) {
+        geo_json(['success' => false, 'message' => 'server ZipArchive is unavailable'], 500);
+    }
+    $tmp = tempnam(sys_get_temp_dir(), 'geo_xlsx_');
+    $zip = new ZipArchive();
+    if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        geo_json(['success' => false, 'message' => 'failed to create xlsx'], 500);
+    }
+    $overrides = '';
+    $workbookSheets = '';
+    $rels = '';
+    $sheetIndex = 1;
+    foreach ($sheetFiles as $name => $path) {
+        $zip->addFile($path, "xl/worksheets/sheet{$sheetIndex}.xml");
+        $overrides .= '<Override PartName="/xl/worksheets/sheet' . $sheetIndex . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+        $workbookSheets .= '<sheet name="' . geo_dashboard_xml(substr((string)$name, 0, 31)) . '" sheetId="' . $sheetIndex . '" r:id="rId' . $sheetIndex . '"/>';
+        $rels .= '<Relationship Id="rId' . $sheetIndex . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . $sheetIndex . '.xml"/>';
+        $sheetIndex++;
+    }
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' . $overrides . '</Types>');
+    $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+    $zip->addFromString('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' . $workbookSheets . '</sheets></workbook>');
+    $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . $rels . '</Relationships>');
+    $zip->close();
+    foreach ($sheetFiles as $path) @unlink($path);
+    header_remove('Content-Type');
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . rawurlencode($filename) . '"');
+    header('Content-Length: ' . filesize($tmp));
+    readfile($tmp);
+    @unlink($tmp);
+    exit;
 }
 
 function geo_dashboard_send_xlsx(string $filename, array $sheets): void {
@@ -251,54 +428,65 @@ $action = (string)($_GET['action'] ?? 'overview');
 
 try {
     if ($action === 'export_geo') {
-        $rows = geo_dashboard_filtered_rows($pdo, $cloudUserId, 10000);
-        if (!$rows) {
-            geo_json(['success' => false, 'message' => '当前筛选条件下暂无可导出的GEO效果数据'], 404);
-        }
-        $taskMap = geo_dashboard_task_map($pdo, $cloudUserId);
-        $pairs = array_map(fn($row) => ['install_id' => $row['install_id'], 'local_result_id' => (int)$row['local_id']], $rows);
-        $assets = geo_dashboard_asset_map($pdo, $cloudUserId, $pairs);
-        $items = [];
-        foreach ($rows as $row) {
-            $key = (string)$row['install_id'] . ':' . (int)$row['local_id'];
-            $items[] = geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null);
-        }
+        @set_time_limit(180);
+        $taskNames = geo_dashboard_task_name_map($pdo, $cloudUserId);
         $dates = [];
         $groups = [];
-        foreach ($items as $item) {
-            $date = substr((string)$item['created_at'], 0, 10);
+        $detailPath = tempnam(sys_get_temp_dir(), 'geo_detail_');
+        $detailHandle = geo_dashboard_xlsx_open_sheet($detailPath);
+        $detailRow = 1;
+        geo_dashboard_xlsx_write_row($detailHandle, $detailRow++, ['采集时间', '任务', 'AI平台', '问题', '品牌曝光', '曝光关键词', '引用数量', '截图路径', 'AI回答']);
+        $stmt = geo_dashboard_filtered_stmt($pdo, $cloudUserId, 20000, 'install_id,local_id,local_task_id,platform,question,has_brand_exposure,payload,local_created_at,synced_at');
+        $rowCount = 0;
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $rowCount++;
+            $payload = geo_dashboard_payload($row['payload'] ?? '');
+            $refs = geo_dashboard_refs($payload);
+            $createdAt = (string)($row['local_created_at'] ?: $row['synced_at']);
+            $date = substr($createdAt, 0, 10);
             $dates[$date] = true;
-            $key = $item['platform_name'] . '|' . $item['question'];
+            $platformName = geo_dashboard_platform_name((string)$row['platform']);
+            $question = (string)$row['question'];
+            $hasExposure = ((int)$row['has_brand_exposure']) === 1;
+            $key = $platformName . '|' . $question;
             if (!isset($groups[$key])) {
-                $groups[$key] = ['platform' => $item['platform_name'], 'question' => $item['question'], 'dates' => [], 'exposed_dates' => []];
+                $groups[$key] = ['platform' => $platformName, 'question' => $question, 'dates' => [], 'exposed_dates' => []];
             }
             $groups[$key]['dates'][$date] = true;
-            if ($item['has_brand_exposure']) $groups[$key]['exposed_dates'][$date] = true;
+            if ($hasExposure) $groups[$key]['exposed_dates'][$date] = true;
+            $taskKey = (string)$row['install_id'] . ':' . (int)$row['local_task_id'];
+            geo_dashboard_xlsx_write_row($detailHandle, $detailRow++, [
+                $createdAt,
+                $taskNames[$taskKey] ?? '',
+                $platformName,
+                $question,
+                $hasExposure ? '是' : '否',
+                implode('、', is_array($payload['exposed_keywords'] ?? null) ? array_values($payload['exposed_keywords']) : []),
+                count($refs),
+                (string)($payload['screenshot_path'] ?? ''),
+                mb_substr((string)($payload['answer'] ?? ''), 0, 8000, 'UTF-8'),
+            ]);
+            unset($payload, $refs);
+        }
+        geo_dashboard_xlsx_close_sheet($detailHandle);
+        if ($rowCount <= 0) {
+            @unlink($detailPath);
+            geo_json(['success' => false, 'message' => '当前筛选条件下暂无可导出的GEO效果数据'], 404);
         }
         $dates = array_keys($dates);
         sort($dates);
-        $summary = [array_merge(['序号', 'AI平台', '监控问题', '达标天数'], $dates)];
+        $summaryPath = tempnam(sys_get_temp_dir(), 'geo_summary_');
+        $summaryHandle = geo_dashboard_xlsx_open_sheet($summaryPath);
+        $summaryRow = 1;
+        geo_dashboard_xlsx_write_row($summaryHandle, $summaryRow++, array_merge(['序号', 'AI平台', '监控问题', '达标天数'], $dates));
         $i = 1;
         foreach ($groups as $group) {
             $line = [$i++, $group['platform'], $group['question'], count($group['exposed_dates'])];
             foreach ($dates as $date) $line[] = isset($group['exposed_dates'][$date]) ? '√' : '';
-            $summary[] = $line;
+            geo_dashboard_xlsx_write_row($summaryHandle, $summaryRow++, $line);
         }
-        $detail = [['采集时间', '任务', 'AI平台', '问题', '品牌曝光', '曝光关键词', '引用数量', '截图URL', 'AI回答']];
-        foreach ($items as $item) {
-            $detail[] = [
-                $item['created_at'],
-                $item['task_name'],
-                $item['platform_name'],
-                $item['question'],
-                $item['has_brand_exposure'] ? '是' : '否',
-                implode('、', $item['exposed_keywords']),
-                $item['reference_count'],
-                $item['screenshot_url'] ?: '',
-                mb_substr($item['answer'], 0, 30000, 'UTF-8'),
-            ];
-        }
-        geo_dashboard_send_xlsx('GEO效果_' . date('Ymd_His') . '.xlsx', ['GEO效果汇总' => $summary, '采集明细' => $detail]);
+        geo_dashboard_xlsx_close_sheet($summaryHandle);
+        geo_dashboard_send_xlsx_files('GEO效果_' . date('Ymd_His') . '.xlsx', ['GEO效果汇总' => $summaryPath, '采集明细' => $detailPath]);
     }
 
     if ($action === 'export_screenshots_zip') {
@@ -342,6 +530,149 @@ try {
         readfile($tmp);
         @unlink($tmp);
         exit;
+    }
+
+    if ($action === 'geo_coverage') {
+        $taskNames = geo_dashboard_task_name_map($pdo, $cloudUserId);
+        $taskIdFilter = (int)($_GET['task_id'] ?? 0);
+        $installIdFilter = trim((string)($_GET['install_id'] ?? ''));
+        $platformFilter = trim((string)($_GET['platform'] ?? ''));
+        $dateFilter = trim((string)($_GET['date'] ?? ''));
+        $startDate = $dateFilter !== '' ? $dateFilter : trim((string)($_GET['start_date'] ?? ''));
+        $endDate = $dateFilter !== '' ? $dateFilter : trim((string)($_GET['end_date'] ?? ''));
+
+        $manuscriptWhere = ['cloud_user_id=?'];
+        $manuscriptParams = [$cloudUserId];
+        if ($installIdFilter !== '') {
+            $manuscriptWhere[] = 'install_id=?';
+            $manuscriptParams[] = $installIdFilter;
+        }
+        $stmt = $pdo->prepare('SELECT install_id,local_id,title,url,payload,local_created_at,synced_at FROM geo_sync_manuscripts WHERE ' . implode(' AND ', $manuscriptWhere) . ' ORDER BY title ASC, local_id ASC LIMIT 3000');
+        $stmt->execute($manuscriptParams);
+        $manuscripts = [];
+        $manuscriptBuckets = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $payload = geo_dashboard_payload($row['payload'] ?? '');
+            $taskIds = geo_dashboard_task_ids_from_payload($payload);
+            if ($taskIdFilter > 0 && $taskIds && !in_array($taskIdFilter, $taskIds, true)) continue;
+            $taskLabels = [];
+            foreach ($taskIds as $taskId) {
+                $taskKey = (string)$row['install_id'] . ':' . $taskId;
+                if (!empty($taskNames[$taskKey])) $taskLabels[] = $taskNames[$taskKey];
+            }
+            $manuscripts[] = [
+                'id' => (int)$row['local_id'],
+                'install_id' => (string)$row['install_id'],
+                'title' => trim((string)$row['title']) ?: '未命名稿件',
+                'url' => trim((string)$row['url']),
+                'task_ids' => $taskIds,
+                'task_name' => $taskLabels ? implode('、', array_values(array_unique($taskLabels))) : '未关联',
+                'is_cited' => false,
+                'cited_count' => 0,
+                'details' => [],
+                'created_at' => $row['local_created_at'] ?: $row['synced_at'],
+            ];
+            $index = count($manuscripts) - 1;
+            $domain = geo_dashboard_main_domain_from_url((string)$row['url']);
+            if ($domain !== '') $manuscriptBuckets[$domain][] = $index;
+        }
+
+        $resultWhere = ['cloud_user_id=?'];
+        $resultParams = [$cloudUserId];
+        if ($taskIdFilter > 0) {
+            $resultWhere[] = 'local_task_id=?';
+            $resultParams[] = $taskIdFilter;
+        }
+        if ($installIdFilter !== '') {
+            $resultWhere[] = 'install_id=?';
+            $resultParams[] = $installIdFilter;
+        }
+        if ($platformFilter !== '') {
+            $resultWhere[] = 'platform=?';
+            $resultParams[] = $platformFilter;
+        }
+        if ($startDate !== '') {
+            $resultWhere[] = 'result_at >= ?';
+            $resultParams[] = $startDate . ' 00:00:00';
+        }
+        if ($endDate !== '') {
+            $resultWhere[] = 'result_at <= ?';
+            $resultParams[] = $endDate . ' 23:59:59';
+        }
+        $sql = 'SELECT install_id,local_id,local_task_id,platform,question,payload,local_created_at,synced_at FROM geo_sync_results WHERE ' . implode(' AND ', $resultWhere) . ' ORDER BY result_at DESC, id DESC LIMIT 10000';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($resultParams);
+        while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $payload = geo_dashboard_payload($result['payload'] ?? '');
+            $refs = geo_dashboard_refs($payload);
+            if (!$refs) continue;
+            foreach ($refs as $ref) {
+                if (!is_array($ref)) continue;
+                $refUrl = (string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? '');
+                if ($refUrl === '') continue;
+                $refDomain = geo_dashboard_main_domain_from_url($refUrl);
+                $candidateIndexes = $refDomain !== '' && isset($manuscriptBuckets[$refDomain])
+                    ? $manuscriptBuckets[$refDomain]
+                    : array_keys($manuscripts);
+                foreach ($candidateIndexes as $manuscriptIndex) {
+                    $manuscript = $manuscripts[$manuscriptIndex];
+                    if ($manuscript['install_id'] !== (string)$result['install_id']) continue;
+                    if ($manuscript['task_ids'] && !in_array((int)$result['local_task_id'], $manuscript['task_ids'], true)) continue;
+                    if (!geo_dashboard_url_matches((string)$manuscript['url'], $refUrl)) continue;
+                    $manuscripts[$manuscriptIndex]['is_cited'] = true;
+                    $manuscripts[$manuscriptIndex]['cited_count']++;
+                    if (count($manuscripts[$manuscriptIndex]['details']) < 20) {
+                        $manuscripts[$manuscriptIndex]['details'][] = [
+                            'platform' => (string)$result['platform'],
+                            'platform_name' => geo_dashboard_platform_name((string)$result['platform']),
+                            'question' => (string)$result['question'],
+                            'reference_title' => (string)($ref['title'] ?? ''),
+                            'reference_url' => $refUrl,
+                            'created_at' => $result['local_created_at'] ?: $result['synced_at'],
+                            'result_id' => (int)$result['local_id'],
+                        ];
+                    }
+                }
+            }
+        }
+
+        $groups = [];
+        foreach ($manuscripts as $manuscript) {
+            $title = $manuscript['title'] ?: '未命名稿件';
+            if (!isset($groups[$title])) {
+                $groups[$title] = [
+                    'title' => $title,
+                    'task_name' => '',
+                    'is_cited' => false,
+                    'cited_count' => 0,
+                    'url_count' => 0,
+                    'children' => [],
+                ];
+            }
+            $groups[$title]['children'][] = $manuscript;
+            $groups[$title]['url_count']++;
+            $groups[$title]['is_cited'] = $groups[$title]['is_cited'] || $manuscript['is_cited'];
+            $groups[$title]['cited_count'] += (int)$manuscript['cited_count'];
+        }
+        foreach ($groups as &$group) {
+            $taskLabels = [];
+            foreach ($group['children'] as $child) {
+                if (!empty($child['task_name']) && $child['task_name'] !== '未关联') $taskLabels[] = $child['task_name'];
+            }
+            $group['task_name'] = $taskLabels ? implode('、', array_values(array_unique($taskLabels))) : '未关联';
+            usort($group['children'], fn($a, $b) => ((int)$b['cited_count'] <=> (int)$a['cited_count']) ?: strcmp((string)$a['url'], (string)$b['url']));
+        }
+        unset($group);
+        $groupRows = array_values($groups);
+        usort($groupRows, fn($a, $b) => ((int)$b['cited_count'] <=> (int)$a['cited_count']) ?: strcmp((string)$a['title'], (string)$b['title']));
+        geo_json([
+            'success' => true,
+            'total_titles' => count($groupRows),
+            'total_urls' => count($manuscripts),
+            'cited_titles' => count(array_filter($groupRows, fn($row) => $row['is_cited'])),
+            'cited_urls' => count(array_filter($manuscripts, fn($row) => $row['is_cited'])),
+            'groups' => $groupRows,
+        ]);
     }
 
     if ($action === 'tasks') {
@@ -397,12 +728,12 @@ try {
         }
         $start = trim((string)($_GET['start_date'] ?? ''));
         if ($start !== '') {
-            $where[] = 'COALESCE(local_created_at, synced_at) >= ?';
+            $where[] = 'result_at >= ?';
             $params[] = $start . ' 00:00:00';
         }
         $end = trim((string)($_GET['end_date'] ?? ''));
         if ($end !== '') {
-            $where[] = 'COALESCE(local_created_at, synced_at) <= ?';
+            $where[] = 'result_at <= ?';
             $params[] = $end . ' 23:59:59';
         }
         $limit = geo_dashboard_limit();
@@ -412,7 +743,7 @@ try {
         $countStmt->execute($params);
         $total = (int)($countStmt->fetch()['c'] ?? 0);
 
-        $sql = 'SELECT * FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(local_created_at, synced_at) DESC, id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
+        $sql = 'SELECT * FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY result_at DESC, id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll() ?: [];
@@ -422,7 +753,7 @@ try {
         $results = [];
         foreach ($rows as $row) {
             $key = (string)$row['install_id'] . ':' . (int)$row['local_id'];
-            $results[] = geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null);
+            $results[] = geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null, 600);
         }
         geo_json(['success' => true, 'total' => $total, 'limit' => $limit, 'offset' => $offset, 'results' => $results]);
     }
@@ -444,7 +775,7 @@ try {
     }
 
     if ($action === 'references') {
-        $stmt = $pdo->prepare('SELECT payload FROM geo_sync_results WHERE cloud_user_id=? ORDER BY COALESCE(local_created_at, synced_at) DESC LIMIT 5000');
+        $stmt = $pdo->prepare('SELECT payload FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at DESC LIMIT 5000');
         $stmt->execute([$cloudUserId]);
         $domains = [];
         foreach ($stmt->fetchAll() ?: [] as $row) {
@@ -463,7 +794,7 @@ try {
     }
 
     if ($action === 'overview') {
-        $stmt = $pdo->prepare('SELECT platform,has_brand_exposure,payload,local_created_at,synced_at FROM geo_sync_results WHERE cloud_user_id=? ORDER BY COALESCE(local_created_at, synced_at) ASC LIMIT 5000');
+        $stmt = $pdo->prepare('SELECT platform,has_brand_exposure,payload,local_created_at,synced_at FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at ASC LIMIT 5000');
         $stmt->execute([$cloudUserId]);
         $rows = $stmt->fetchAll() ?: [];
         $total = count($rows);

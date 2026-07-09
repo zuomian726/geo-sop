@@ -1230,16 +1230,30 @@ body {
                     </div>
 
                     <!-- 分析结果表格 -->
-                    <el-table :data="geoCoverageData" v-loading="geoLoading" border stripe style="width: 100%">
-                        <el-table-column prop="title" label="稿件备注" width="200"></el-table-column>
-                        <el-table-column prop="url" label="目标URL/特征" min-width="300">
+                    <el-table
+                        :data="groupedGeoData"
+                        v-loading="geoLoading"
+                        border
+                        stripe
+                        class="geo-table-expand"
+                        style="width: 100%; table-layout: auto;"
+                        row-key="title"
+                        :expand-row-keys="expandedGeoKeys">
+                        <el-table-column prop="title" label="稿件/文章标题" min-width="260">
                             <template #default="scope">
-                                <el-link :href="scope.row.url.startsWith('http') ? scope.row.url : 'https://' + scope.row.url" target="_blank" type="primary">
-                                    [[ scope.row.url ]]
-                                </el-link>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-weight: 600;">[[ scope.row.title ]]</span>
+                                    <el-tag size="small" effect="plain">[[ scope.row.children.length ]] 个URL</el-tag>
+                                    <el-button
+                                        size="small"
+                                        text
+                                        @click.stop="handleGeoExpandChange(scope.row.title)">
+                                        [[ expandedGeoKeys.includes(scope.row.title) ? '收起' : '展开' ]]
+                                    </el-button>
+                                </div>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="task_name" label="关联任务" width="180"></el-table-column>
+                        <el-table-column prop="task_name" label="关联任务" min-width="220"></el-table-column>
                         <el-table-column label="引用状态" width="120" align="center">
                             <template #default="scope">
                                 <el-tag :type="scope.row.is_cited ? 'success' : 'info'">
@@ -1247,24 +1261,63 @@ body {
                                 </el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column label="引用次数" width="120" align="center">
+                        <el-table-column label="引用次数" width="140" align="center">
+                            <template #header>
+                                <span style="cursor: pointer;" @click="handleGeoSort('cited_count')">
+                                    引用次数
+                                    <span v-if="geoSortField === 'cited_count'" style="margin-left: 4px; font-size: 12px;">
+                                        [[ geoSortOrder === 'asc' ? '▲' : '▼' ]]
+                                    </span>
+                                    <span v-else style="margin-left: 4px; font-size: 12px; color: #999;">↕</span>
+                                </span>
+                            </template>
                             <template #default="scope">
-                                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                    <el-tag v-if="scope.row.cited_count > 0" type="success" size="small" effect="dark">
-                                        [[ scope.row.cited_count ]]
-                                    </el-tag>
-                                    <el-button size="small" @click="viewGeoDetails(scope.row)" :disabled="!scope.row.is_cited">
-                                        查看详情
-                                    </el-button>
-                                </div>
+                                <el-tag v-if="scope.row.cited_count > 0" type="success" size="small" effect="dark">
+                                    [[ scope.row.cited_count ]]
+                                </el-tag>
+                                <span v-else>-</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="150" align="center">
+                        <el-table-column type="expand" label="URL明细" width="90">
                             <template #default="scope">
-                                <el-button-group>
-                                    <el-button size="small" @click="editGeoManuscript(scope.row)">编辑</el-button>
-                                    <el-button size="small" type="danger" @click="confirmDeleteGeo(scope.row)">删除</el-button>
-                                </el-button-group>
+                                <el-table :data="scope.row.children" border size="small" style="width: 100%; table-layout: auto;">
+                                    <el-table-column prop="url" label="稿件/文章URL" min-width="320">
+                                        <template #default="childScope">
+                                            <el-link :href="normalizeGeoUrl(childScope.row.url)" target="_blank" type="primary">
+                                                [[ childScope.row.url ]]
+                                            </el-link>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="task_name" label="关联任务" min-width="200"></el-table-column>
+                                    <el-table-column label="引用状态" width="110" align="center">
+                                        <template #default="childScope">
+                                            <el-tag :type="childScope.row.is_cited ? 'success' : 'info'">
+                                                [[ childScope.row.is_cited ? '已引用' : '未引用' ]]
+                                            </el-tag>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="引用次数" width="150" align="center" prop="cited_count" sortable>
+                                        <template #default="childScope">
+                                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                                <el-tag v-if="childScope.row.cited_count > 0" type="success" size="small" effect="dark">
+                                                    [[ childScope.row.cited_count ]]
+                                                </el-tag>
+                                                <span v-else>-</span>
+                                                <el-button size="small" @click="viewGeoDetails(childScope.row)" :disabled="!childScope.row.is_cited">
+                                                    查看详情
+                                                </el-button>
+                                            </div>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="操作" width="150" align="center">
+                                        <template #default="childScope">
+                                            <el-button-group>
+                                                <el-button size="small" @click="editGeoManuscript(childScope.row)">编辑</el-button>
+                                                <el-button size="small" type="danger" @click="confirmDeleteGeo(childScope.row)">删除</el-button>
+                                            </el-button-group>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -2118,6 +2171,9 @@ const app = createApp({
                 date: ''
             },
             geoCoverageData: [],
+            expandedGeoKeys: [],
+            geoSortField: 'cited_count',
+            geoSortOrder: 'desc',
             geoDialogVisible: false,
             geoDialogTitle: '添加GEO稿件',
             geoSubmitting: false,
@@ -2187,6 +2243,48 @@ const app = createApp({
         },
         filteredDomains() {
             return this.trendFilter.level === 'top' ? this.allTopDomains : this.allDomains;
+        },
+        groupedGeoData() {
+            if (!this.geoCoverageData || this.geoCoverageData.length === 0) {
+                return [];
+            }
+            const groups = {};
+            this.geoCoverageData.forEach(row => {
+                const title = row.title || '未命名稿件';
+                if (!groups[title]) {
+                    groups[title] = {
+                        title,
+                        children: [],
+                        taskNames: new Set(),
+                        is_cited: false,
+                        cited_count: 0
+                    };
+                }
+                groups[title].children.push(row);
+                if (row.task_name) {
+                    groups[title].taskNames.add(row.task_name);
+                }
+                if (row.is_cited) {
+                    groups[title].is_cited = true;
+                }
+                groups[title].cited_count += Number(row.cited_count || 0);
+            });
+            let result = Object.values(groups).map(group => ({
+                title: group.title,
+                children: group.children.sort((a, b) => Number(b.cited_count || 0) - Number(a.cited_count || 0)),
+                task_name: Array.from(group.taskNames).join('、') || '未关联',
+                is_cited: group.is_cited,
+                cited_count: group.cited_count
+            }));
+            if (this.geoSortField) {
+                const order = this.geoSortOrder === 'asc' ? 1 : -1;
+                result = result.sort((a, b) => {
+                    const valA = Number(a[this.geoSortField] || 0);
+                    const valB = Number(b[this.geoSortField] || 0);
+                    return (valA - valB) * order || String(a.title).localeCompare(String(b.title), 'zh-Hans-CN');
+                });
+            }
+            return result;
         }
     },
     watch: {
@@ -2558,6 +2656,11 @@ const app = createApp({
                 const response = await axios.get('/api/analysis/geo-coverage', { params });
                 if (response.data.success) {
                     this.geoCoverageData = response.data.data;
+                    this.expandedGeoKeys = [];
+                    this.$nextTick(() => {
+                        const firstCited = this.groupedGeoData.find(row => row.is_cited);
+                        if (firstCited) this.expandedGeoKeys = [firstCited.title];
+                    });
                 }
             } catch (error) {
                 console.error('加载GEO分析数据失败:', error);
@@ -2702,6 +2805,29 @@ const app = createApp({
         viewGeoDetails(row) {
             this.currentGeoDetails = row.details;
             this.geoDetailsVisible = true;
+        },
+
+        normalizeGeoUrl(url) {
+            if (!url) return '#';
+            return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+        },
+
+        handleGeoExpandChange(title) {
+            const index = this.expandedGeoKeys.indexOf(title);
+            if (index >= 0) {
+                this.expandedGeoKeys.splice(index, 1);
+            } else {
+                this.expandedGeoKeys.push(title);
+            }
+        },
+
+        handleGeoSort(field) {
+            if (this.geoSortField === field) {
+                this.geoSortOrder = this.geoSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.geoSortField = field;
+                this.geoSortOrder = 'desc';
+            }
         },
 
         initTrendFilter() {

@@ -92,33 +92,50 @@ $taskStmt = $pdo->prepare('SELECT * FROM geo_sync_tasks WHERE cloud_user_id=? OR
 $taskStmt->execute([$uid]);
 $syncedTasks = $taskStmt->fetchAll();
 
-$resultStmt = $pdo->prepare('SELECT * FROM geo_sync_results WHERE cloud_user_id=? ORDER BY COALESCE(local_created_at, synced_at) ASC, id ASC LIMIT 5000');
-$resultStmt->execute([$uid]);
-$resultRows = $resultStmt->fetchAll();
-
 $runStmt = $pdo->prepare('SELECT * FROM geo_sync_runs WHERE cloud_user_id=? ORDER BY synced_at DESC LIMIT 1');
 $runStmt->execute([$uid]);
 $lastRun = $runStmt->fetch() ?: null;
 
-$totalResults = count($resultRows);
-$exposedResults = 0;
+$metricStmt = $pdo->prepare('SELECT COUNT(*) total, COALESCE(SUM(has_brand_exposure),0) exposed, COUNT(DISTINCT platform) platforms FROM geo_sync_results WHERE cloud_user_id=?');
+$metricStmt->execute([$uid]);
+$metricRow = $metricStmt->fetch() ?: [];
+$totalResults = (int)($metricRow['total'] ?? 0);
+$exposedResults = (int)($metricRow['exposed'] ?? 0);
+$activePlatforms = (int)($metricRow['platforms'] ?? 0);
+
+$screenshotStmt = $pdo->prepare("SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND payload LIKE '%screenshot_path%'");
+$screenshotStmt->execute([$uid]);
+$screenshotCount = (int)($screenshotStmt->fetch()['c'] ?? 0);
+
+$referenceStmt = $pdo->prepare("SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND payload LIKE '%references%'");
+$referenceStmt->execute([$uid]);
+$referenceResultCount = (int)($referenceStmt->fetch()['c'] ?? 0);
+
 $platformStats = [];
+$platformStmt = $pdo->prepare('SELECT platform, COUNT(*) answers, COALESCE(SUM(has_brand_exposure),0) exposed FROM geo_sync_results WHERE cloud_user_id=? GROUP BY platform ORDER BY answers DESC LIMIT 8');
+$platformStmt->execute([$uid]);
+foreach ($platformStmt->fetchAll() ?: [] as $row) {
+    $platform = (string)($row['platform'] ?? 'unknown');
+    $platformStats[$platform] = ['platform' => $platform, 'answers' => (int)$row['answers'], 'exposed' => (int)$row['exposed']];
+}
+
 $dailyStats = [];
+$dailyStmt = $pdo->prepare('SELECT DATE(result_at) date_key, COUNT(*) answers, COALESCE(SUM(has_brand_exposure),0) exposed FROM geo_sync_results WHERE cloud_user_id=? GROUP BY date_key ORDER BY date_key DESC LIMIT 14');
+$dailyStmt->execute([$uid]);
+foreach ($dailyStmt->fetchAll() ?: [] as $row) {
+    $dateKey = (string)($row['date_key'] ?: date('Y-m-d'));
+    $dailyStats[$dateKey] = ['answers' => (int)$row['answers'], 'exposed' => (int)$row['exposed']];
+}
+
 $referenceCounts = [];
 $questionStats = [];
-$screenshotCount = 0;
-$referenceResultCount = 0;
 
-foreach ($resultRows as $row) {
+$previewStmt = $pdo->prepare('SELECT platform,question,has_brand_exposure,payload,local_created_at,synced_at FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at DESC, id DESC LIMIT 600');
+$previewStmt->execute([$uid]);
+foreach ($previewStmt->fetchAll() ?: [] as $row) {
     $payload = geo_decode_payload($row['payload'] ?? '');
-    $platform = (string)($row['platform'] ?? ($payload['platform'] ?? 'unknown'));
     $question = (string)($row['question'] ?? ($payload['question'] ?? ''));
     $hasExposure = (int)($row['has_brand_exposure'] ?? 0) === 1;
-    if ($hasExposure) $exposedResults++;
-
-    if (!isset($platformStats[$platform])) $platformStats[$platform] = ['platform' => $platform, 'answers' => 0, 'exposed' => 0];
-    $platformStats[$platform]['answers']++;
-    if ($hasExposure) $platformStats[$platform]['exposed']++;
 
     if ($question !== '') {
         if (!isset($questionStats[$question])) $questionStats[$question] = ['question' => $question, 'answers' => 0, 'exposed' => 0];
@@ -126,16 +143,7 @@ foreach ($resultRows as $row) {
         if ($hasExposure) $questionStats[$question]['exposed']++;
     }
 
-    $dateRaw = $row['local_created_at'] ?: ($row['synced_at'] ?? '');
-    $dateKey = $dateRaw ? substr((string)$dateRaw, 0, 10) : date('Y-m-d');
-    if (!isset($dailyStats[$dateKey])) $dailyStats[$dateKey] = ['answers' => 0, 'exposed' => 0];
-    $dailyStats[$dateKey]['answers']++;
-    if ($hasExposure) $dailyStats[$dateKey]['exposed']++;
-
-    if (!empty($payload['screenshot_path'])) $screenshotCount++;
-
     $refs = geo_payload_refs($payload);
-    if ($refs) $referenceResultCount++;
     foreach ($refs as $ref) {
         if (!is_array($ref)) continue;
         $domain = geo_domain_from_url((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
@@ -162,7 +170,6 @@ uasort($questionStats, function ($a, $b) {
 });
 ksort($dailyStats);
 
-$activePlatforms = count($platformStats);
 $referenceDomains = count($referenceCounts);
 $exposureRate = geo_percent($exposedResults, $totalResults);
 $screenshotRate = geo_percent($screenshotCount, $totalResults);
@@ -202,8 +209,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 <title>AI 答案采集分析</title>
 <style>
 :root{--blue:#409eff;--blue2:#1769ff;--cyan:#00a6b2;--ink:#1f2937;--muted:#7b8aa0;--line:#dfe6f0;--soft:#f3f6fb;--card:#fff;--dark:#07111f;--good:#67c23a}
-*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}}
-select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}}
+	*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel,.tabs{position:relative}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px;padding-right:120px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.collapse-toggle{position:absolute;top:18px;right:20px;height:30px;padding:0 11px;border-radius:4px;font-size:12px;background:#f8fafc}.panel.is-collapsed{padding-bottom:22px}.panel.is-collapsed>:not(.kicker):not(h2):not(.collapse-toggle){display:none}.tabs.is-collapsed .tab-body{display:none}.tabs.is-collapsed .tab-nav{border-bottom:0}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;padding-right:110px}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.panel h2{padding-right:96px}.collapse-toggle{top:16px;right:14px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}}
+	select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.geo-summary-item{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px}.geo-summary-item span{display:block;color:var(--muted);font-size:12px;font-weight:800}.geo-summary-item strong{display:block;font-size:24px;margin-top:6px}.geo-title-row{cursor:pointer}.geo-title-main{display:flex;align-items:center;gap:10px;font-weight:800}.geo-caret{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#667085;font-size:12px}.geo-child-row{background:#fbfdff}.geo-url-list{padding:8px 0}.geo-url-card{display:grid;grid-template-columns:minmax(260px,1fr) 150px 150px 170px;gap:14px;align-items:start;padding:12px 14px;border-bottom:1px solid #edf1f7}.geo-url-card:last-child{border-bottom:0}.geo-url{color:#175cd3;word-break:break-all;line-height:1.5}.geo-detail-list{margin-top:8px;display:grid;gap:7px}.geo-detail-item{padding:8px 10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:6px;color:#475467;line-height:1.5}.geo-muted{color:#7b8aa0;font-size:12px}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}.geo-summary{grid-template-columns:1fr 1fr}.geo-url-card{grid-template-columns:1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}.geo-summary{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -213,6 +220,7 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         <span>AI 答案采集分析</span>
         <span class="tag">v0.3.2-dev</span>
         <span class="tag green">账号同步</span>
+        <span class="tag">当前账号: <?=geo_h((string)($user['username'] ?? $user['email'] ?? $user['id']))?></span>
     </div>
     <div class="header-actions">
         <a class="btn" href="#create-task">采集设置: 50条 30~120秒</a>
@@ -261,7 +269,7 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         <div class="metric-card"><span>引用域名</span><strong><?=geo_h((string)$referenceDomains)?></strong><small class="muted">截图留证 <?=geo_h((string)$screenshotCount)?> 条</small></div>
     </section>
 
-    <section class="tabs" id="insights">
+    <section class="tabs" id="insights" data-collapsible="insights" data-collapse-default="open">
         <nav class="tab-nav">
             <a class="active" href="#insights">数据看板</a>
             <a href="#create-task">任务管理</a>
@@ -338,7 +346,39 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         </div>
     </section>
 
-    <section class="panel" id="data-query" style="margin-top:16px">
+    <section class="panel" id="geo" style="margin-top:16px" data-collapsible="geo" data-collapse-default="closed">
+        <span class="kicker">GEO</span>
+        <h2>GEO稿件被引用分析</h2>
+        <p class="muted">按稿件/文章标题聚合同一篇内容，展开后查看每个 URL 是否被 AI 回答引用，以及对应的平台、问题和引用来源。</p>
+        <div class="query-grid">
+            <label>关联任务<select id="geoTask"><option value="">全部任务</option></select></label>
+            <label>AI 平台<select id="geoPlatform"><option value="">全部平台</option><option value="doubao">豆包</option><option value="deepseek">DeepSeek</option><option value="kimi">Kimi</option><option value="qianwen">通义千问</option><option value="yuanbao">腾讯元宝</option><option value="chatgpt">ChatGPT</option><option value="gemini">Gemini</option><option value="wenxin">文心一言</option></select></label>
+            <label>日期<input id="geoDate" type="date"></label>
+            <label>开始日期<input id="geoStart" type="date"></label>
+            <label>结束日期<input id="geoEnd" type="date"></label>
+            <label>排序<select id="geoSort"><option value="cited_desc">引用次数高到低</option><option value="title_asc">标题 A-Z</option><option value="uncited_first">未引用优先</option></select></label>
+        </div>
+        <div class="query-actions">
+            <button class="primary" type="button" onclick="loadGeoCoverage()">刷新分析</button>
+            <button type="button" id="geoMoreBtn" onclick="loadMoreGeoCoverage()" style="display:none">继续加载</button>
+            <button type="button" onclick="resetGeoCoverage()">重置</button>
+            <span class="query-count" id="geoCount">等待分析</span>
+        </div>
+        <div class="geo-summary">
+            <div class="geo-summary-item"><span>稿件标题</span><strong id="geoTitleTotal">0</strong></div>
+            <div class="geo-summary-item"><span>URL 数量</span><strong id="geoUrlTotal">0</strong></div>
+            <div class="geo-summary-item"><span>被引用标题</span><strong id="geoCitedTitleTotal">0</strong></div>
+            <div class="geo-summary-item"><span>被引用 URL</span><strong id="geoCitedUrlTotal">0</strong></div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>稿件标题</th><th>关联任务</th><th>引用状态</th><th>引用次数</th><th>URL 数量</th></tr></thead>
+                <tbody id="geoRows"><tr><td colspan="5"><div class="empty">正在加载前 20 个稿件标题...</div></td></tr></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel" id="data-query" style="margin-top:16px" data-collapsible="data-query" data-collapse-default="closed">
         <span class="kicker">Query</span>
         <h2>云端数据查询</h2>
         <p class="muted">服务端会读取同一账号同步上来的任务、回答、引用来源和截图。平台登录和真实采集仍在本机 App 内完成。</p>
@@ -362,8 +402,8 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
             <div class="query-page-controls">
                 <span class="query-count">每页</span>
                 <select id="queryPageSize" onchange="queryCloudResults(1)">
-                    <option value="20">20 条</option>
-                    <option value="30" selected>30 条</option>
+                    <option value="20" selected>20 条</option>
+                    <option value="30">30 条</option>
                     <option value="50">50 条</option>
                     <option value="100">100 条</option>
                 </select>
@@ -374,12 +414,12 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         <div class="table-wrap">
             <table>
                 <thead><tr><th>时间</th><th>任务</th><th>平台</th><th>问题</th><th>曝光</th><th>引用</th><th>截图</th><th>回答摘要</th></tr></thead>
-                <tbody id="queryRows"><tr><td colspan="8"><div class="empty">选择条件后点击查询，服务端会读取已同步的云端数据。</div></td></tr></tbody>
+                <tbody id="queryRows"><tr><td colspan="8"><div class="empty">正在加载最近 20 条云端数据...</div></td></tr></tbody>
             </table>
         </div>
     </section>
 
-    <section class="panel" id="create-task" style="margin-top:16px">
+    <section class="panel" id="create-task" style="margin-top:16px" data-collapsible="create-task" data-collapse-default="closed">
         <span class="kicker">Task</span>
         <h2>创建监测任务</h2>
         <p class="muted">云端可创建任务；真正的平台登录、浏览器采集、截图留证会由同账号本机 App 完成。</p>
@@ -403,16 +443,23 @@ select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;b
         </form>
     </section>
 
-    <section class="panel" style="margin-top:16px">
+    <section class="panel" style="margin-top:16px" data-collapsible="remote-tasks" data-collapse-default="closed">
         <span class="kicker">Queue</span>
         <h2>任务管理</h2>
+        <p class="muted">云端下发任务是从网页创建、等待客户端执行的队列；本地同步任务是桌面端已经采集并同步回来的历史任务。</p>
+        <h3 style="margin:18px 0 8px">云端下发任务</h3>
         <div class="table-wrap"><table><tr><th>ID</th><th>任务</th><th>状态</th><th>客户端</th><th>本地任务</th><th>创建时间</th></tr>
         <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status"><?=geo_h($r['status'])?></span></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['created_at'])?></td></tr><?php endforeach; ?>
         <?php if(!$remoteRows): ?><tr><td colspan="6"><div class="empty">暂无远程任务。</div></td></tr><?php endif; ?>
         </table></div>
+        <h3 style="margin:22px 0 8px">本地同步任务</h3>
+        <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>客户端</th><th>同步时间</th></tr>
+        <?php foreach(array_slice($syncedTasks, 0, 30) as $r): ?><tr><td><?=geo_h($r['local_id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status"><?=geo_h($r['status'] ?: '-')?></span></td><td><?=geo_h($r['install_id'])?></td><td><?=geo_h($r['synced_at'])?></td></tr><?php endforeach; ?>
+        <?php if(!$syncedTasks): ?><tr><td colspan="5"><div class="empty">暂无本地同步任务。请先在桌面软件里登录同一账号并同步。</div></td></tr><?php endif; ?>
+        </table></div>
     </section>
 
-    <section class="panel" style="margin-top:16px">
+    <section class="panel" style="margin-top:16px" data-collapsible="sync-records" data-collapse-default="closed">
         <span class="kicker">Sync</span>
         <h2>桌面端同步记录</h2>
         <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>用户</th><th>同步时间</th></tr>
@@ -440,21 +487,23 @@ async function geoApi(params){
 async function loadCloudTasks(){
     try {
         var data = await geoApi({action: 'tasks'});
-        var select = document.getElementById('queryTask');
-        if (!select) return;
+        var selects = [document.getElementById('queryTask'), document.getElementById('geoTask')].filter(Boolean);
         data.tasks.forEach(function(task){
-            var option = document.createElement('option');
-            option.value = task.local_id;
-            option.dataset.installId = task.install_id;
-            option.textContent = '#' + task.local_id + ' ' + task.name;
-            select.appendChild(option);
+            selects.forEach(function(select){
+                var option = document.createElement('option');
+                option.value = task.local_id;
+                option.dataset.installId = task.install_id;
+                option.textContent = '#' + task.local_id + ' ' + task.name;
+                select.appendChild(option);
+            });
         });
     } catch (e) {
         console.warn(e);
     }
 }
 
-var queryState = { page: 1, pageSize: 30, total: 0 };
+var queryState = { page: 1, pageSize: 20, total: 0 };
+var geoState = { groups: [], expanded: {}, visible: 20, step: 20 };
 
 function updateQueryPagination(){
     var totalPages = Math.max(1, Math.ceil(queryState.total / queryState.pageSize));
@@ -555,6 +604,122 @@ function exportCloudScreenshots(){
     window.location.href = '/api/dashboard/?' + buildCloudQueryParams('export_screenshots_zip').toString();
 }
 
+function buildGeoParams(){
+    var task = document.getElementById('geoTask');
+    var selected = task.options[task.selectedIndex];
+    return {
+        action: 'geo_coverage',
+        task_id: task.value || '',
+        install_id: selected ? (selected.dataset.installId || '') : '',
+        platform: document.getElementById('geoPlatform').value,
+        date: document.getElementById('geoDate').value,
+        start_date: document.getElementById('geoStart').value,
+        end_date: document.getElementById('geoEnd').value
+    };
+}
+
+function sortGeoGroups(groups){
+    var sort = document.getElementById('geoSort').value;
+    var rows = groups.slice();
+    if (sort === 'title_asc') {
+        rows.sort(function(a, b){ return String(a.title).localeCompare(String(b.title), 'zh-Hans-CN'); });
+    } else if (sort === 'uncited_first') {
+        rows.sort(function(a, b){ return Number(a.is_cited) - Number(b.is_cited) || (b.cited_count || 0) - (a.cited_count || 0); });
+    } else {
+        rows.sort(function(a, b){ return (b.cited_count || 0) - (a.cited_count || 0) || String(a.title).localeCompare(String(b.title), 'zh-Hans-CN'); });
+    }
+    return rows;
+}
+
+function renderGeoCoverage(){
+    var rows = document.getElementById('geoRows');
+    var count = document.getElementById('geoCount');
+    var groups = sortGeoGroups(geoState.groups);
+    var visibleGroups = groups.slice(0, geoState.visible);
+    var moreBtn = document.getElementById('geoMoreBtn');
+    if (!groups.length) {
+        rows.innerHTML = '<tr><td colspan="5"><div class="empty">暂无 GEO 稿件数据。请先在桌面端添加稿件并同步到云端。</div></td></tr>';
+        count.textContent = '暂无数据';
+        if (moreBtn) moreBtn.style.display = 'none';
+        return;
+    }
+    count.textContent = '共 ' + groups.length + ' 个标题，当前显示 ' + visibleGroups.length + ' 个';
+    if (moreBtn) moreBtn.style.display = visibleGroups.length < groups.length ? 'inline-flex' : 'none';
+    rows.innerHTML = visibleGroups.map(function(group, index){
+        var key = encodeURIComponent(group.title || ('row-' + index));
+        var expanded = !!geoState.expanded[key];
+        var status = group.is_cited ? '<span class="pill good">已引用</span>' : '<span class="pill bad">未引用</span>';
+        var childRows = '';
+        if (expanded) {
+            childRows = '<tr class="geo-child-row"><td colspan="5"><div class="geo-url-list">' +
+                (group.children || []).map(function(child){
+                    var url = child.url || '';
+                    var href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+                    var details = (child.details || []).slice(0, 8).map(function(detail){
+                        return '<div class="geo-detail-item"><strong>' + h(detail.platform_name || detail.platform || '-') + '</strong> · ' +
+                            h(detail.question || '-') + '<br><span class="geo-muted">' + h(detail.created_at || '') + ' · ' +
+                            h(detail.reference_title || '引用来源') + '</span></div>';
+                    }).join('');
+                    return '<div class="geo-url-card">' +
+                        '<div><a class="geo-url" href="' + h(href) + '" target="_blank">' + h(url || '-') + '</a>' + (details ? '<div class="geo-detail-list">' + details + '</div>' : '') + '</div>' +
+                        '<div>' + h(child.task_name || '-') + '</div>' +
+                        '<div>' + (child.is_cited ? '<span class="pill good">已引用</span>' : '<span class="pill bad">未引用</span>') + '</div>' +
+                        '<div><strong>' + h(child.cited_count || 0) + '</strong> 次</div>' +
+                    '</div>';
+                }).join('') +
+            '</div></td></tr>';
+        }
+        return '<tr class="geo-title-row" data-geo-key="' + h(key) + '" onclick="toggleGeoGroup(this.dataset.geoKey)">' +
+            '<td><div class="geo-title-main"><span class="geo-caret">' + (expanded ? '−' : '+') + '</span><span>' + h(group.title || '未命名稿件') + '</span></div></td>' +
+            '<td>' + h(group.task_name || '-') + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td><strong>' + h(group.cited_count || 0) + '</strong></td>' +
+            '<td>' + h(group.url_count || ((group.children || []).length)) + '</td>' +
+        '</tr>' + childRows;
+    }).join('');
+}
+
+async function loadGeoCoverage(){
+    var rows = document.getElementById('geoRows');
+    var count = document.getElementById('geoCount');
+    rows.innerHTML = '<tr><td colspan="5"><div class="empty">正在分析稿件引用情况...</div></td></tr>';
+    count.textContent = '分析中';
+    try {
+        var data = await geoApi(buildGeoParams());
+        geoState.groups = data.groups || [];
+        geoState.visible = geoState.step;
+        document.getElementById('geoTitleTotal').textContent = data.total_titles || 0;
+        document.getElementById('geoUrlTotal').textContent = data.total_urls || 0;
+        document.getElementById('geoCitedTitleTotal').textContent = data.cited_titles || 0;
+        document.getElementById('geoCitedUrlTotal').textContent = data.cited_urls || 0;
+        renderGeoCoverage();
+    } catch (e) {
+        count.textContent = '分析失败';
+        rows.innerHTML = '<tr><td colspan="5"><div class="empty">' + h(e.message) + '</div></td></tr>';
+    }
+}
+
+function toggleGeoGroup(key){
+    geoState.expanded[key] = !geoState.expanded[key];
+    renderGeoCoverage();
+}
+
+function resetGeoCoverage(){
+    ['geoTask','geoPlatform','geoDate','geoStart','geoEnd'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('geoSort').value = 'cited_desc';
+    geoState.expanded = {};
+    geoState.visible = geoState.step;
+    loadGeoCoverage();
+}
+
+function loadMoreGeoCoverage(){
+    geoState.visible += geoState.step;
+    renderGeoCoverage();
+}
+
 function openLocalApp(target){
     var fallback = 'https://geo.allgood.cn/';
     var url = 'geo-sop://open?target=' + encodeURIComponent(target || 'dashboard');
@@ -566,9 +731,51 @@ function openLocalApp(target){
         }
     }, 900);
 }
+
+function initCollapsibleSections(){
+    document.querySelectorAll('[data-collapsible]').forEach(function(section){
+        var key = section.dataset.collapsible;
+        var storageKey = 'geoDashboardSection:' + key;
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'collapse-toggle';
+        section.appendChild(button);
+        function setCollapsed(collapsed, persist){
+            section.classList.toggle('is-collapsed', collapsed);
+            button.textContent = collapsed ? '展开' : '收起';
+            button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            if (persist) localStorage.setItem(storageKey, collapsed ? 'closed' : 'open');
+        }
+        var saved = localStorage.getItem(storageKey);
+        var collapsed = saved ? saved === 'closed' : section.dataset.collapseDefault === 'closed';
+        setCollapsed(collapsed, false);
+        button.addEventListener('click', function(event){
+            event.preventDefault();
+            setCollapsed(!section.classList.contains('is-collapsed'), true);
+        });
+    });
+    document.querySelectorAll('a[href^="#"]').forEach(function(link){
+        link.addEventListener('click', function(){
+            var id = decodeURIComponent(link.getAttribute('href').slice(1));
+            if (!id) return;
+            var target = document.getElementById(id);
+            if (target && target.matches('[data-collapsible]') && target.classList.contains('is-collapsed')) {
+                var btn = target.querySelector('.collapse-toggle');
+                if (btn) btn.click();
+            }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function(){
+    initCollapsibleSections();
     updateQueryPagination();
-    loadCloudTasks().then(function(){ queryCloudResults(1); });
+    loadCloudTasks().then(function(){
+        queryCloudResults(1);
+        loadGeoCoverage();
+    });
+    var geoSort = document.getElementById('geoSort');
+    if (geoSort) geoSort.addEventListener('change', renderGeoCoverage);
 });
 </script>
 </body>
