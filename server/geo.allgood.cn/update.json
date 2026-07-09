@@ -1,18 +1,19 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.8-dev",
+  "version": "0.3.9-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-07T13:40:00+08:00",
+  "released_at": "2026-07-09T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "macOS App 注册 geo-sop:// 协议。",
-    "云端 dashboard 的“打开本机 App”按钮可以唤起本机客户端。",
-    "客户端可识别云端传入的打开目标。"
+    "Windows 包新增“Start GEO-SOP.bat”用户启动入口。",
+    "Windows 启动脚本修复路径解析问题，避免误报“系统找不到指定的路径”。",
+    "启动前会检查是否完整解压、Python 是否可用，并给出可读提示。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
+      "version": "0.3.8-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
       "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.8-dev-macOS.dmg",
       "size": "165 MB",
@@ -20,10 +21,11 @@
     },
     "windows": {
       "name": "GEO-SOP-Windows-dev.zip",
+      "version": "0.3.9-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Windows-dev.zip",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.8-dev-Windows.zip",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.9-dev-Windows.zip",
       "size": "3.1 MB",
-      "sha256": "542ea68cf9b797ca80db248b0e1bb8062f764b985ea34399965f1e893bd890d0"
+      "sha256": "5b5be4aa5834447531067a073abdd052afba3bf6d146e22c36806de464897744"
     }
   }
 }

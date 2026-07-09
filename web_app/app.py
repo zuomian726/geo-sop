@@ -146,11 +146,11 @@ def _check_latest_update():
         response = requests.get(update_url, timeout=8)
         response.raise_for_status()
         manifest = response.json()
-        latest_version = str(manifest.get('version') or current_version)
         system_name = platform.system().lower()
         platform_key = 'windows' if system_name.startswith('win') else 'macos' if system_name == 'darwin' else 'linux'
         downloads = manifest.get('downloads') if isinstance(manifest.get('downloads'), dict) else {}
         package = downloads.get(platform_key) if isinstance(downloads.get(platform_key), dict) else {}
+        latest_version = str(package.get('version') or manifest.get('version') or current_version)
         status.update({
             'latest_version': latest_version,
             'has_update': _version_parts(latest_version) > _version_parts(current_version),

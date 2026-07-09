@@ -1,5 +1,15 @@
 # GEO-SOP Release Notes
 
+## v0.3.9-dev - 2026-07-09
+
+Windows launcher patch.
+
+### Fixed
+
+- Added a clear Windows entry script, `Start GEO-SOP.bat`, for normal users.
+- Windows launcher now uses safer local paths, verifies required files before startup, and shows readable recovery messages when the ZIP is not fully extracted or Python is missing.
+- Windows README now separates the normal launch path from the developer-only EXE build script.
+
 ## v0.3.8-dev - 2026-07-07
 
 Desktop launch integration patch.
