@@ -1,6 +1,6 @@
 # GEO-SOP Windows Package
 
-Version: 0.3.10-dev
+Version: 0.3.11-dev
 
 This ZIP is a Windows desktop package, not a signed commercial installer yet.
 
@@ -13,6 +13,8 @@ This ZIP is a Windows desktop package, not a signed commercial installer yet.
 The first launch creates `.venv-desktop`, installs dependencies, and starts the local desktop app.
 
 If Windows shows "The system cannot find the path specified", usually the ZIP was not fully extracted or a build script was clicked by mistake. Re-extract the ZIP to a normal folder such as `D:\GEO-SOP`, then double-click `Start GEO-SOP.bat`.
+
+`install.bat` is also safe to double-click. It forwards to the same desktop launcher.
 
 ## Build EXE On Windows
 

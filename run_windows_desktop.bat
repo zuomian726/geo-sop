@@ -12,9 +12,23 @@ echo ============================================
 echo Current folder: %CD%
 echo.
 
-where python >nul 2>nul
-if errorlevel 1 (
-  echo Python was not found.
+set "PYTHON_CMD="
+where py >nul 2>nul
+if not errorlevel 1 (
+  py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >nul 2>nul
+  if not errorlevel 1 set "PYTHON_CMD=py -3"
+)
+
+if not defined PYTHON_CMD (
+  where python >nul 2>nul
+  if not errorlevel 1 (
+    python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >nul 2>nul
+    if not errorlevel 1 set "PYTHON_CMD=python"
+  )
+)
+
+if not defined PYTHON_CMD (
+  echo Python 3.10 or later was not found.
   echo Please install Python 3.10 or later and enable "Add python.exe to PATH".
   echo Download: https://www.python.org/downloads/windows/
   pause
@@ -37,7 +51,7 @@ if not exist "requirements-desktop.txt" (
 
 if not exist ".venv-desktop\Scripts\python.exe" (
   echo First launch: creating local runtime...
-  python -m venv .venv-desktop
+  %PYTHON_CMD% -m venv .venv-desktop
   if errorlevel 1 (
     echo Failed to create local runtime. Please check your Python installation.
     pause
@@ -58,6 +72,14 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements-desktop.txt
 if errorlevel 1 (
   echo Dependency installation failed. Please check your network and try again.
+  pause
+  exit /b 1
+)
+
+echo Checking Playwright browser runtime...
+python -m playwright install chromium
+if errorlevel 1 (
+  echo Playwright browser installation failed. Please check your network and try again.
   pause
   exit /b 1
 )

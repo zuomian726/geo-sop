@@ -1,5 +1,15 @@
 # GEO-SOP Release Notes
 
+## v0.3.11-dev - 2026-07-09
+
+Windows first-run reliability patch.
+
+### Fixed
+
+- `install.bat` now forwards to the desktop launcher instead of the old web-app dependency installer.
+- Windows launcher now prefers the `py -3` launcher, verifies Python 3.10+, and avoids Windows Store Python aliases.
+- First launch now installs the Playwright Chromium runtime before starting the desktop app.
+
 ## v0.3.10-dev - 2026-07-09
 
 Windows batch compatibility patch.
