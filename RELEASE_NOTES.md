@@ -1,5 +1,16 @@
 # GEO-SOP Release Notes
 
+## v0.3.12-dev - 2026-07-09
+
+Windows bootstrap installer patch.
+
+### Added
+
+- Added `Install GEO-SOP.bat` and `Install GEO-SOP.ps1` as a bootstrap installer.
+- The installer automatically installs Python 3.12 through Windows Package Manager when Python 3.10+ is missing.
+- `Start GEO-SOP.bat`, `install.bat`, and the installer now all route users through the same first-run setup.
+- Added an Inno Setup script and `build_windows_installer.bat` for building a real Windows setup EXE on Windows.
+
 ## v0.3.11-dev - 2026-07-09
 
 Windows first-run reliability patch.

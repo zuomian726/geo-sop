@@ -6,7 +6,4 @@ cd /d "%~dp0" || (
   exit /b 1
 )
 
-echo This installer uses the same desktop launcher.
-echo Please keep this window open during the first launch.
-echo.
-call "%~dp0Start GEO-SOP.bat"
+call "%~dp0Install GEO-SOP.bat"

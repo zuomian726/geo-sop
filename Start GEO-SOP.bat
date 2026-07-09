@@ -6,4 +6,4 @@ cd /d "%~dp0" || (
   exit /b 1
 )
 
-call "%~dp0run_windows_desktop.bat"
+call "%~dp0Install GEO-SOP.bat"

@@ -13,6 +13,12 @@ echo Current folder: %CD%
 echo.
 
 set "PYTHON_CMD="
+if defined GEO_PYTHON_CMD (
+  set "PYTHON_CMD=%GEO_PYTHON_CMD%"
+  %PYTHON_CMD% -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >nul 2>nul
+  if errorlevel 1 set "PYTHON_CMD="
+)
+
 where py >nul 2>nul
 if not errorlevel 1 (
   py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" >nul 2>nul

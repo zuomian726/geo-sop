@@ -1,14 +1,15 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.11-dev",
+  "version": "0.3.12-dev",
   "channel": "desktop-dev",
   "released_at": "2026-07-09T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "install.bat 已改为跳转到桌面版启动器，避免误走旧安装逻辑。",
-    "Windows 启动器会优先使用 py -3 并检查 Python 3.10+。",
-    "首次运行会安装 Playwright Chromium 浏览器运行环境。"
+    "新增 Install GEO-SOP.bat / Install GEO-SOP.ps1 引导安装器。",
+    "缺少 Python 时会优先通过 winget 自动安装 Python 3.12。",
+    "Start、install 和 Install 三个入口统一走同一套首次安装流程。",
+    "新增 Windows setup EXE 构建脚本，后续可在 Windows 上生成正式安装包。"
   ],
   "downloads": {
     "macos": {
@@ -21,11 +22,11 @@
     },
     "windows": {
       "name": "GEO-SOP-Windows-dev.zip",
-      "version": "0.3.11-dev",
+      "version": "0.3.12-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Windows-dev.zip",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.11-dev-Windows.zip",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.12-dev-Windows.zip",
       "size": "3.1 MB",
-      "sha256": "be03edf9c86903072e1a4af20801f328ea134c6e58fc5d3539cbc48d69b31269"
+      "sha256": "046ba248b9b929ebd02f60073ddf85b9553decb6988cfd301c41fcbadc4f2eb7"
     }
   }
 }
