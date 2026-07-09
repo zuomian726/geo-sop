@@ -30,7 +30,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
-Source: "..\..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git\*,.venv*\*,web_app\venv\*,build\*,dist\*,release\*,browser_profile\*,answers\*,*.db,*.dmg,*.zip"
+Source: "..\..\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git\*,.github\*,.venv*\*,web_app\venv\*,build\*,dist\*,release\*,browser_profile\*,answers\*,*.db,*.dmg,*.zip,*.exe"
 
 [Icons]
 Name: "{group}\GEO-SOP"; Filename: "{app}\{#MyAppExe}"; WorkingDir: "{app}"
