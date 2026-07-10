@@ -28,6 +28,13 @@ function geo_restore_payload(?string $payload): array {
     return is_array($data) ? $data : [];
 }
 
+function geo_restore_config_payload(array $payload): array {
+    // API keys stay on the desktop that entered them and are never restored from cloud storage.
+    $payload['ai_api_key'] = null;
+    unset($payload['api_key'], $payload['key']);
+    return $payload;
+}
+
 function geo_restore_source_key(array $payload, string $installId, int $localId): string {
     $schedule = $payload['schedule_config'] ?? [];
     if (is_array($schedule) && !empty($schedule['cloud_source_install_id']) && !empty($schedule['cloud_source_local_id'])) {
@@ -96,7 +103,7 @@ try {
 
     $configRows = [];
     foreach (geo_restore_rows($pdo, 'geo_sync_sentiment_configs', $cloudUserId) as $row) {
-        $payload = geo_restore_payload($row['payload'] ?? '');
+        $payload = geo_restore_config_payload(geo_restore_payload($row['payload'] ?? ''));
         $key = (string)$row['install_id'] . ':' . (int)$row['local_id'];
         $configRows[$key] = [
             'install_id' => (string)$row['install_id'],
