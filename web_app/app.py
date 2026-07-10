@@ -243,6 +243,7 @@ def _write_login_status_cache(data):
 
 _cloud_sync_lock = threading.Lock()
 _cloud_sync_running_users = set()
+_cloud_sync_dirty_users = {}
 
 
 def _sync_user_workspace_blocking(user_id, reason='workspace_change', wait=False):
@@ -257,22 +258,38 @@ def _sync_user_workspace_blocking(user_id, reason='workspace_change', wait=False
         with _cloud_sync_lock:
             if user_id not in _cloud_sync_running_users:
                 _cloud_sync_running_users.add(user_id)
+                _cloud_sync_dirty_users[user_id] = 0
                 break
         if not wait:
             return False
         time.sleep(1)
 
+    released = False
     try:
-        with app.app_context():
-            result = sync_user_workspace(user_id)
-            logger.info("[CloudSync] %s user=%s result=%s", reason, user_id, result)
-        return True
+        synced = False
+        while True:
+            with app.app_context():
+                result = sync_user_workspace(user_id)
+                logger.info("[CloudSync] %s user=%s result=%s", reason, user_id, result)
+            synced = True
+            with _cloud_sync_lock:
+                pending_again = _cloud_sync_dirty_users.get(user_id, 0) > 0
+                if not pending_again:
+                    _cloud_sync_running_users.discard(user_id)
+                    _cloud_sync_dirty_users.pop(user_id, None)
+                    released = True
+                else:
+                    _cloud_sync_dirty_users[user_id] = 0
+            if not pending_again:
+                return synced
     except Exception as e:
         logger.exception("[CloudSync] 同步失败 user=%s reason=%s: %s", user_id, reason, e)
         return False
     finally:
-        with _cloud_sync_lock:
-            _cloud_sync_running_users.discard(user_id)
+        if not released:
+            with _cloud_sync_lock:
+                _cloud_sync_running_users.discard(user_id)
+                _cloud_sync_dirty_users.pop(user_id, None)
 
 
 def _queue_cloud_sync(user_id, reason='workspace_change'):
@@ -281,6 +298,10 @@ def _queue_cloud_sync(user_id, reason='workspace_change'):
         return False
     if not cloud_sync_enabled():
         return False
+
+    user_id = int(user_id)
+    with _cloud_sync_lock:
+        _cloud_sync_dirty_users[user_id] = _cloud_sync_dirty_users.get(user_id, 0) + 1
 
     def worker():
         _sync_user_workspace_blocking(user_id, reason, wait=False)
