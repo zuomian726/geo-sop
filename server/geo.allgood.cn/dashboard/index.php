@@ -9,6 +9,7 @@ if (!$user) {
     header('Location: /login/');
     exit;
 }
+$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
 
 function geo_decode_payload($value): array {
     $data = json_decode((string)$value, true);
@@ -60,6 +61,9 @@ function geo_platform_name(string $platform): string {
 
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($isDemoUser) {
+        $message = '在线 Demo 为只读安全模式，不能创建或修改任务。';
+    } else {
     $payload = [
         'name' => trim($_POST['name'] ?? '服务端采集任务'),
         'brand_name' => trim($_POST['brand_name'] ?? ''),
@@ -80,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = '远程任务已创建。桌面端登录同一账号后会自动拉取并执行。';
     } else {
         $message = '请填写品牌关键词、采集问题，并至少选择一个平台。';
+    }
     }
 }
 
@@ -244,6 +249,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 </header>
 
 <main class="wrap">
+    <?php if ($isDemoUser): ?><div class="msg" style="background:#fff8e6;color:#8a5a00;border:1px solid #f5d48a;margin-bottom:18px">当前为在线 Demo 只读模式：可以查看、筛选和导出样例数据；创建任务、平台登录、采集和修改操作已关闭。</div><?php endif; ?>
     <section class="workspace-hero">
         <div class="hero-panel">
             <div class="kicker">GEO-SOP WORKSPACE</div>
@@ -450,8 +456,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <label><input type="checkbox" name="platforms[]" value="qianwen">通义千问</label>
                 <label><input type="checkbox" name="platforms[]" value="yuanbao">腾讯元宝</label>
             </p>
-            <button class="primary">创建任务</button>
-            <button type="button" onclick="openLocalApp('dashboard')">打开本机 App 执行</button>
+            <button class="primary" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>创建任务</button>
+            <button type="button" onclick="openLocalApp('dashboard')" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>打开本机 App 执行</button>
         </form>
     </section>
 
