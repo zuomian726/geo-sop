@@ -22,6 +22,9 @@ $user = geo_auth_user($pdo);
 if (!$user) {
     geo_json(['success' => false, 'message' => 'unauthorized'], 401);
 }
+if (strtolower(trim((string)($user['username'] ?? ''))) === 'tuke') {
+    geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);
+}
 
 function geo_assets_ensure_schema(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS geo_sync_assets (

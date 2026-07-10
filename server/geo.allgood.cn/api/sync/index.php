@@ -250,6 +250,9 @@ try {
     if ($token === '' || $cloudUserId <= 0) {
         json_response(['success' => false, 'message' => 'unauthorized'], 401);
     }
+    if ($cloudUserId === 16) {
+        json_response(['success' => false, 'message' => 'online demo is read-only'], 403);
+    }
     $pdo->beginTransaction();
 
     upsert($pdo, 'geo_sync_users', [

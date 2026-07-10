@@ -67,6 +67,11 @@ geo_remote_ensure_schema($pdo);
 
 $route = geo_remote_route();
 $cloudUserId = (int)$user['id'];
+$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
+
+if ($isDemoUser && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $route === 'base') {
     $installId = trim((string)($_GET['install_id'] ?? ''));
