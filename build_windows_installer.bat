@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0" || exit /b 1
 
-if "%APP_VERSION%"=="" set APP_VERSION=0.3.13-dev
+if "%APP_VERSION%"=="" set APP_VERSION=0.3.14-dev
 
 where ISCC.exe >nul 2>nul
 if errorlevel 1 (

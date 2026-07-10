@@ -173,3 +173,7 @@ This release moves GEO-SOP from a development preview toward a distributable des
 
 - 云端任务管理增加桌面客户端心跳状态，服务端可以直接判断任务是在等待上线还是已在线执行。
 - Windows Inno Setup 配置默认版本与应用版本统一为 v0.3.13-dev。
+## v0.3.14-dev - 2026-07-10
+
+- 连续创建任务、采集结果或保存配置时，云端同步会自动补齐并发期间发生的变更。
+- 桌面端同步队列完成后再释放状态，减少云端历史记录缺失风险。
