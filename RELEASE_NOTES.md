@@ -169,3 +169,7 @@ This release moves GEO-SOP from a development preview toward a distributable des
 - macOS builds still need Apple Developer ID signing and notarization before public commercial distribution.
 - Windows builds should be produced on Windows and signed with an OV/EV code-signing certificate before broad distribution.
 - AI platform login stability depends on each platform's web UI and anti-automation changes.
+## v0.3.13-dev - 2026-07-10
+
+- 云端任务管理增加桌面客户端心跳状态，服务端可以直接判断任务是在等待上线还是已在线执行。
+- Windows Inno Setup 配置默认版本与应用版本统一为 v0.3.13-dev。

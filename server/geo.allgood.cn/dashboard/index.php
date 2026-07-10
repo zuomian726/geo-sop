@@ -88,6 +88,18 @@ $remoteStmt = $pdo->prepare('SELECT * FROM geo_remote_tasks WHERE cloud_user_id=
 $remoteStmt->execute([$uid]);
 $remoteRows = $remoteStmt->fetchAll();
 
+$clientStmt = $pdo->prepare('SELECT install_id,user_key,status,message,payload,last_seen_at FROM geo_desktop_clients WHERE cloud_user_id=? ORDER BY last_seen_at DESC LIMIT 20');
+$clientStmt->execute([$uid]);
+$clientRows = $clientStmt->fetchAll();
+
+foreach ($clientRows as &$clientRow) {
+    $clientPayload = json_decode((string)($clientRow['payload'] ?? ''), true);
+    $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
+    $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
+    $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
+}
+unset($clientRow);
+
 $taskStmt = $pdo->prepare('SELECT * FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY synced_at DESC LIMIT 80');
 $taskStmt->execute([$uid]);
 $syncedTasks = $taskStmt->fetchAll();
@@ -451,6 +463,12 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <div class="table-wrap"><table><tr><th>ID</th><th>任务</th><th>状态</th><th>客户端</th><th>本地任务</th><th>创建时间</th></tr>
         <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status"><?=geo_h($r['status'])?></span></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['created_at'])?></td></tr><?php endforeach; ?>
         <?php if(!$remoteRows): ?><tr><td colspan="6"><div class="empty">暂无远程任务。</div></td></tr><?php endif; ?>
+        </table></div>
+        <h3 style="margin:22px 0 8px">客户端连接状态</h3>
+        <p class="muted">只有同一账号下的桌面客户端保持在线，云端任务才会被自动拉取。超过 60 秒未收到心跳会显示为离线。</p>
+        <div class="table-wrap"><table><tr><th>状态</th><th>客户端</th><th>平台</th><th>最近心跳</th><th>提示</th></tr>
+        <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
+        <?php if(!$clientRows): ?><tr><td colspan="5"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
         </table></div>
         <h3 style="margin:22px 0 8px">本地同步任务</h3>
         <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>客户端</th><th>同步时间</th></tr>
