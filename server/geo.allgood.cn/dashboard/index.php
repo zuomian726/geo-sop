@@ -109,9 +109,21 @@ foreach ($clientRows as &$clientRow) {
     $clientPayload = json_decode((string)($clientRow['payload'] ?? ''), true);
     $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
     $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
-    $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
+$clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
 }
 unset($clientRow);
+
+$configStmt = $pdo->prepare('SELECT name,is_default,payload,local_updated_at,synced_at FROM geo_sync_sentiment_configs WHERE cloud_user_id=? ORDER BY COALESCE(local_updated_at, synced_at) DESC, id DESC LIMIT 10');
+$configStmt->execute([$uid]);
+$configRows = $configStmt->fetchAll();
+foreach ($configRows as &$configRow) {
+    $configPayload = geo_decode_payload($configRow['payload'] ?? '');
+    $configRow['platform'] = (string)($configPayload['ai_platform'] ?? '');
+    $configRow['model'] = (string)($configPayload['ai_model_name'] ?? '');
+    $configRow['api_host'] = (string)(parse_url((string)($configPayload['ai_api_url'] ?? ''), PHP_URL_HOST) ?: '');
+    $configRow['has_key'] = trim((string)($configPayload['ai_api_key'] ?? '')) !== '';
+}
+unset($configRow);
 
 $taskStmt = $pdo->prepare('SELECT * FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY synced_at DESC LIMIT 80');
 $taskStmt->execute([$uid]);
@@ -281,6 +293,11 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <span class="kicker">AI Analysis</span>
                 <strong>在本机 App 配置智慧舆情</strong>
                 <p class="muted">API URL、Key 和模型保存在本机客户端。配置完成后，可生成观察、风险和下一步动作，并随采集结果同步到云端看板。</p>
+                <?php if($configRows): ?>
+                <?php foreach(array_slice($configRows, 0, 2) as $config): ?>
+                <p class="local-note"><strong><?=geo_h((string)$config['name'])?></strong> · <?=geo_h($config['platform'] ?: 'OpenAI 兼容')?> / <?=geo_h($config['model'] ?: '未设置模型')?> · <?= $config['has_key'] ? 'Key 已配置' : '等待 Key' ?></p>
+                <?php endforeach; ?>
+                <?php else: ?><p class="local-note">当前账号还没有同步的舆情配置。</p><?php endif; ?>
                 <button class="btn small primary" onclick="openLocalApp('ai-settings')">在本机配置 AI</button>
             </div>
         </div>
