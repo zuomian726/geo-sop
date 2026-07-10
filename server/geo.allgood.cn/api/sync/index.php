@@ -46,6 +46,7 @@ function ensure_schema(PDO $pdo): void {
     $sqls = [
         "CREATE TABLE IF NOT EXISTS geo_sync_users (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_id INT NOT NULL,
             user_key VARCHAR(255) NOT NULL,
@@ -59,6 +60,7 @@ function ensure_schema(PDO $pdo): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS geo_sync_tasks (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_id INT NOT NULL,
             local_user_id INT NOT NULL,
@@ -75,6 +77,7 @@ function ensure_schema(PDO $pdo): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS geo_sync_results (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_id INT NOT NULL,
             local_task_id INT NOT NULL,
@@ -100,6 +103,7 @@ function ensure_schema(PDO $pdo): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS geo_sync_manuscripts (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_id INT NOT NULL,
             local_user_id INT NOT NULL,
@@ -114,6 +118,7 @@ function ensure_schema(PDO $pdo): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS geo_sync_sentiment_configs (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_id INT NOT NULL,
             local_user_id INT NOT NULL,
@@ -129,6 +134,7 @@ function ensure_schema(PDO $pdo): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS geo_sync_runs (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            cloud_user_id BIGINT UNSIGNED NULL,
             install_id VARCHAR(64) NOT NULL,
             local_user_id INT NOT NULL,
             user_key VARCHAR(255) NOT NULL,
@@ -157,6 +163,24 @@ function ensure_schema(PDO $pdo): void {
     ];
     foreach ($resultIndexes as $name => $columns) {
         try { $pdo->exec("ALTER TABLE geo_sync_results ADD KEY {$name} ({$columns})"); } catch (Throwable $e) {}
+    }
+
+    $uniqueKeys = [
+        'geo_sync_users' => 'uniq_install_user',
+        'geo_sync_tasks' => 'uniq_install_task',
+        'geo_sync_results' => 'uniq_install_result',
+        'geo_sync_manuscripts' => 'uniq_install_manuscript',
+        'geo_sync_sentiment_configs' => 'uniq_install_config',
+    ];
+    foreach ($uniqueKeys as $table => $index) {
+        $stmt = $pdo->prepare('SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index) AS columns FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=? AND index_name=? GROUP BY index_name');
+        $stmt->execute([$table, $index]);
+        $columns = strtolower((string)($stmt->fetchColumn() ?: ''));
+        if ($columns === 'cloud_user_id,install_id,local_id') {
+            continue;
+        }
+        try { $pdo->exec("ALTER TABLE {$table} DROP INDEX {$index}"); } catch (Throwable $e) {}
+        try { $pdo->exec("ALTER TABLE {$table} ADD UNIQUE KEY {$index} (cloud_user_id, install_id, local_id)"); } catch (Throwable $e) {}
     }
 }
 
@@ -192,15 +216,15 @@ function clean_ids(array $rows): array {
     return $ids;
 }
 
-function delete_missing(PDO $pdo, string $table, string $installId, string $userKey, array $keepIds): void {
+function delete_missing(PDO $pdo, string $table, int $cloudUserId, string $installId, string $userKey, array $keepIds): void {
     if ($keepIds) {
         $placeholders = implode(',', array_fill(0, count($keepIds), '?'));
-        $sql = "DELETE FROM {$table} WHERE install_id = ? AND user_key = ? AND local_id NOT IN ({$placeholders})";
+        $sql = "DELETE FROM {$table} WHERE cloud_user_id = ? AND install_id = ? AND user_key = ? AND local_id NOT IN ({$placeholders})";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute(array_merge([$installId, $userKey], $keepIds));
+        $stmt->execute(array_merge([$cloudUserId, $installId, $userKey], $keepIds));
     } else {
-        $stmt = $pdo->prepare("DELETE FROM {$table} WHERE install_id = ? AND user_key = ?");
-        $stmt->execute([$installId, $userKey]);
+        $stmt = $pdo->prepare("DELETE FROM {$table} WHERE cloud_user_id = ? AND install_id = ? AND user_key = ?");
+        $stmt->execute([$cloudUserId, $installId, $userKey]);
     }
 }
 
@@ -331,10 +355,10 @@ try {
         ], ['cloud_user_id', 'local_user_id', 'user_key', 'name', 'is_default', 'payload', 'local_created_at', 'local_updated_at', 'synced_at']);
     }
 
-    delete_missing($pdo, 'geo_sync_tasks', $installId, $userKey, clean_ids($tasks));
-    delete_missing($pdo, 'geo_sync_results', $installId, $userKey, clean_ids($results));
-    delete_missing($pdo, 'geo_sync_manuscripts', $installId, $userKey, clean_ids($manuscripts));
-    delete_missing($pdo, 'geo_sync_sentiment_configs', $installId, $userKey, clean_ids($configs));
+    delete_missing($pdo, 'geo_sync_tasks', $cloudUserId, $installId, $userKey, clean_ids($tasks));
+    delete_missing($pdo, 'geo_sync_results', $cloudUserId, $installId, $userKey, clean_ids($results));
+    delete_missing($pdo, 'geo_sync_manuscripts', $cloudUserId, $installId, $userKey, clean_ids($manuscripts));
+    delete_missing($pdo, 'geo_sync_sentiment_configs', $cloudUserId, $installId, $userKey, clean_ids($configs));
 
     $counts = [
         'users' => 1,
