@@ -20,6 +20,7 @@ import requests
 
 from local_paths import app_data_dir
 from models import CollectionResult, GeoManuscript, MonitorTask, SentimentConfig, User, db
+from version import APP_VERSION
 
 
 def _truthy(value: str | None) -> bool:
@@ -645,6 +646,7 @@ def report_client_heartbeat(user_id: int, status: str = "online", message: str =
         "status": status,
         "message": message,
         "desktop": {
+            "app_version": APP_VERSION,
             "platform": platform.platform(),
             "python": platform.python_version(),
         },

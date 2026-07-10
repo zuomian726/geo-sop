@@ -73,7 +73,11 @@ def _find_cloud_user() -> User | None:
         if user:
             return user
 
-    return User.query.order_by(User.id.asc()).first()
+    if username or email:
+        logger.warning("[RemoteWorker] cloud account does not match a local user: username=%s email=%s", username, email)
+    else:
+        logger.warning("[RemoteWorker] cloud account identity is missing; remote tasks are paused")
+    return None
 
 
 def _remote_pending_tasks(user_id: int) -> list[MonitorTask]:
