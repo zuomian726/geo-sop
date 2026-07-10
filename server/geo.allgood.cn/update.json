@@ -2,13 +2,13 @@
   "app": "GEO-SOP",
   "version": "0.3.15-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-09T15:00:00+08:00",
+  "released_at": "2026-07-10T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "修复云端“智慧舆情设置”唤起本机后没有进入正确设置页的问题。",
-    "桌面端兼容 #ai-settings 和 #sentiment_settings 两种链接。",
-    "云端文案明确 API Key 需要在本机 App 保存配置。"
+    "多用户桌面端不再将未匹配的云端账号回退到本地第一位用户。",
+    "客户端心跳增加应用版本，云端任务管理可以识别客户端版本。",
+    "连续操作期间的云端同步会自动补齐并发变更。"
   ],
   "downloads": {
     "macos": {
