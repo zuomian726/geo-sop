@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#f4f7fb"/>
+  <rect width="1200" height="64" fill="#ffffff"/>
+  <text x="44" y="40" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#182235">GEO-SOP</text>
+  <text x="190" y="40" font-family="Arial, sans-serif" font-size="13" fill="#7b8aa0">示例数据 · 只读 Demo</text>
+  <rect x="44" y="96" width="1112" height="180" rx="8" fill="#0c1424"/>
+  <text x="76" y="132" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="3" fill="#00a6b2">GEO-SOP WORKSPACE</text>
+  <text x="76" y="183" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#ffffff">AI 平台品牌可见度工作台</text>
+  <text x="76" y="220" font-family="Arial, sans-serif" font-size="15" fill="#aebbd0">查看品牌曝光、引用来源、平台覆盖和下一步动作。</text>
+  <rect x="76" y="242" width="116" height="12" rx="6" fill="#1769ff"/>
+  <rect x="208" y="242" width="116" height="12" rx="6" fill="#33445e"/>
+  <g font-family="Arial, sans-serif">
+    <rect x="44" y="304" width="260" height="122" rx="8" fill="#ffffff" stroke="#dfe6f0"/>
+    <text x="68" y="338" font-size="13" fill="#7b8aa0">品牌出现率</text><text x="68" y="382" font-size="34" font-weight="700" fill="#182235">66.7%</text><text x="68" y="406" font-size="12" fill="#16803c">较上次 +12.4%</text>
+    <rect x="324" y="304" width="260" height="122" rx="8" fill="#ffffff" stroke="#dfe6f0"/>
+    <text x="348" y="338" font-size="13" fill="#7b8aa0">覆盖平台</text><text x="348" y="382" font-size="34" font-weight="700" fill="#182235">3 个</text><text x="348" y="406" font-size="12" fill="#7b8aa0">豆包 · DeepSeek · Kimi</text>
+    <rect x="604" y="304" width="260" height="122" rx="8" fill="#ffffff" stroke="#dfe6f0"/>
+    <text x="628" y="338" font-size="13" fill="#7b8aa0">引用来源</text><text x="628" y="382" font-size="34" font-weight="700" fill="#182235">8 次</text><text x="628" y="406" font-size="12" fill="#7b8aa0">1 个示例域名</text>
+    <rect x="884" y="304" width="272" height="122" rx="8" fill="#ffffff" stroke="#dfe6f0"/>
+    <text x="908" y="338" font-size="13" fill="#7b8aa0">GEO 健康分</text><text x="908" y="382" font-size="34" font-weight="700" fill="#182235">78</text><text x="908" y="406" font-size="12" fill="#16803c">可优化</text>
+  </g>
+  <rect x="44" y="454" width="1112" height="190" rx="8" fill="#ffffff" stroke="#dfe6f0"/>
+  <text x="72" y="492" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#182235">品牌出现率趋势</text>
+  <line x1="76" y1="602" x2="1120" y2="602" stroke="#e5eaf2"/>
+  <polyline points="88,574 220,548 350,558 490,520 630,530 770,488 910,500 1060,470" fill="none" stroke="#1769ff" stroke-width="5"/>
+  <g fill="#1769ff"><circle cx="88" cy="574" r="6"/><circle cx="220" cy="548" r="6"/><circle cx="350" cy="558" r="6"/><circle cx="490" cy="520" r="6"/><circle cx="630" cy="530" r="6"/><circle cx="770" cy="488" r="6"/><circle cx="910" cy="500" r="6"/><circle cx="1060" cy="470" r="6"/></g>
+</svg>

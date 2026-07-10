@@ -2,6 +2,7 @@ START TRANSACTION;
 
 DELETE FROM geo_sync_results WHERE cloud_user_id=16;
 DELETE FROM geo_sync_manuscripts WHERE cloud_user_id=16;
+DELETE FROM geo_sync_assets WHERE cloud_user_id=16;
 DELETE FROM geo_sync_tasks WHERE cloud_user_id=16;
 
 INSERT INTO geo_sync_tasks
@@ -39,5 +40,11 @@ VALUES
     (16,'demo-static',1,16,'demo@geo.allgood.cn','企业智能办公实践指南','https://demo.example.com/guides/smart-office','{"title":"企业智能办公实践指南","url":"https://demo.example.com/guides/smart-office","task_id":1}', '2026-07-08 10:00:00','2026-07-10 09:30:00'),
     (16,'demo-static',2,16,'demo@geo.allgood.cn','企业知识库建设清单','https://demo.example.com/guides/enterprise-kb','{"title":"企业知识库建设清单","url":"https://demo.example.com/guides/enterprise-kb","task_id":1}', '2026-07-09 11:00:00','2026-07-10 09:30:00'),
     (16,'demo-static',3,16,'demo@geo.allgood.cn','团队知识管理案例','https://demo.example.com/cases/team-knowledge','{"title":"团队知识管理案例","url":"https://demo.example.com/cases/team-knowledge","task_id":1}', '2026-07-09 11:00:00','2026-07-10 09:30:00');
+
+INSERT INTO geo_sync_assets
+    (cloud_user_id,install_id,user_key,local_result_id,local_task_id,kind,platform,question,original_name,storage_path,public_url,mime_type,file_size,sha256,payload,created_at,updated_at)
+VALUES
+    (16,'demo-static','demo@geo.allgood.cn',1,1,'screenshot','doubao','适合中小企业的智能办公方案有哪些？','geo-answer-demo.svg','/www/wwwroot/geo.allgood.cn/demo/assets/geo-answer-demo.svg','https://geo.allgood.cn/demo/assets/geo-answer-demo.svg','image/svg+xml',2323,'41766fc614125dc65c22eefcf612dd8f950b75e3832875817bbb6a25c61e92d2','{"demo":true}', '2026-07-10 09:30:00','2026-07-10 09:30:00'),
+    (16,'demo-static','demo@geo.allgood.cn',4,1,'screenshot','doubao','如何选择企业知识库工具？','geo-dashboard-demo.svg','/www/wwwroot/geo.allgood.cn/demo/assets/geo-dashboard-demo.svg','https://geo.allgood.cn/demo/assets/geo-dashboard-demo.svg','image/svg+xml',3156,'7cd22308ed1a1e80cdde732b8a50cadc4deb1dc72835dc9ee4e4f0a969b1cd22','{"demo":true}', '2026-07-10 09:30:00','2026-07-10 09:30:00');
 
 COMMIT;

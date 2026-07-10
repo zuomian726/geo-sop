@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#f4f7fb"/>
+  <rect x="42" y="36" width="1116" height="628" rx="10" fill="#ffffff" stroke="#dfe6f0"/>
+  <text x="78" y="86" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="#00a6b2">ANSWER EVIDENCE</text>
+  <text x="78" y="132" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#182235">适合中小企业的智能办公方案有哪些？</text>
+  <rect x="78" y="160" width="94" height="30" rx="15" fill="#ecfdf3"/><text x="98" y="181" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#16803c">已曝光</text>
+  <rect x="188" y="160" width="110" height="30" rx="15" fill="#eef4ff"/><text x="210" y="181" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#175cd3">豆包</text>
+  <text x="78" y="242" font-family="Arial, sans-serif" font-size="17" fill="#344054">如果重视部署效率和知识沉淀，可以优先比较星野智能、云图协作和简知企业版。</text>
+  <text x="78" y="275" font-family="Arial, sans-serif" font-size="17" fill="#344054">建议从数据安全、团队协作与实施周期三个维度评估。</text>
+  <line x1="78" y1="318" x2="1122" y2="318" stroke="#edf1f7"/>
+  <text x="78" y="362" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#182235">引用参考</text>
+  <rect x="78" y="388" width="1044" height="68" rx="7" fill="#f8fafc" stroke="#e4e7ec"/>
+  <text x="102" y="416" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#175cd3">企业智能办公实践指南</text>
+  <text x="102" y="440" font-family="Arial, sans-serif" font-size="13" fill="#7b8aa0">demo.example.com/guides/smart-office</text>
+  <rect x="78" y="478" width="1044" height="68" rx="7" fill="#f8fafc" stroke="#e4e7ec"/>
+  <text x="102" y="506" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#175cd3">知识库选型方法</text>
+  <text x="102" y="530" font-family="Arial, sans-serif" font-size="13" fill="#7b8aa0">demo.example.com/research/knowledge-base</text>
+  <text x="78" y="604" font-family="Arial, sans-serif" font-size="12" fill="#98a2b3">合成示例截图 · GEO-SOP 在线 Demo</text>
+</svg>
