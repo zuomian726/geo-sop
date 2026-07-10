@@ -543,6 +543,9 @@ body {
             <el-tag v-if="desktopMode" size="small" type="success" style="margin-left: 8px;">
                 单机版
             </el-tag>
+            <el-tag v-if="desktopMode" size="small" :type="cloudSyncTagType" style="margin-left: 8px;" :title="cloudSyncDetail">
+                [[ cloudSyncLabel ]]
+            </el-tag>
             <el-button
                 v-if="updateInfo.has_update"
                 size="small"
@@ -1986,6 +1989,11 @@ const app = createApp({
         return {
             currentUser: null,
             desktopMode: false,
+            cloudSync: {
+                enabled: false,
+                last_synced_at: null,
+                error: ''
+            },
             appInfo: {
                 name: 'GEO-SOP',
                 version: '',
@@ -2208,6 +2216,23 @@ const app = createApp({
         };
     },
     computed: {
+        cloudSyncLabel() {
+            if (!this.desktopMode) return '';
+            if (this.cloudSync.error) return '同步异常';
+            if (!this.cloudSync.enabled) return '未连接云端';
+            if (this.cloudSync.last_synced_at) return '云端已同步';
+            return '云端已连接';
+        },
+        cloudSyncTagType() {
+            if (this.cloudSync.error) return 'danger';
+            if (!this.cloudSync.enabled) return 'info';
+            return this.cloudSync.last_synced_at ? 'success' : 'warning';
+        },
+        cloudSyncDetail() {
+            if (this.cloudSync.error) return this.cloudSync.error;
+            if (this.cloudSync.last_synced_at) return `最近同步：${this.cloudSync.last_synced_at}`;
+            return this.cloudSync.enabled ? '已连接云端，等待首次同步' : '登录云端账号后启用同步';
+        },
         nextStep() {
             if (this.getLoggedInCount && this.platformLoginStatus.length && this.getLoggedInCount() === 0) {
                 return {
@@ -2347,6 +2372,7 @@ const app = createApp({
                 if (response.data.success) {
                     this.currentUser = response.data.user;
                     this.desktopMode = !!response.data.desktop_mode;
+                    this.cloudSync = response.data.cloud_sync || this.cloudSync;
                     this.appInfo = response.data.app || this.appInfo;
                     this.updateInfo = response.data.update || this.updateInfo;
                     this.dataDir = response.data.data_dir || '';

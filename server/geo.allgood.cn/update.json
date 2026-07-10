@@ -1,6 +1,6 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.15-dev",
+  "version": "0.3.16-dev",
   "channel": "desktop-dev",
   "released_at": "2026-07-10T15:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
@@ -13,17 +13,17 @@
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.15-dev",
+      "version": "0.3.16-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.15-dev-macOS.dmg",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.16-dev-macOS.dmg",
       "size": "164 MB",
       "sha256": "b09b288690334ded9aa5eceb5f33f215eac7b81cd5426cb4c5156cd3441f66cc"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.15-dev",
+      "version": "0.3.16-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.15-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.16-dev.exe",
       "size": "4.2 MB",
       "sha256": "768b3bcec54fcb6e57f6461293cc5fe77fcfc21a05a24630f929f3940600327a"
     }

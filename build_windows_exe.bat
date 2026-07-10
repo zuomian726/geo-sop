@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set APP_VERSION=0.3.15-dev
+set APP_VERSION=0.3.16-dev
 
 where python >nul 2>nul
 if errorlevel 1 (

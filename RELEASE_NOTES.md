@@ -181,3 +181,7 @@ This release moves GEO-SOP from a development preview toward a distributable des
 
 - 多用户桌面端不再把未匹配的云端账号回退到本地第一位用户，避免跨账号执行任务或同步数据。
 - 客户端心跳增加应用版本信息，云端任务管理可以识别客户端版本。
+## v0.3.16-dev - 2026-07-10
+
+- 桌面 dashboard 顶部增加云端同步状态，显示已同步、已连接、未连接或同步异常。
+- 同步状态包含最近成功同步时间，减少用户对数据是否上传的疑问。
