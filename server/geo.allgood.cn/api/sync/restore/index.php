@@ -44,7 +44,10 @@ function geo_restore_source_key(array $payload, string $installId, int $localId)
 }
 
 function geo_restore_rows(PDO $pdo, string $table, int $cloudUserId): array {
-    $stmt = $pdo->prepare("SELECT install_id, local_id, payload, synced_at FROM {$table} WHERE cloud_user_id = ? ORDER BY synced_at ASC, id ASC");
+    $columns = $table === 'geo_sync_results'
+        ? 'install_id, local_id, local_task_id, payload, synced_at'
+        : 'install_id, local_id, payload, synced_at';
+    $stmt = $pdo->prepare("SELECT {$columns} FROM {$table} WHERE cloud_user_id = ? ORDER BY synced_at ASC, id ASC");
     $stmt->execute([$cloudUserId]);
     return $stmt->fetchAll() ?: [];
 }
@@ -72,7 +75,7 @@ try {
     foreach (geo_restore_rows($pdo, 'geo_sync_results', $cloudUserId) as $row) {
         $payload = geo_restore_payload($row['payload'] ?? '');
         $installId = (string)$row['install_id'];
-        $localTaskId = (int)($payload['local_task_id'] ?? $payload['task_id'] ?? 0);
+        $localTaskId = (int)($row['local_task_id'] ?? $payload['local_task_id'] ?? $payload['task_id'] ?? 0);
         $taskSource = $taskSources[$installId . ':' . $localTaskId] ?? ($installId . ':' . $localTaskId);
         $resultKey = $taskSource . ':' . (int)$row['local_id'];
         $parts = explode(':', $taskSource, 2);
