@@ -108,6 +108,7 @@ $clientRows = $clientStmt->fetchAll();
 foreach ($clientRows as &$clientRow) {
     $clientPayload = json_decode((string)($clientRow['payload'] ?? ''), true);
     $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
+    $clientRow['version'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['app_version'] ?? '') : '';
     $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
 $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
 }
@@ -497,9 +498,9 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         </table></div>
         <h3 style="margin:22px 0 8px">客户端连接状态</h3>
         <p class="muted">只有同一账号下的桌面客户端保持在线，云端任务才会被自动拉取。超过 60 秒未收到心跳会显示为离线。</p>
-        <div class="table-wrap"><table><tr><th>状态</th><th>客户端</th><th>平台</th><th>最近心跳</th><th>提示</th></tr>
-        <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
-        <?php if(!$clientRows): ?><tr><td colspan="5"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
+        <div class="table-wrap"><table><tr><th>状态</th><th>客户端</th><th>版本</th><th>平台</th><th>最近心跳</th><th>提示</th></tr>
+        <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['version'] ?: '-')?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
+        <?php if(!$clientRows): ?><tr><td colspan="6"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
         </table></div>
         <h3 style="margin:22px 0 8px">本地同步任务</h3>
         <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>客户端</th><th>同步时间</th></tr>
