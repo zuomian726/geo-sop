@@ -13,11 +13,11 @@
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.8-dev",
+      "version": "0.3.13-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.8-dev-macOS.dmg",
-      "size": "165 MB",
-      "sha256": "2cee6633af6b286f9d8714f22a02b69258561282e793c43f4d5391520d37becf"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.13-dev-macOS.dmg",
+      "size": "164 MB",
+      "sha256": "9bff27aea0e0c1abd29c79481058cfb0f187dc3af0e7d584db5ff92d0b26ac5f"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
