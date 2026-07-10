@@ -17,7 +17,7 @@
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
       "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.16-dev-macOS.dmg",
       "size": "164 MB",
-      "sha256": "b09b288690334ded9aa5eceb5f33f215eac7b81cd5426cb4c5156cd3441f66cc"
+      "sha256": "ca5919389af7fe1d723872ac3f902952ae2f5efd6dcee10c1c1e9cf5cc65f996"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
@@ -25,7 +25,7 @@
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
       "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.16-dev.exe",
       "size": "4.2 MB",
-      "sha256": "768b3bcec54fcb6e57f6461293cc5fe77fcfc21a05a24630f929f3940600327a"
+      "sha256": "4421be90ad9344c4b8fd92c0fc6d39a17e733078c165b795d574ac474393a81b"
     }
   }
 }
