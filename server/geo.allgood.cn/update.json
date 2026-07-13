@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.16-dev",
+  "version": "0.3.17-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-10T15:00:00+08:00",
+  "released_at": "2026-07-13T16:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "多用户桌面端不再将未匹配的云端账号回退到本地第一位用户。",
-    "客户端心跳增加应用版本，云端任务管理可以识别客户端版本。",
-    "连续操作期间的云端同步会自动补齐并发变更。"
+    "已有本地数据的客户端支持分批增量合并其他设备的云端记录。",
+    "采集完成后自动上传任务截图，登录后后台补传历史截图。",
+    "登录立即上报心跳，后台持续拉取云端任务和新增数据。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.16-dev",
+      "version": "0.3.17-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.16-dev-macOS.dmg",
-      "size": "164 MB",
-      "sha256": "ca5919389af7fe1d723872ac3f902952ae2f5efd6dcee10c1c1e9cf5cc65f996"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.17-dev-macOS.dmg",
+      "size": "165 MB",
+      "sha256": "928658f3d65861537928802b4f8f13c469423555040b45701a8aefbf60d7e46b"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.16-dev",
+      "version": "0.3.17-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.16-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.17-dev.exe",
       "size": "4.2 MB",
-      "sha256": "4421be90ad9344c4b8fd92c0fc6d39a17e733078c165b795d574ac474393a81b"
+      "sha256": "73909ff8a00bd5ba65510765076ea29ef7d070da0e0f3f152aa621d9e9c7cbdf"
     }
   }
 }
