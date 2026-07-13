@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import inspect, text
 import json
 
 db = SQLAlchemy()
@@ -55,6 +56,8 @@ class GeoManuscript(db.Model):
     
     title = db.Column(db.String(255), nullable=False) # 稿件标题/备注
     url = db.Column(db.Text, nullable=False) # 稿件URL或关键特征
+    cloud_source_install_id = db.Column(db.String(64), nullable=True)
+    cloud_source_local_id = db.Column(db.Integer, nullable=True)
     
     created_at = db.Column(db.DateTime, default=now_cst)
     
@@ -66,6 +69,8 @@ class GeoManuscript(db.Model):
             'task_ids': json.loads(self.task_ids) if self.task_ids else [],
             'title': self.title,
             'url': self.url,
+            'cloud_source_install_id': self.cloud_source_install_id,
+            'cloud_source_local_id': self.cloud_source_local_id,
             'created_at': self.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         }
 
@@ -164,6 +169,10 @@ class CollectionResult(db.Model):
     
     # 排名信息（JSON格式）- 解析AI回答中的排名
     rankings = db.Column(db.Text)
+
+    # 跨设备增量同步来源。为空表示该记录由当前设备原生创建。
+    cloud_source_install_id = db.Column(db.String(64), nullable=True)
+    cloud_source_local_id = db.Column(db.Integer, nullable=True)
     
     # 时间戳
     created_at = db.Column(db.DateTime, default=now_cst)
@@ -199,6 +208,8 @@ class CollectionResult(db.Model):
             'rankings': json.loads(self.rankings) if self.rankings else [],
             'ai_sentiment_result': json.loads(self.ai_sentiment_result) if self.ai_sentiment_result else None,
             'ai_sentiment_updated_at': self.ai_sentiment_updated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if self.ai_sentiment_updated_at else None,
+            'cloud_source_install_id': self.cloud_source_install_id,
+            'cloud_source_local_id': self.cloud_source_local_id,
             'created_at': self.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         }
 
@@ -235,6 +246,8 @@ class SentimentConfig(db.Model):
     
     # 是否为默认配置
     is_default = db.Column(db.Boolean, default=False)
+    cloud_source_install_id = db.Column(db.String(64), nullable=True)
+    cloud_source_local_id = db.Column(db.Integer, nullable=True)
     
     # 时间戳
     created_at = db.Column(db.DateTime, default=now_cst)
@@ -257,6 +270,36 @@ class SentimentConfig(db.Model):
             'ai_model_name': self.ai_model_name,
             'ai_prompt': self.ai_prompt,
             'is_default': self.is_default,
+            'cloud_source_install_id': self.cloud_source_install_id,
+            'cloud_source_local_id': self.cloud_source_local_id,
             'created_at': self.created_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'updated_at': self.updated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00')
         }
+
+
+def ensure_local_sync_schema():
+    """Add cloud-origin columns to existing desktop SQLite databases."""
+    migrations = {
+        'collection_results': {
+            'cloud_source_install_id': 'VARCHAR(64)',
+            'cloud_source_local_id': 'INTEGER',
+        },
+        'geo_manuscripts': {
+            'cloud_source_install_id': 'VARCHAR(64)',
+            'cloud_source_local_id': 'INTEGER',
+        },
+        'sentiment_configs': {
+            'cloud_source_install_id': 'VARCHAR(64)',
+            'cloud_source_local_id': 'INTEGER',
+        },
+    }
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    with db.engine.begin() as connection:
+        for table, columns in migrations.items():
+            if table not in existing_tables:
+                continue
+            existing_columns = {column['name'] for column in inspector.get_columns(table)}
+            for name, sql_type in columns.items():
+                if name not in existing_columns:
+                    connection.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {sql_type}'))

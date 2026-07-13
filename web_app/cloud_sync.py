@@ -8,9 +8,11 @@ server.
 from __future__ import annotations
 
 import json
+import hashlib
 import mimetypes
 import os
 import platform
+import threading
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -18,9 +20,12 @@ from urllib.parse import urlencode
 
 import requests
 
-from local_paths import app_data_dir
-from models import CollectionResult, GeoManuscript, MonitorTask, SentimentConfig, User, db
+from local_paths import answers_dir, app_data_dir
+from models import CollectionResult, GeoManuscript, MonitorTask, SentimentConfig, User, db, ensure_local_sync_schema
 from version import APP_VERSION
+
+
+_cloud_merge_lock = threading.Lock()
 
 
 def _truthy(value: str | None) -> bool:
@@ -29,6 +34,10 @@ def _truthy(value: str | None) -> bool:
 
 def cloud_account_path() -> Path:
     return Path(app_data_dir()) / "cloud_account.json"
+
+
+def cloud_pull_state_path() -> Path:
+    return Path(app_data_dir()) / "cloud_pull_state.json"
 
 
 def load_cloud_account() -> dict:
@@ -47,6 +56,38 @@ def save_cloud_account(data: dict) -> None:
     tmp_path = path.with_suffix(".json.tmp")
     tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp_path.replace(path)
+
+
+def _load_cloud_pull_state() -> dict:
+    path = cloud_pull_state_path()
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_cloud_pull_cursor(user_key: str, cursor: int, cursor_time: str = "") -> None:
+    state = _load_cloud_pull_state()
+    state[user_key] = {
+        "result_cursor": max(0, int(cursor)),
+        "result_cursor_time": str(cursor_time or ""),
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    path = cloud_pull_state_path()
+    tmp_path = path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _cloud_pull_cursor(user_key: str) -> tuple[int, str]:
+    row = _load_cloud_pull_state().get(user_key) or {}
+    try:
+        return max(0, int(row.get("result_cursor") or 0)), str(row.get("result_cursor_time") or "")
+    except Exception:
+        return 0, ""
 
 
 def cloud_sync_url() -> str | None:
@@ -132,6 +173,37 @@ def _task_cloud_source(task: MonitorTask) -> tuple[str, int] | None:
     return (install_id, local_id) if install_id and local_id else None
 
 
+def _model_cloud_source(model) -> tuple[str, int] | None:
+    install_id = str(getattr(model, "cloud_source_install_id", None) or "")
+    local_id = int(getattr(model, "cloud_source_local_id", None) or 0)
+    return (install_id, local_id) if install_id and local_id else None
+
+
+def _normalized_datetime(value) -> str:
+    parsed = _parse_dt(value)
+    return parsed.strftime("%Y-%m-%d %H:%M:%S") if parsed else str(value or "").strip()
+
+
+def _task_fingerprint(name, created_at) -> str:
+    return f"{str(name or '').strip().casefold()}|{_normalized_datetime(created_at)}"
+
+
+def _result_fingerprint(task_id, question, platform_name, created_at, answer) -> str:
+    raw = "|".join([
+        str(int(task_id or 0)),
+        str(platform_name or "").strip().casefold(),
+        str(question or "").strip(),
+        _normalized_datetime(created_at),
+        str(answer or "").strip(),
+    ])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _manuscript_fingerprint(title, url) -> str:
+    raw = f"{str(title or '').strip().casefold()}|{str(url or '').strip()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def _user_key(user: User) -> str:
     return (user.email or user.username or f"user-{user.id}").strip().lower()
 
@@ -156,13 +228,22 @@ def build_workspace_payload(user_id: int) -> dict:
 
     tasks = MonitorTask.query.filter_by(user_id=user.id).order_by(MonitorTask.id.asc()).all()
     task_ids = [int(task.id) for task in tasks if task.id is not None]
-    results = (
+    all_results = (
         CollectionResult.query.filter(CollectionResult.task_id.in_(task_ids)).order_by(CollectionResult.id.asc()).all()
         if task_ids
         else []
     )
-    manuscripts = GeoManuscript.query.filter_by(user_id=user.id).order_by(GeoManuscript.id.asc()).all()
-    configs = SentimentConfig.query.filter_by(user_id=user.id).order_by(SentimentConfig.id.asc()).all()
+    # Cloud-imported rows already exist remotely. Re-uploading them under this
+    # device's install_id creates cross-device duplicates.
+    results = [result for result in all_results if not _model_cloud_source(result)]
+    manuscripts = [
+        manuscript for manuscript in GeoManuscript.query.filter_by(user_id=user.id).order_by(GeoManuscript.id.asc()).all()
+        if not _model_cloud_source(manuscript)
+    ]
+    configs = [
+        config for config in SentimentConfig.query.filter_by(user_id=user.id).order_by(SentimentConfig.id.asc()).all()
+        if not _model_cloud_source(config)
+    ]
 
     user_payload = _with_local_id(user.to_dict())
     return {
@@ -215,7 +296,39 @@ def sync_user_workspace(user_id: int) -> dict:
     return data
 
 
-def upload_workspace_assets(user_id: int, resolve_path) -> dict:
+def resolve_local_screenshot_path(filepath: str | None) -> str | None:
+    if not filepath:
+        return None
+    raw_path = str(filepath).replace("\\", "/")
+    normalized = raw_path.lstrip("/")
+    without_answers = normalized[len("answers/"):] if normalized.startswith("answers/") else normalized
+    web_app_dir = Path(__file__).resolve().parent
+    root_dir = web_app_dir.parent
+    local_answers_dir = Path(answers_dir()).resolve()
+    candidates = [
+        Path(raw_path) if Path(raw_path).is_absolute() else None,
+        Path(normalized),
+        local_answers_dir / normalized,
+        local_answers_dir / without_answers,
+        web_app_dir / normalized,
+        root_dir / normalized,
+        web_app_dir / "answers" / without_answers,
+        root_dir / "answers" / without_answers,
+    ]
+    allowed_roots = [local_answers_dir, (web_app_dir / "answers").resolve(), (root_dir / "answers").resolve()]
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        try:
+            resolved = candidate.resolve()
+            if resolved.is_file() and any(resolved == root or root in resolved.parents for root in allowed_roots):
+                return str(resolved)
+        except OSError:
+            continue
+    return None
+
+
+def upload_workspace_assets(user_id: int, resolve_path=None, task_ids: list[int] | None = None) -> dict:
     """Upload local screenshot files and a stats snapshot for the signed-in user."""
     if not cloud_sync_enabled():
         return {"enabled": False, "message": "cloud api sync is disabled"}
@@ -225,15 +338,20 @@ def upload_workspace_assets(user_id: int, resolve_path) -> dict:
         raise ValueError(f"user {user_id} not found")
 
     tasks = MonitorTask.query.filter_by(user_id=user.id).order_by(MonitorTask.id.asc()).all()
-    task_ids = [int(task.id) for task in tasks if task.id is not None]
+    all_task_ids = [int(task.id) for task in tasks if task.id is not None]
     results = (
-        CollectionResult.query.filter(CollectionResult.task_id.in_(task_ids)).order_by(CollectionResult.id.asc()).all()
-        if task_ids
+        CollectionResult.query.filter(CollectionResult.task_id.in_(all_task_ids)).order_by(CollectionResult.id.asc()).all()
+        if all_task_ids
         else []
     )
     total_results = len(results)
     exposed_results = sum(1 for result in results if result.has_brand_exposure)
-    screenshot_results = [result for result in results if result.screenshot_path]
+    requested_task_ids = {int(task_id) for task_id in (task_ids or []) if task_id}
+    screenshot_results = [
+        result for result in results
+        if result.screenshot_path and (not requested_task_ids or int(result.task_id) in requested_task_ids)
+    ]
+    resolve_path = resolve_path or resolve_local_screenshot_path
 
     stats_payload = {
         "install_id": get_install_id(),
@@ -328,10 +446,20 @@ def upload_workspace_assets(user_id: int, resolve_path) -> dict:
 
 
 def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> dict:
-    """Restore cloud mirrored history into an empty local desktop workspace."""
+    if not _cloud_merge_lock.acquire(blocking=False):
+        return {"enabled": True, "restored": False, "skipped": "cloud merge already running"}
+    try:
+        return _restore_workspace_from_cloud(user_id, only_if_empty=only_if_empty)
+    finally:
+        _cloud_merge_lock.release()
+
+
+def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> dict:
+    """Merge the cloud workspace into the local desktop database."""
     if not cloud_sync_enabled():
         return {"enabled": False, "restored": False, "message": "cloud api sync is disabled"}
 
+    ensure_local_sync_schema()
     user = db.session.get(User, int(user_id))
     if not user:
         raise ValueError(f"user {user_id} not found")
@@ -344,44 +472,127 @@ def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> di
     if only_if_empty and any(local_counts.values()):
         return {"enabled": True, "restored": False, "skipped": "local workspace is not empty", "local_counts": local_counts}
 
-    query = urlencode({"user_key": _user_key(user)})
-    response = requests.get(
-        f"{cloud_sync_url()}/sync/restore/?{query}",
-        headers=_headers(),
-        timeout=45,
-    )
-    if response.status_code >= 400:
-        raise RuntimeError(f"cloud restore failed: HTTP {response.status_code} {response.text[:500]}")
+    user_key = _user_key(user)
+    cursor, cursor_time = _cloud_pull_cursor(user_key)
+    final_cursor = cursor
+    final_cursor_time = cursor_time
+    pages = 0
+    tasks_by_source = {}
+    results = []
+    manuscripts_by_source = {}
+    configs_by_source = {}
+    cloud_counts = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
 
-    data = response.json()
-    if not data.get("success"):
-        raise RuntimeError(f"cloud restore failed: {data}")
+    while pages < 1000:
+        query = urlencode({
+            "user_key": user_key,
+            "cursor": final_cursor,
+            "cursor_time": final_cursor_time,
+            "limit": 100,
+        })
+        response = requests.get(
+            f"{cloud_sync_url()}/sync/restore/?{query}",
+            headers=_headers(),
+            timeout=60,
+        )
+        if response.status_code >= 400:
+            raise RuntimeError(f"cloud restore failed: HTTP {response.status_code} {response.text[:500]}")
+        data = response.json()
+        if not data.get("success"):
+            raise RuntimeError(f"cloud restore failed: {data}")
 
-    workspace = data.get("workspace") or {}
-    tasks = workspace.get("tasks") if isinstance(workspace.get("tasks"), list) else []
-    results = workspace.get("results") if isinstance(workspace.get("results"), list) else []
-    manuscripts = workspace.get("manuscripts") if isinstance(workspace.get("manuscripts"), list) else []
-    configs = workspace.get("sentiment_configs") if isinstance(workspace.get("sentiment_configs"), list) else []
+        workspace = data.get("workspace") or {}
+        page_tasks = workspace.get("tasks") if isinstance(workspace.get("tasks"), list) else []
+        page_results = workspace.get("results") if isinstance(workspace.get("results"), list) else []
+        page_manuscripts = workspace.get("manuscripts") if isinstance(workspace.get("manuscripts"), list) else []
+        page_configs = workspace.get("sentiment_configs") if isinstance(workspace.get("sentiment_configs"), list) else []
+        for row in page_tasks:
+            tasks_by_source[_source_key(row)] = row
+        results.extend(page_results)
+        for row in page_manuscripts:
+            manuscripts_by_source[_source_key(row)] = row
+        for row in page_configs:
+            configs_by_source[_source_key(row)] = row
+
+        counts = data.get("counts") or {}
+        cloud_counts["tasks"] = max(cloud_counts["tasks"], int(counts.get("tasks") or 0))
+        cloud_counts["results"] += int(counts.get("results") or 0)
+        cloud_counts["manuscripts"] = max(cloud_counts["manuscripts"], int(counts.get("manuscripts") or 0))
+        cloud_counts["sentiment_configs"] = max(cloud_counts["sentiment_configs"], int(counts.get("sentiment_configs") or 0))
+
+        paging = data.get("paging") if isinstance(data.get("paging"), dict) else {}
+        next_cursor = int(paging.get("next_cursor") or final_cursor)
+        next_cursor_time = str(paging.get("next_cursor_time") or final_cursor_time)
+        has_more = bool(paging.get("has_more"))
+        pages += 1
+        cursor_advanced = next_cursor_time > final_cursor_time or (
+            next_cursor_time == final_cursor_time and next_cursor > final_cursor
+        )
+        if not cursor_advanced or not has_more:
+            if cursor_advanced:
+                final_cursor = next_cursor
+                final_cursor_time = next_cursor_time
+            break
+        final_cursor = next_cursor
+        final_cursor_time = next_cursor_time
+
+    tasks = list(tasks_by_source.values())
+    manuscripts = list(manuscripts_by_source.values())
+    configs = list(configs_by_source.values())
 
     if not any([tasks, results, manuscripts, configs]):
-        return {"enabled": True, "restored": False, "cloud_counts": data.get("counts") or {}}
+        _save_cloud_pull_cursor(user_key, final_cursor, final_cursor_time)
+        return {"enabled": True, "restored": False, "cloud_counts": cloud_counts, "pages": pages}
 
+    install_id = get_install_id()
     task_map: dict[tuple[str, int], int] = {}
+    task_fingerprints: dict[str, int] = {}
     config_map: dict[tuple[str, int], int] = {}
-    restored_counts = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
+    added = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
+    updated = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
+    skipped = {"tasks": 0, "results": 0, "manuscripts": 0, "sentiment_configs": 0}
+
+    local_tasks = MonitorTask.query.filter_by(user_id=user.id).all()
+    for task in local_tasks:
+        source = _task_cloud_source(task) or (install_id, int(task.id))
+        task_map[source] = int(task.id)
+        task_fingerprints[_task_fingerprint(task.name, task.created_at)] = int(task.id)
+
+    local_configs = SentimentConfig.query.filter_by(user_id=user.id).all()
+    configs_by_name = {(config.name or "").strip().casefold(): config for config in local_configs}
+    for config in local_configs:
+        source = _model_cloud_source(config) or (install_id, int(config.id))
+        config_map[source] = int(config.id)
 
     for row in configs:
         payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
-        source = _source_key(row)
+        source = (
+            str(row.get("source_result_install_id") or row.get("source_install_id") or row.get("install_id") or ""),
+            int(row.get("source_local_id") or row.get("local_id") or 0),
+        )
         if not source[0] or not source[1]:
             continue
-        existing = SentimentConfig.query.filter_by(user_id=user.id, name=payload.get("name") or "默认配置").first()
+        name = payload.get("name") or "默认配置"
+        existing_id = config_map.get(source)
+        existing = db.session.get(SentimentConfig, existing_id) if existing_id else configs_by_name.get(name.strip().casefold())
         if existing:
             config_map[source] = existing.id
+            if _model_cloud_source(existing):
+                existing.positive_words = _json_text(payload.get("positive_words"), [])
+                existing.negative_words = _json_text(payload.get("negative_words"), [])
+                existing.enable_ai_sentiment = bool(payload.get("enable_ai_sentiment"))
+                existing.ai_platform = payload.get("ai_platform")
+                existing.ai_api_url = payload.get("ai_api_url")
+                existing.ai_model_name = payload.get("ai_model_name")
+                existing.ai_prompt = payload.get("ai_prompt")
+                existing.is_default = bool(payload.get("is_default"))
+                updated["sentiment_configs"] += 1
+            else:
+                skipped["sentiment_configs"] += 1
             continue
         config = SentimentConfig(
             user_id=user.id,
-            name=payload.get("name") or "默认配置",
+            name=name,
             positive_words=_json_text(payload.get("positive_words"), []),
             negative_words=_json_text(payload.get("negative_words"), []),
             enable_ai_sentiment=bool(payload.get("enable_ai_sentiment")),
@@ -391,26 +602,42 @@ def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> di
             ai_model_name=payload.get("ai_model_name"),
             ai_prompt=payload.get("ai_prompt"),
             is_default=bool(payload.get("is_default")),
+            cloud_source_install_id=source[0],
+            cloud_source_local_id=source[1],
             created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
             updated_at=_parse_dt(payload.get("updated_at")) or datetime.now(),
         )
         db.session.add(config)
         db.session.flush()
         config_map[source] = config.id
-        restored_counts["sentiment_configs"] += 1
+        configs_by_name[name.strip().casefold()] = config
+        added["sentiment_configs"] += 1
 
     for row in tasks:
         payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
         source = _source_key(row)
         if not source[0] or not source[1]:
             continue
-        existing = None
-        for task in MonitorTask.query.filter_by(user_id=user.id).all():
-            if _task_cloud_source(task) == source:
-                existing = task
-                break
+        existing_id = task_map.get(source)
+        if not existing_id:
+            existing_id = task_fingerprints.get(_task_fingerprint(payload.get("name"), payload.get("created_at")))
+        existing = db.session.get(MonitorTask, existing_id) if existing_id else None
         if existing:
             task_map[source] = existing.id
+            if _task_cloud_source(existing):
+                existing.name = payload.get("name") or existing.name
+                existing.brand_name = payload.get("brand_name")
+                existing.brand_keywords = _json_text(payload.get("brand_keywords"), [])
+                existing.competitor_brands = _json_text(payload.get("competitor_brands"), [])
+                existing.questions = _json_text(payload.get("questions"), [])
+                existing.platforms = _json_text(payload.get("platforms"), [])
+                existing.screenshot_config = _json_text(payload.get("screenshot_config"), {})
+                existing.status = payload.get("status") or existing.status
+                existing.last_run_at = _parse_dt(payload.get("last_run_at"))
+                existing.updated_at = _parse_dt(payload.get("updated_at")) or existing.updated_at
+                updated["tasks"] += 1
+            else:
+                skipped["tasks"] += 1
             continue
         schedule_config = payload.get("schedule_config") if isinstance(payload.get("schedule_config"), dict) else {}
         schedule_config["cloud_source_install_id"] = source[0]
@@ -442,13 +669,59 @@ def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> di
         db.session.add(task)
         db.session.flush()
         task_map[source] = task.id
-        restored_counts["tasks"] += 1
+        task_fingerprints[_task_fingerprint(task.name, task.created_at)] = task.id
+        added["tasks"] += 1
+
+    local_task_ids = list({int(task_id) for task_id in task_map.values()})
+    local_results = (
+        CollectionResult.query.filter(CollectionResult.task_id.in_(local_task_ids)).all()
+        if local_task_ids else []
+    )
+    result_sources: dict[tuple[str, int], CollectionResult] = {}
+    result_fingerprints: dict[str, CollectionResult] = {}
+    for result in local_results:
+        source = _model_cloud_source(result) or (install_id, int(result.id))
+        result_sources[source] = result
+        result_fingerprints[_result_fingerprint(
+            result.task_id, result.question, result.platform, result.created_at, result.answer
+        )] = result
 
     for row in results:
         payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
-        task_source = (str(row.get("source_install_id") or row.get("install_id") or ""), int(row.get("source_task_local_id") or payload.get("local_task_id") or payload.get("task_id") or 0))
+        source = (
+            str(row.get("source_result_install_id") or row.get("source_install_id") or row.get("install_id") or ""),
+            int(row.get("source_local_id") or row.get("local_id") or 0),
+        )
+        task_source = (
+            str(row.get("source_install_id") or row.get("install_id") or ""),
+            int(row.get("source_task_local_id") or payload.get("local_task_id") or payload.get("task_id") or 0),
+        )
         local_task_id = task_map.get(task_source)
-        if not local_task_id:
+        if not local_task_id or not source[0] or not source[1]:
+            continue
+        fingerprint = _result_fingerprint(
+            local_task_id,
+            payload.get("question"),
+            payload.get("platform"),
+            payload.get("created_at"),
+            payload.get("answer"),
+        )
+        existing = result_sources.get(source) or result_fingerprints.get(fingerprint)
+        if existing:
+            if _model_cloud_source(existing):
+                existing.question = payload.get("question") or ""
+                existing.platform = payload.get("platform") or ""
+                existing.answer = payload.get("answer")
+                existing.references = _json_text(payload.get("references"), [])
+                existing.screenshot_path = payload.get("screenshot_path")
+                existing.has_brand_exposure = bool(payload.get("has_brand_exposure"))
+                existing.exposed_keywords = _json_text(payload.get("exposed_keywords"), [])
+                existing.ai_sentiment_result = _json_text(payload.get("ai_sentiment_result"), None) if payload.get("ai_sentiment_result") is not None else None
+                existing.ai_sentiment_updated_at = _parse_dt(payload.get("ai_sentiment_updated_at"))
+                existing.rankings = _json_text(payload.get("rankings"), [])
+                updated["results"] += 1
+            else:
+                skipped["results"] += 1
             continue
         result = CollectionResult(
             task_id=local_task_id,
@@ -462,35 +735,91 @@ def restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> di
             ai_sentiment_result=_json_text(payload.get("ai_sentiment_result"), None) if payload.get("ai_sentiment_result") is not None else None,
             ai_sentiment_updated_at=_parse_dt(payload.get("ai_sentiment_updated_at")),
             rankings=_json_text(payload.get("rankings"), []),
+            cloud_source_install_id=source[0],
+            cloud_source_local_id=source[1],
             created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
         )
         db.session.add(result)
-        restored_counts["results"] += 1
+        db.session.flush()
+        result_sources[source] = result
+        result_fingerprints[fingerprint] = result
+        added["results"] += 1
+
+    local_manuscripts = GeoManuscript.query.filter_by(user_id=user.id).all()
+    manuscript_sources: dict[tuple[str, int], GeoManuscript] = {}
+    manuscript_fingerprints: dict[str, GeoManuscript] = {}
+    for manuscript in local_manuscripts:
+        source = _model_cloud_source(manuscript) or (install_id, int(manuscript.id))
+        manuscript_sources[source] = manuscript
+        manuscript_fingerprints[_manuscript_fingerprint(manuscript.title, manuscript.url)] = manuscript
 
     for row in manuscripts:
         payload = row.get("payload") if isinstance(row.get("payload"), dict) else row
-        source_install = str(row.get("source_install_id") or row.get("install_id") or "")
+        source = _source_key(row)
+        source_install = source[0]
+        fingerprint = _manuscript_fingerprint(payload.get("title"), payload.get("url"))
+        existing_manuscript = manuscript_sources.get(source) or manuscript_fingerprints.get(fingerprint)
+        if existing_manuscript:
+            if _model_cloud_source(existing_manuscript):
+                existing_manuscript.title = payload.get("title") or existing_manuscript.title
+                existing_manuscript.url = payload.get("url") or existing_manuscript.url
+                updated["manuscripts"] += 1
+            else:
+                skipped["manuscripts"] += 1
+            continue
         mapped_task_id = None
-        if payload.get("task_id"):
-            mapped_task_id = task_map.get((source_install, int(payload.get("task_id"))))
         mapped_task_ids = []
-        for task_id in payload.get("task_ids") or []:
-            mapped = task_map.get((source_install, int(task_id)))
+        source_task_refs = row.get("source_task_refs") if isinstance(row.get("source_task_refs"), list) else []
+        for ref in source_task_refs:
+            if not isinstance(ref, dict):
+                continue
+            mapped = task_map.get((str(ref.get("install_id") or ""), int(ref.get("local_id") or 0)))
             if mapped:
                 mapped_task_ids.append(mapped)
+        if not mapped_task_ids:
+            fallback_ids = []
+            if payload.get("task_id"):
+                fallback_ids.append(payload.get("task_id"))
+            fallback_ids.extend(payload.get("task_ids") or [])
+            for task_id in fallback_ids:
+                mapped = task_map.get((source_install, int(task_id)))
+                if mapped:
+                    mapped_task_ids.append(mapped)
+        mapped_task_ids = list(dict.fromkeys(mapped_task_ids))
+        if mapped_task_ids:
+            mapped_task_id = mapped_task_ids[0]
         manuscript = GeoManuscript(
             user_id=user.id,
             task_id=mapped_task_id,
             task_ids=json.dumps(mapped_task_ids, ensure_ascii=False),
             title=payload.get("title") or "恢复稿件",
             url=payload.get("url") or "",
+            cloud_source_install_id=source[0],
+            cloud_source_local_id=source[1],
             created_at=_parse_dt(payload.get("created_at")) or datetime.now(),
         )
         db.session.add(manuscript)
-        restored_counts["manuscripts"] += 1
+        db.session.flush()
+        manuscript_sources[source] = manuscript
+        manuscript_fingerprints[fingerprint] = manuscript
+        added["manuscripts"] += 1
 
     db.session.commit()
-    return {"enabled": True, "restored": True, "counts": restored_counts, "cloud_counts": data.get("counts") or {}}
+    _save_cloud_pull_cursor(user_key, final_cursor, final_cursor_time)
+    total_changed = sum(added.values()) + sum(updated.values())
+    return {
+        "enabled": True,
+        "restored": total_changed > 0,
+        "merged": True,
+        "counts": added,
+        "added": added,
+        "updated": updated,
+        "skipped": skipped,
+        "cloud_counts": cloud_counts,
+        "pages": pages,
+        "result_cursor": final_cursor,
+        "result_cursor_time": final_cursor_time,
+    }
 
 
 def sync_status(user_id: int | None = None) -> dict:

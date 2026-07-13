@@ -1,5 +1,13 @@
 # GEO-SOP Release Notes
 
+## v0.3.17-dev - 2026-07-13
+
+- Existing desktops now incrementally merge cloud records from other devices instead of restoring only into an empty database.
+- Cloud restore uses cursor pagination, preventing large accounts from timing out and only pulling new rows after the first merge.
+- Synced results, manuscripts, and sentiment settings carry source identifiers for idempotent cross-device merging.
+- Completed tasks automatically upload their screenshots; login also starts a background backfill for historical screenshots.
+- Cloud login sends an immediate heartbeat while the background worker continues pulling tasks and new data.
+
 ## v0.3.13-dev - 2026-07-09
 
 Cloud-to-desktop AI settings routing patch.

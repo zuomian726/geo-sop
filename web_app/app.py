@@ -42,6 +42,7 @@ try:
     from cloud_sync import (
         cloud_sync_enabled,
         pull_remote_tasks,
+        report_client_heartbeat,
         restore_workspace_from_cloud,
         save_cloud_account,
         sync_status,
@@ -333,17 +334,45 @@ def _adopt_local_workspace_for_cloud_user(user):
     return changed
 
 
-def _restore_cloud_workspace_if_empty(user):
-    """新安装桌面端登录云端账号后，自动恢复云端历史记录。"""
+def _merge_cloud_workspace(user):
+    """Merge cloud history for both new and existing desktop workspaces."""
     if not CLOUD_SYNC_AVAILABLE or not cloud_sync_enabled():
         return {'restored': False, 'enabled': False}
     try:
-        result = restore_workspace_from_cloud(user.id, only_if_empty=True)
-        logger.info("[CloudSync] restore user=%s result=%s", user.id, result)
+        result = restore_workspace_from_cloud(user.id, only_if_empty=False)
+        logger.info("[CloudSync] merge user=%s result=%s", user.id, result)
         return result
     except Exception as e:
-        logger.exception("[CloudSync] 自动恢复云端历史失败 user=%s: %s", user.id, e)
+        logger.exception("[CloudSync] 自动合并云端历史失败 user=%s: %s", user.id, e)
         return {'restored': False, 'error': str(e)}
+
+
+def _queue_cloud_workspace_merge(user_id):
+    def worker():
+        with app.app_context():
+            user = db.session.get(User, int(user_id))
+            if user:
+                _merge_cloud_workspace(user)
+                try:
+                    upload_workspace_assets(user.id, _resolve_screenshot_path)
+                except Exception as asset_error:
+                    logger.warning("[CloudSync] 历史截图后台补传失败 user=%s: %s", user.id, asset_error)
+
+    threading.Thread(target=worker, daemon=True, name=f'cloud-merge-{user_id}').start()
+    return {'restored': False, 'queued': True, 'message': '云端历史正在后台同步'}
+
+
+def _upload_task_assets_blocking(user_id, task_id):
+    if not CLOUD_SYNC_AVAILABLE or not cloud_sync_enabled():
+        return False
+    try:
+        with app.app_context():
+            result = upload_workspace_assets(int(user_id), _resolve_screenshot_path, task_ids=[int(task_id)])
+            logger.info("[CloudSync] task assets uploaded user=%s task=%s result=%s", user_id, task_id, result)
+        return True
+    except Exception as e:
+        logger.exception("[CloudSync] 任务截图自动上传失败 user=%s task=%s: %s", user_id, task_id, e)
+        return False
 
 
 def _get_cached_login_status(user_id):
@@ -540,14 +569,18 @@ def login():
                 app.config['CLOUD_SYNC_TOKEN'] = cloud_sync_token_value
 
                 login_user(user)
-                restore_result = {'restored': False}
-                if not adopted_count:
-                    restore_result = _restore_cloud_workspace_if_empty(user)
+                restore_result = _queue_cloud_workspace_merge(user.id)
+                try:
+                    report_client_heartbeat(user.id, 'online', '客户端登录成功，已连接云端')
+                except Exception as heartbeat_error:
+                    logger.warning("[CloudSync] 登录心跳失败 user=%s: %s", user.id, heartbeat_error)
                 _queue_cloud_sync(user.id, 'cloud_login_adopted' if adopted_count else 'cloud_login')
                 message = '云端账号登录成功'
                 if restore_result.get('restored'):
                     counts = restore_result.get('counts') or {}
                     message = f"云端账号登录成功，已恢复历史记录：{counts.get('tasks', 0)} 个任务、{counts.get('results', 0)} 条结果"
+                elif restore_result.get('queued'):
+                    message = '云端账号登录成功，历史记录正在后台同步'
                 return jsonify({'success': True, 'message': message, 'restore': restore_result})
             except Exception as e:
                 logger.exception("云端账号登录失败: %s", e)
@@ -966,6 +999,7 @@ def run_task(task_id):
                     db.session.commit()
         finally:
             _sync_user_workspace_blocking(task_user_id, 'task_run_finished', wait=True)
+            _upload_task_assets_blocking(task_user_id, task_id)
     
     thread = threading.Thread(target=run_in_background)
     thread.daemon = True
@@ -4093,6 +4127,8 @@ def create_admin():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        from models import ensure_local_sync_schema
+        ensure_local_sync_schema()
     app.debug = False
     app.use_debugger = False
     app.use_reloader = False

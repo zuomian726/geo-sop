@@ -49,7 +49,7 @@ def _free_port() -> int:
 
 def _init_database():
     from app import app
-    from models import db
+    from models import db, ensure_local_sync_schema
     from sqlalchemy import inspect
 
     with app.app_context():
@@ -67,6 +67,7 @@ def _init_database():
             missing_tables = sorted(required_tables - existing_tables)
         if missing_tables:
             raise RuntimeError(f"Local database initialization failed, missing tables: {', '.join(missing_tables)}")
+        ensure_local_sync_schema()
         _boot_log(f"database initialized tables={len(existing_tables)}")
 
 

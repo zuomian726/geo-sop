@@ -21,7 +21,9 @@ from cloud_sync import (
     remote_task_id_for_task,
     report_client_heartbeat,
     report_remote_task_status,
+    restore_workspace_from_cloud,
     sync_user_workspace,
+    upload_workspace_assets,
 )
 from models import MonitorTask, User, db
 
@@ -30,6 +32,7 @@ logger = logging.getLogger("remote_worker")
 _worker_started = False
 _worker_lock = threading.Lock()
 _running_task_ids: set[int] = set()
+_last_cloud_merge_at: dict[int, float] = {}
 
 
 def _ensure_local_schema() -> None:
@@ -52,6 +55,14 @@ def _poll_seconds() -> int:
     except Exception:
         value = 10
     return max(5, min(value, 120))
+
+
+def _merge_interval_seconds() -> int:
+    try:
+        value = int(os.environ.get("GEO_CLOUD_PULL_SECONDS", "300"))
+    except Exception:
+        value = 300
+    return max(60, min(value, 3600))
 
 
 def _find_cloud_user() -> User | None:
@@ -110,6 +121,10 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
                 if final_status not in {"completed", "stopped", "failed"}:
                     final_status = "completed"
                 sync_user_workspace(user_id)
+                try:
+                    upload_workspace_assets(user_id, task_ids=[task_id])
+                except Exception as asset_error:
+                    logger.warning("[RemoteWorker] screenshot upload failed task=%s: %s", task_id, asset_error)
                 report_remote_task_status(
                     user_id,
                     remote_task_id,
@@ -147,6 +162,13 @@ def _tick(app) -> None:
     pulled = pull_remote_tasks(user_id)
     if pulled.get("created"):
         logger.info("[RemoteWorker] pulled remote tasks: %s", pulled)
+
+    now = time.monotonic()
+    if now - _last_cloud_merge_at.get(user_id, 0) >= _merge_interval_seconds():
+        _last_cloud_merge_at[user_id] = now
+        merged = restore_workspace_from_cloud(user_id, only_if_empty=False)
+        if merged.get("restored"):
+            logger.info("[RemoteWorker] merged cloud workspace: %s", merged)
 
     if _running_task_ids:
         return

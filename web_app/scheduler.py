@@ -179,6 +179,14 @@ def run_task_async(app: Flask, task_id: int):
                 logger.error(f"定时任务执行失败: {task.name}, 错误: {e}")
                 task.status = 'failed'
                 db.session.commit()
+            finally:
+                try:
+                    from cloud_sync import cloud_sync_enabled, sync_user_workspace, upload_workspace_assets
+                    if cloud_sync_enabled():
+                        sync_user_workspace(task.user_id)
+                        upload_workspace_assets(task.user_id, task_ids=[task_id])
+                except Exception as sync_error:
+                    logger.warning(f"定时任务云端同步失败: {sync_error}")
     
     thread = threading.Thread(target=run_in_background, daemon=True)
     thread.start()
