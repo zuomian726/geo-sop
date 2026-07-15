@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       app_version:
-        description: "GEO-SOP version"
-        required: true
-        default: "0.3.19-dev"
+        description: "Optional GEO-SOP version override (defaults to version.py)"
+        required: false
+        default: ""
   push:
     branches:
       - main
@@ -40,6 +40,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Resolve application version
+        shell: pwsh
+        run: |
+          $requestedVersion = "${{ github.event.inputs.app_version }}"
+          if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
+            $requestedVersion = python -c "from version import APP_VERSION; print(APP_VERSION)"
+          }
+          if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
+            throw "Application version could not be resolved."
+          }
+          "APP_VERSION=$requestedVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Building GEO-SOP $requestedVersion"
+
       - name: Run unit tests
         shell: pwsh
         run: |
@@ -53,7 +66,6 @@ jobs:
         shell: cmd
         env:
           CI: "1"
-          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.19-dev' }}
         run: build_windows_exe.bat
 
       - name: Verify bundled browser
@@ -125,7 +137,6 @@ jobs:
         shell: cmd
         env:
           CI: "1"
-          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.19-dev' }}
         run: build_windows_installer.bat
 
       - name: Verify installer
