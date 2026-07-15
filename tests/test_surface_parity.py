@@ -1,3 +1,4 @@
+import json
 import re
 import unittest
 from pathlib import Path
@@ -103,6 +104,18 @@ class SurfaceParityTests(unittest.TestCase):
             self.assertIn("/downloads/GEO-SOP-Setup-dev.exe", source)
             self.assertIn("/downloads/GEO-SOP-macOS-dev.dmg", source)
             self.assertIn("/downloads/GEO-SOP-macOS-Intel-dev.dmg", source)
+
+    def test_macos_release_builds_are_architecture_specific(self):
+        build_script = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
+        self.assertIn('GEO_MACOS_ARCH', build_script)
+        self.assertIn('macOS-Apple-Silicon', build_script)
+        self.assertIn('macOS-Intel', build_script)
+        self.assertIn('lipo -archs', build_script)
+        self.assertIn('verify_macos_bundle.py', build_script)
+
+        manifest = json.loads((ROOT / "server" / "geo.allgood.cn" / "update.json").read_text(encoding="utf-8"))
+        self.assertIn("macos", manifest["downloads"])
+        self.assertIn("macos_intel", manifest["downloads"])
 
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")
