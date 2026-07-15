@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.23-dev",
+  "version": "0.3.24-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T21:12:00+08:00",
+  "released_at": "2026-07-15T21:44:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "云端任务区会实时显示客户端心跳、版本、在线状态和任务等待原因。",
-    "客户端心跳、任务拉取和云端恢复独立容错，临时网络失败不再阻塞已导入任务。",
-    "云端连接状态每 15 秒自动刷新，超过 90 秒未上报会准确标记为离线。"
+    "桌面任务、平台登录检测和云端任务统一使用同一份 8 平台目录。",
+    "云端任务创建现已支持全部客户端平台，并对未知平台进行服务端和客户端双重拦截。",
+    "远程任务会自动限制并行数和采集间隔，避免异常参数影响客户端稳定性。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.23-dev",
+      "version": "0.3.24-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.23-dev-macOS.dmg",
-      "size": "163 MB",
-      "sha256": "d414afa9aef88f9bae109c4d23708f246c728bc175021c411f2578fa2d05586c"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.24-dev-macOS.dmg",
+      "size": "166 MB",
+      "sha256": "f637247fc147ae5f44741dbdc0bb3a25cd07bd82cd66d36225809307e2bed338"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.23-dev",
+      "version": "0.3.24-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.23-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.24-dev.exe",
       "size": "185 MB",
-      "sha256": "feec7e978ff9dec4c3cd97316c10b2b4296f664108f4c895a2b182c8211ca0d1"
+      "sha256": "75b9b29c8c5d9a78dea967a1a6fa1e2354b22837e0aa7fa63e20843ef6de4fc1"
     }
   }
 }
