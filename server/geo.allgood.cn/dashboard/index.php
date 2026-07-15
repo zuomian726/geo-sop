@@ -1,5 +1,6 @@
 <?php
 require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
 
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
@@ -68,6 +69,7 @@ function geo_platform_name(string $platform): string {
 }
 
 $message = '';
+$supportedPlatforms = geo_platform_catalog();
 function geo_remote_status_label(string $status): string {
     return [
         'pending' => '等待客户端',
@@ -99,13 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'schedule_type' => 'manual',
         'schedule_config' => ['source' => 'cloud_dashboard'],
     ];
-    if ($payload['brand_keywords'] && $payload['questions'] && $payload['platforms']) {
+    $validation = geo_validate_remote_task_payload($payload);
+    if ($validation['valid']) {
+        $payload = $validation['payload'];
         $now = date('Y-m-d H:i:s');
         $stmt = $pdo->prepare('INSERT INTO geo_remote_tasks (cloud_user_id,name,payload,status,created_at,updated_at) VALUES (?,?,?,?,?,?)');
         $stmt->execute([(int)$user['id'], $payload['name'], json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'pending', $now, $now]);
         $message = '远程任务已创建。桌面端登录同一账号后会自动拉取并执行。';
     } else {
-        $message = '请填写品牌关键词、采集问题，并至少选择一个平台。';
+        $message = $validation['message'];
     }
     }
 }
@@ -534,11 +538,9 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
             </div>
             <p><textarea name="questions" placeholder="采集问题，每行一个" required></textarea></p>
             <p class="checks">
-                <label><input type="checkbox" name="platforms[]" value="doubao" checked>豆包</label>
-                <label><input type="checkbox" name="platforms[]" value="deepseek">DeepSeek</label>
-                <label><input type="checkbox" name="platforms[]" value="kimi">Kimi</label>
-                <label><input type="checkbox" name="platforms[]" value="qianwen">通义千问</label>
-                <label><input type="checkbox" name="platforms[]" value="yuanbao">腾讯元宝</label>
+                <?php foreach($supportedPlatforms as $platformId => $platformMeta): ?>
+                <label><input type="checkbox" name="platforms[]" value="<?=geo_h($platformId)?>" <?= $platformId === 'doubao' ? 'checked' : '' ?>><?=geo_h($platformMeta['name'])?></label>
+                <?php endforeach; ?>
             </p>
             <button class="primary" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>创建任务</button>
             <button type="button" onclick="openLocalApp('dashboard')" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>打开本机 App 执行</button>

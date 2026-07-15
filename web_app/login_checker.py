@@ -21,16 +21,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from playwright.sync_api import sync_playwright, Page
 from browser_utils import launch_browser
 from profile_utils import get_profile_dir
+from platform_catalog import PLATFORM_CATALOG
 
 PLATFORMS = {
-    "doubao":   ("platforms.doubao",   "豆包",     "https://www.doubao.com/chat/"),
-    "deepseek": ("platforms.deepseek", "DeepSeek", "https://chat.deepseek.com/"),
-    "kimi":     ("platforms.kimi",     "Kimi",     "https://www.kimi.com/"),
-    "yuanbao":  ("platforms.yuanbao",  "元宝",     "https://yuanbao.tencent.com/chat"),
-    "wenxin":   ("platforms.wenxin",   "百度文心", "https://wenxin.baidu.com/"),
-    "qianwen":  ("platforms.qianwen",  "千问",     "https://www.qianwen.com/"),
-    "chatgpt":  ("platforms.chatgpt",  "ChatGPT",  "https://chatgpt.com/"),
-    "yiyan":    ("platforms.yiyan",    "文心一言(yiyan)", "https://yiyan.baidu.com/"),
+    item["id"]: (f"platforms.{item['id']}", item["name"], item["url"])
+    for item in PLATFORM_CATALOG
 }
 
 

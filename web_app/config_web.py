@@ -18,6 +18,7 @@ def _startup_trace(message):
 
 _startup_trace('module loading')
 from local_paths import app_data_dir, instance_dir, database_path, answers_dir
+from platform_catalog import supported_platforms
 _startup_trace('local path helpers imported')
 
 class Config:
@@ -64,13 +65,4 @@ class Config:
     CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
     
     # AI平台配置
-    SUPPORTED_PLATFORMS = [
-        {'id': 'doubao', 'name': '豆包', 'url': 'https://www.doubao.com/chat'},
-        {'id': 'deepseek', 'name': 'DeepSeek', 'url': 'https://chat.deepseek.com'},
-        {'id': 'yuanbao', 'name': '元宝', 'url': 'https://yuanbao.tencent.com/chat'},
-        {'id': 'kimi', 'name': 'Kimi', 'url': 'https://www.kimi.com'},
-        {'id': 'qianwen', 'name': '千问', 'url': 'https://www.qianwen.com'},
-        {'id': 'wenxin', 'name': '文心一言(wenxin)', 'url': 'https://wenxin.baidu.com'},
-        {'id': 'yiyan', 'name': '文心一言(yiyan)', 'url': 'https://yiyan.baidu.com'},
-        {'id': 'chatgpt', 'name': 'ChatGPT', 'url': 'https://chatgpt.com'}
-    ]
+    SUPPORTED_PLATFORMS = supported_platforms()

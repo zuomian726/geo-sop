@@ -848,8 +848,8 @@ body {
                             <el-badge 
                                 v-if="!quickChecking && platformLoginStatus.length > 0"
                                 :value="getLoggedInCount()"
-                                :max="7"
-                                :type="getLoggedInCount() === 7 ? 'success' : (getLoggedInCount() > 0 ? 'warning' : 'danger')"
+                                :max="availablePlatforms.length"
+                                :type="getLoggedInCount() === availablePlatforms.length ? 'success' : (getLoggedInCount() > 0 ? 'warning' : 'danger')"
                                 style="margin-left: 8px;">
                             </el-badge>
                         </el-button>

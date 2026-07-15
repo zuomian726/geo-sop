@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');
@@ -242,7 +243,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'base') {
     if (!is_array($payload)) {
         geo_json(['success' => false, 'message' => 'payload required'], 400);
     }
-    $name = (string)($payload['name'] ?? '远程采集任务');
+    $validation = geo_validate_remote_task_payload($payload);
+    if (!$validation['valid']) {
+        geo_json(['success' => false, 'message' => $validation['message']], 422);
+    }
+    $payload = $validation['payload'];
+    $name = (string)$payload['name'];
     $now = geo_now();
     $stmt = $pdo->prepare('INSERT INTO geo_remote_tasks (cloud_user_id,name,payload,status,created_at,updated_at) VALUES (?,?,?,?,?,?)');
     $stmt->execute([$cloudUserId, $name, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'pending', $now, $now]);

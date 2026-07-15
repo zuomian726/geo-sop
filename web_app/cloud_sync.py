@@ -22,6 +22,7 @@ import requests
 
 from local_paths import answers_dir, app_data_dir
 from models import CollectionResult, GeoManuscript, MonitorTask, SentimentConfig, User, db, ensure_local_sync_schema
+from platform_catalog import SUPPORTED_PLATFORM_IDS
 from version import APP_VERSION
 
 
@@ -919,6 +920,29 @@ def pull_remote_tasks(user_id: int) -> dict:
         if not questions or not platforms or not brand_keywords:
             skipped.append({"remote_task_id": remote_id, "reason": "missing required fields"})
             continue
+        if not isinstance(platforms, list):
+            skipped.append({"remote_task_id": remote_id, "reason": "invalid platform list"})
+            continue
+        normalized_platforms = []
+        unsupported_platforms = []
+        for platform_id in platforms:
+            platform_id = str(platform_id or "").strip()
+            if not platform_id or platform_id in normalized_platforms:
+                continue
+            if platform_id not in SUPPORTED_PLATFORM_IDS:
+                unsupported_platforms.append(platform_id)
+                continue
+            normalized_platforms.append(platform_id)
+        if unsupported_platforms:
+            skipped.append({
+                "remote_task_id": remote_id,
+                "reason": f"unsupported platforms: {', '.join(unsupported_platforms)}",
+            })
+            continue
+        if not normalized_platforms:
+            skipped.append({"remote_task_id": remote_id, "reason": "missing supported platforms"})
+            continue
+        platforms = normalized_platforms
 
         schedule_config = payload.get("schedule_config") if isinstance(payload.get("schedule_config"), dict) else {}
         schedule_config["remote_task_id"] = remote_id

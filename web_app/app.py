@@ -808,20 +808,9 @@ def pull_cloud_remote_tasks():
 @app.route('/api/platforms', methods=['GET'])
 def get_platforms():
     """获取所有支持的AI平台列表"""
-    platforms = [
-        {'id': 'doubao', 'name': '豆包', 'url': 'https://www.doubao.com/chat'},
-        {'id': 'deepseek', 'name': 'DeepSeek', 'url': 'https://chat.deepseek.com'},
-        {'id': 'yuanbao', 'name': '元宝', 'url': 'https://yuanbao.tencent.com/chat'},
-        {'id': 'kimi', 'name': 'Kimi', 'url': 'https://www.kimi.com'},
-        {'id': 'qianwen', 'name': '千问', 'url': 'https://www.qianwen.com'},
-        {'id': 'wenxin', 'name': '文心一言(wenxin)', 'url': 'https://wenxin.baidu.com'},
-        {'id': 'yiyan', 'name': '文心一言(yiyan)', 'url': 'https://yiyan.baidu.com'},
-        {'id': 'baidu_chat', 'name': '文心（chat）', 'url': 'https://chat.baidu.com'},
-        {'id': 'chatgpt', 'name': 'ChatGPT', 'url': 'https://chatgpt.com'}
-    ]
     return jsonify({
         'success': True,
-        'platforms': platforms
+        'platforms': Config.SUPPORTED_PLATFORMS
     })
 
 

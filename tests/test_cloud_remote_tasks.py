@@ -118,6 +118,24 @@ class RemoteTaskPullTests(unittest.TestCase):
         ack = json.loads(post.call_args.kwargs["data"].decode("utf-8"))
         self.assertEqual(local_task.id, ack["imported"][0]["local_task_id"])
 
+    def test_unsupported_platform_is_skipped_and_acknowledged(self):
+        result, post = self._run_pull([{
+            "id": 99,
+            "name": "Invalid platform task",
+            "payload": {
+                "brand_keywords": ["GEO-SOP"],
+                "questions": ["How visible is GEO-SOP?"],
+                "platforms": ["doubao", "not-a-real-platform"],
+            },
+        }])
+
+        self.assertEqual([], result["created"])
+        self.assertEqual(0, MonitorTask.query.count())
+        self.assertIn("unsupported platforms", result["skipped"][0]["reason"])
+        ack = json.loads(post.call_args.kwargs["data"].decode("utf-8"))
+        self.assertEqual(99, ack["skipped"][0]["remote_task_id"])
+        self.assertIn("not-a-real-platform", ack["skipped"][0]["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()
