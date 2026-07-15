@@ -27,7 +27,7 @@ if errorlevel 1 (
 
 if exist ".playwright-browsers" rmdir /s /q ".playwright-browsers"
 set "PLAYWRIGHT_BROWSERS_PATH=%CD%\.playwright-browsers"
-python -m playwright install chromium
+python -m playwright install chromium --no-shell
 if errorlevel 1 (
   echo Failed to download the bundled Chromium runtime.
   if "%CI%"=="" pause
