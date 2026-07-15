@@ -58,12 +58,16 @@ def _free_port() -> int:
 
 
 def _init_database():
+    _boot_log("importing Flask application")
     from app import app
+    _boot_log("Flask application imported")
     from models import db, ensure_local_sync_schema
     from sqlalchemy import inspect
 
     with app.app_context():
+        _boot_log("creating local database tables")
         db.create_all()
+        _boot_log("local database tables created")
         inspector = inspect(db.engine)
         existing_tables = set(inspector.get_table_names())
         required_tables = {"users", "monitor_tasks", "collection_results"}
@@ -77,6 +81,7 @@ def _init_database():
             missing_tables = sorted(required_tables - existing_tables)
         if missing_tables:
             raise RuntimeError(f"Local database initialization failed, missing tables: {', '.join(missing_tables)}")
+        _boot_log("applying local sync schema")
         ensure_local_sync_schema()
         _boot_log(f"database initialized tables={len(existing_tables)}")
 
