@@ -111,6 +111,13 @@ class BrowserRuntimeTests(unittest.TestCase):
         self.assertNotIn("platform_id == 'yiyan'", collector_source)
         self.assertIn("USE_CUSTOM_BROWSER", collector_source)
 
+    def test_pinned_playwright_uses_compatible_windows_install_command(self):
+        requirements = (ROOT / "requirements-desktop.txt").read_text(encoding="utf-8")
+        build_script = (ROOT / "build_windows_exe.bat").read_text(encoding="utf-8")
+        self.assertIn("playwright==1.44.0", requirements)
+        self.assertIn("python -m playwright install chromium", build_script)
+        self.assertNotIn("--no-shell", build_script)
+
 
 if __name__ == "__main__":
     unittest.main()
