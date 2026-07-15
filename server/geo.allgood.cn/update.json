@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.17-dev",
+  "version": "0.3.18-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-13T16:00:00+08:00",
+  "released_at": "2026-07-15T17:00:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "已有本地数据的客户端支持分批增量合并其他设备的云端记录。",
-    "采集完成后自动上传任务截图，登录后后台补传历史截图。",
-    "登录立即上报心跳，后台持续拉取云端任务和新增数据。"
+    "同一账号多台客户端在线时，云端任务只会由一台设备安全认领和执行。",
+    "Windows 改为原生一键安装包，内置应用运行时和 Chromium，不再要求 Python。",
+    "未确认的远程任务会自动回收，重复拉取不会创建重复的本地任务。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.17-dev",
+      "version": "0.3.18-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.17-dev-macOS.dmg",
-      "size": "165 MB",
-      "sha256": "928658f3d65861537928802b4f8f13c469423555040b45701a8aefbf60d7e46b"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.18-dev-macOS.dmg",
+      "size": "164 MB",
+      "sha256": "a7bd08ce769f0544adaf4db57a201900a7a5f4713b29f86cc9ba6a5361e45e49"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.17-dev",
+      "version": "0.3.18-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.17-dev.exe",
-      "size": "4.2 MB",
-      "sha256": "73909ff8a00bd5ba65510765076ea29ef7d070da0e0f3f152aa621d9e9c7cbdf"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.18-dev.exe",
+      "size": "184 MB",
+      "sha256": "8a94b6693b826037f23631ac3c4795eab6cd2483b041315ce98e4425e1f2a834"
     }
   }
 }
