@@ -4,6 +4,20 @@ AI答案采集平台 - 主应用
 import os
 import sys
 
+
+def _startup_trace(message):
+    if os.environ.get('GEO_DEBUG_BOOT') != '1':
+        return
+    try:
+        path = os.environ.get('GEO_BOOT_LOG_PATH') or os.path.join(os.environ.get('TEMP') or '/tmp', 'geo_sop_boot.log')
+        with open(path, 'a', encoding='utf-8') as handle:
+            handle.write(f"{message}\n")
+    except Exception:
+        pass
+
+
+_startup_trace('app module loading')
+
 # 抑制 Playwright 的 Node.js 警告
 os.environ['NODE_NO_WARNINGS'] = '1'
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,6 +33,7 @@ import time
 import platform
 from urllib.parse import urlparse
 import requests
+_startup_trace('Flask and core dependencies imported')
 
 # 配置日志
 logging.basicConfig(
@@ -33,10 +48,13 @@ def now_cst():
     return datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=8))).replace(tzinfo=None)
 
 from models import db, User, MonitorTask, CollectionResult, GeoManuscript, SentimentConfig
+_startup_trace('database models imported')
 from config_web import Config
+_startup_trace('application config imported')
 from profile_utils import get_profile_dir, clear_profile_dir
 from local_paths import app_data_dir, answers_dir
 from version import app_info
+_startup_trace('local paths and version imported')
 
 try:
     from cloud_sync import (
@@ -50,9 +68,11 @@ try:
         upload_workspace_assets,
     )
     CLOUD_SYNC_AVAILABLE = True
+    _startup_trace('cloud sync module imported')
 except Exception as e:
     logger.warning(f"云端同步模块不可用: {e}")
     CLOUD_SYNC_AVAILABLE = False
+    _startup_trace(f'cloud sync module unavailable: {type(e).__name__}')
 
 
 def _desktop_downloads_dir():
@@ -457,10 +477,12 @@ except ImportError:
 
 app = Flask(__name__)
 app.config.from_object(Config)
+_startup_trace('Flask application configured')
 
 # 初始化扩展
 db.init_app(app)
 CORS(app)
+_startup_trace('Flask extensions initialized')
 
 # 初始化定时调度器
 if SCHEDULER_AVAILABLE and not Config.DESKTOP_MODE:
