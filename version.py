@@ -1,10 +1,10 @@
 """Application release metadata."""
 
 APP_NAME = "GEO-SOP"
-APP_VERSION = "0.3.38-dev"
+APP_VERSION = "0.3.39-dev"
 APP_CHANNEL = "desktop"
 BUILD_DATE = "2026-07-16"
-BUILD_NUMBER = "20260716.10"
+BUILD_NUMBER = "20260716.11"
 
 
 def app_info() -> dict:

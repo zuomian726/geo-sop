@@ -223,6 +223,29 @@ class AiInsightPersistenceTests(unittest.TestCase):
         heartbeat.assert_called_once_with(self.user.id, "offline", "用户已在本机退出 GEO-SOP")
         clear_account.assert_called_once_with()
 
+    def test_create_user_cli_validates_password_and_never_bootstraps_admin(self):
+        runner = web_app.app.test_cli_runner()
+        weak = runner.invoke(
+            args=["create-user", "--username", "cli-user", "--email", "cli@example.com", "--password", "short"]
+        )
+        self.assertNotEqual(0, weak.exit_code)
+        self.assertIsNone(User.query.filter_by(username="cli-user").first())
+        self.assertIsNone(User.query.filter_by(username="admin").first())
+
+        created = runner.invoke(
+            args=[
+                "create-user",
+                "--username",
+                "cli-user",
+                "--email",
+                "cli@example.com",
+                "--password",
+                "cli-test-password",
+            ]
+        )
+        self.assertEqual(0, created.exit_code, created.output)
+        self.assertIsNotNone(User.query.filter_by(username="cli-user").first())
+
 
 if __name__ == "__main__":
     unittest.main()

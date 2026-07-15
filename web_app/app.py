@@ -27,6 +27,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_cors import CORS
 from datetime import datetime, timezone, timedelta
 import json
+import click
 import threading
 import logging
 import time
@@ -4305,16 +4306,27 @@ def init_db():
     print("数据库初始化完成！")
 
 
-@app.cli.command()
-def create_admin():
-    """创建管理员账户"""
-    admin = User(username='admin', email='admin@example.com')
-    admin.set_password('admin')
-    db.session.add(admin)
+@app.cli.command('create-user')
+@click.option('--username', prompt='用户名')
+@click.option('--email', prompt='邮箱')
+@click.option('--password', prompt='密码', hide_input=True, confirmation_prompt=True)
+def create_user(username, email, password):
+    """Create a local account without shipping predictable credentials."""
+    username = (username or '').strip()
+    email = (email or '').strip()
+    if len(username) < 3:
+        raise click.ClickException('用户名至少需要 3 个字符')
+    if '@' not in email:
+        raise click.ClickException('请输入有效邮箱')
+    if len(password or '') < 8:
+        raise click.ClickException('密码至少需要 8 个字符')
+    if User.query.filter((User.username == username) | (User.email == email)).first():
+        raise click.ClickException('用户名或邮箱已存在')
+    user = User(username=username, email=email)
+    user.set_password(password)
+    db.session.add(user)
     db.session.commit()
-    print("管理员账户创建成功！")
-    print("用户名: admin")
-    print("密码: admin")
+    click.echo(f'本地账户 {username} 创建成功')
 
 
 if __name__ == '__main__':

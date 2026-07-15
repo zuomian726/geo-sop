@@ -123,6 +123,20 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertNotIn('prop="url" label="登录地址"', dashboard)
         self.assertIn("首次登录只需三步", dashboard)
 
+    def test_long_desktop_forms_scroll_inside_the_minimum_window(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertGreaterEqual(dashboard.count('class="scrollable-form-dialog"'), 2)
+        self.assertIn("max-height: calc(100vh - 32px)", dashboard)
+        self.assertIn(".scrollable-form-dialog .el-dialog__body", dashboard)
+        self.assertIn("overflow-y: auto", dashboard)
+
+    def test_desktop_cli_does_not_ship_a_default_admin_password(self):
+        app_source = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        self.assertNotIn("def create_admin", app_source)
+        self.assertNotIn("set_password('admin')", app_source)
+        self.assertIn("@app.cli.command('create-user')", app_source)
+        self.assertIn("hide_input=True, confirmation_prompt=True", app_source)
+
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")

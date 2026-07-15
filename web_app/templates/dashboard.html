@@ -191,6 +191,30 @@ body {
     padding-top: 10px;
 }
 
+.scrollable-form-dialog {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 32px);
+    margin: 16px auto !important;
+}
+
+.scrollable-form-dialog .el-dialog__header,
+.scrollable-form-dialog .el-dialog__footer {
+    flex: 0 0 auto;
+}
+
+.scrollable-form-dialog .el-dialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.scrollable-form-dialog .el-dialog__footer {
+    border-top: 1px solid #e8edf5;
+    padding-top: 14px;
+}
+
 .platform-login-help {
     margin-top: 16px;
     padding: 12px 14px;
@@ -1605,7 +1629,8 @@ body {
                 <el-dialog 
                     v-model="sentimentConfigDialogVisible" 
                     :title="editingSentimentConfig ? '编辑舆情配置' : '添加舆情配置'"
-                    width="800px">
+                    width="min(800px, calc(100vw - 32px))"
+                    class="scrollable-form-dialog">
                     <el-form :model="sentimentConfigForm" label-width="120px">
                         <el-form-item label="配置名称" required>
                             <el-input v-model="sentimentConfigForm.name" placeholder="请输入配置名称"></el-input>
@@ -1764,7 +1789,8 @@ body {
     <el-dialog 
         v-model="dialogVisible" 
         :title="dialogTitle"
-        width="800px"
+        width="min(800px, calc(100vw - 32px))"
+        class="scrollable-form-dialog"
         @close="resetForm">
         <el-form :model="taskForm" :rules="formRules" ref="taskFormRef" label-width="120px">
             <el-form-item label="任务名称" prop="name">
