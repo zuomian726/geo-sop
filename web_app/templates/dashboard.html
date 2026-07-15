@@ -168,6 +168,29 @@ body {
     letter-spacing: 0;
 }
 
+.cloud-status-trigger {
+    cursor: pointer;
+    user-select: none;
+}
+
+.cloud-status-detail {
+    display: grid;
+    gap: 10px;
+    color: #526078;
+    font-size: 13px;
+}
+
+.cloud-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.cloud-status-row strong {
+    color: #172033;
+    text-align: right;
+}
+
 .container {
     max-width: 1480px;
     padding: 24px;
@@ -536,16 +559,27 @@ body {
 <div>
     <div class="header">
         <div class="header-title" style="display: flex; align-items: center;">
-            <img src="/static/img/geo-ai-answer-logo.png" alt="AI 答案" style="width: 122px; height: 36px; margin-right: 12px; object-fit: contain;">
+            <img src="/static/img/geo-sop-wordmark.png" alt="GEO-SOP" style="width: 122px; height: 36px; margin-right: 12px; object-fit: contain;">
             <el-tag v-if="appInfo.version" size="small" type="info" style="margin-left: 12px;">
                 v[[ appInfo.version ]]
             </el-tag>
             <el-tag v-if="desktopMode" size="small" type="success" style="margin-left: 8px;">
                 单机版
             </el-tag>
-            <el-tag v-if="desktopMode" size="small" :type="cloudSyncTagType" style="margin-left: 8px;" :title="cloudSyncDetail">
-                [[ cloudSyncLabel ]]
-            </el-tag>
+            <el-popover v-if="desktopMode" placement="bottom-start" :width="330" trigger="click">
+                <template #reference>
+                    <el-tag size="small" :type="cloudSyncTagType" class="cloud-status-trigger" style="margin-left: 8px;">
+                        [[ cloudSyncLabel ]]
+                    </el-tag>
+                </template>
+                <div class="cloud-status-detail">
+                    <div class="cloud-status-row"><span>连接状态</span><strong>[[ cloudSyncLabel ]]</strong></div>
+                    <div class="cloud-status-row"><span>最近心跳</span><strong>[[ cloudHeartbeatTime ]]</strong></div>
+                    <div class="cloud-status-row"><span>云端任务</span><strong>[[ cloudWorkerSummary ]]</strong></div>
+                    <div v-if="cloudSync.worker?.last_error" style="color: #c45656; line-height: 1.5;">[[ cloudSync.worker.last_error ]]</div>
+                    <el-button size="small" :loading="cloudStatusLoading" @click="loadCloudSyncStatus">刷新连接状态</el-button>
+                </div>
+            </el-popover>
             <el-button
                 v-if="updateInfo.has_update"
                 size="small"
@@ -2040,8 +2074,11 @@ const app = createApp({
             cloudSync: {
                 enabled: false,
                 last_synced_at: null,
-                error: ''
+                error: '',
+                worker: {}
             },
+            cloudStatusLoading: false,
+            cloudStatusTimer: null,
             appInfo: {
                 name: 'GEO-SOP',
                 version: '',
@@ -2271,18 +2308,48 @@ const app = createApp({
             if (!this.desktopMode) return '';
             if (this.cloudSync.error) return '同步异常';
             if (!this.cloudSync.enabled) return '未连接云端';
+            const worker = this.cloudSync.worker || {};
+            if (worker.degraded && !worker.online) return '云端连接异常';
+            if (worker.degraded) return '云端连接波动';
+            if (worker.online) {
+                const labels = {
+                    collecting: '正在执行云端任务',
+                    syncing: '正在回传结果',
+                    queued: '云端任务已排队',
+                    ready: '云端在线'
+                };
+                return labels[worker.runtime?.worker_state] || '云端在线';
+            }
+            if (worker.started) return '正在连接云端';
             if (this.cloudSync.last_synced_at) return '云端已同步';
             return '云端已连接';
         },
         cloudSyncTagType() {
             if (this.cloudSync.error) return 'danger';
             if (!this.cloudSync.enabled) return 'info';
+            if (this.cloudSync.worker?.degraded) return 'danger';
+            if (this.cloudSync.worker?.online) return 'success';
             return this.cloudSync.last_synced_at ? 'success' : 'warning';
         },
         cloudSyncDetail() {
             if (this.cloudSync.error) return this.cloudSync.error;
+            if (this.cloudSync.worker?.last_error) return this.cloudSync.worker.last_error;
+            if (this.cloudSync.worker?.last_success_at) return `最近心跳：${this.cloudSync.worker.last_success_at}`;
             if (this.cloudSync.last_synced_at) return `最近同步：${this.cloudSync.last_synced_at}`;
             return this.cloudSync.enabled ? '已连接云端，等待首次同步' : '登录云端账号后启用同步';
+        },
+        cloudHeartbeatTime() {
+            return this.cloudSync.worker?.last_success_at || this.cloudSync.worker?.last_attempt_at || '等待首次心跳';
+        },
+        cloudWorkerSummary() {
+            const runtime = this.cloudSync.worker?.runtime || {};
+            const running = Number(runtime.running_tasks || 0);
+            const pending = Number(runtime.pending_remote_tasks || 0);
+            const backlog = Number(runtime.sync_backlog || 0);
+            if (running) return `执行中 ${running} 个`;
+            if (backlog) return `待回传 ${backlog} 个`;
+            if (pending) return `排队中 ${pending} 个`;
+            return this.cloudSync.worker?.online ? '等待新任务' : '客户端尚未连接';
         },
         nextStep() {
             if (this.getLoggedInCount && this.platformLoginStatus.length && this.getLoggedInCount() === 0) {
@@ -2371,6 +2438,8 @@ const app = createApp({
     async mounted() {
         this.applyDashboardHash();
         await this.loadCurrentUser();
+        this.loadCloudSyncStatus();
+        this.cloudStatusTimer = setInterval(() => this.loadCloudSyncStatus(true), 15000);
         this.loadTasks();
         this.loadDailyLimit();
         this.loadTodayCollectionCount();
@@ -2391,6 +2460,9 @@ const app = createApp({
         this.updateCurrentStep();
     },
     beforeUnmount() {
+        if (this.cloudStatusTimer) {
+            clearInterval(this.cloudStatusTimer);
+        }
         Object.keys(this.taskPollers).forEach(taskId => {
             this.clearTaskPolling(taskId);
         });
@@ -2446,6 +2518,30 @@ const app = createApp({
             }
         },
 
+        async loadCloudSyncStatus(silent = false) {
+            if (!this.desktopMode || this.cloudStatusLoading) return;
+            this.cloudStatusLoading = true;
+            try {
+                const response = await axios.get('/api/cloud-sync/status');
+                if (response.data.success) {
+                    this.cloudSync = {
+                        ...this.cloudSync,
+                        ...(response.data.cloud_sync || {})
+                    };
+                }
+            } catch (error) {
+                this.cloudSync = {
+                    ...this.cloudSync,
+                    error: error.response?.data?.message || error.message || '云端连接失败'
+                };
+                if (!silent) {
+                    ElMessage.warning('云端连接状态暂时无法刷新');
+                }
+            } finally {
+                this.cloudStatusLoading = false;
+            }
+        },
+
         beforeUpdateDialogClose(done) {
             if (this.updateInfo.required) {
                 ElMessage.warning('当前版本需要升级后才能保证云端同步正常');
@@ -2490,6 +2586,7 @@ const app = createApp({
                 if (stats.counts) {
                     console.info('Cloud stats uploaded:', stats.counts);
                 }
+                this.loadCloudSyncStatus(true);
             } catch (error) {
                 console.error('上传云端失败:', error);
                 ElMessage.error('上传云端失败: ' + (error.response?.data?.message || error.message));

@@ -830,7 +830,7 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
     }
 
 
-def sync_status(user_id: int | None = None) -> dict:
+def sync_status(user_id: int | None = None, include_remote: bool = True) -> dict:
     status = {
         "enabled": cloud_sync_enabled(),
         "api_configured": bool(cloud_sync_url()),
@@ -838,7 +838,7 @@ def sync_status(user_id: int | None = None) -> dict:
         "install_id": get_install_id(),
         "sync_keys": should_sync_keys(),
     }
-    if not cloud_sync_enabled() or not user_id:
+    if not cloud_sync_enabled() or not user_id or not include_remote:
         return status
 
     user = db.session.get(User, int(user_id))

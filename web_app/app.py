@@ -718,6 +718,23 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+def _desktop_cloud_status(user_id, include_remote=False):
+    status = sync_status(user_id, include_remote=include_remote)
+    if app.config.get('DESKTOP_MODE'):
+        try:
+            from remote_worker import worker_health
+            status['worker'] = worker_health(user_id)
+        except Exception as e:
+            logger.warning("[CloudSync] 客户端工作器状态读取失败: %s", e)
+            status['worker'] = {
+                'started': False,
+                'online': False,
+                'degraded': True,
+                'last_error': str(e)
+            }
+    return status
+
+
 @app.route('/api/current-user', methods=['GET'])
 @login_required
 def get_current_user():
@@ -725,7 +742,9 @@ def get_current_user():
     if app.config.get('DESKTOP_MODE') and current_user.username != 'local':
         _adopt_local_workspace_for_cloud_user(current_user)
     try:
-        cloud_status = sync_status(current_user.id) if CLOUD_SYNC_AVAILABLE else {'enabled': False}
+        # Keep first paint independent from cloud latency. The dashboard refreshes
+        # the remote status asynchronously after the local identity is rendered.
+        cloud_status = _desktop_cloud_status(current_user.id, include_remote=False) if CLOUD_SYNC_AVAILABLE else {'enabled': False}
     except Exception as e:
         logger.warning("[CloudSync] 当前用户同步状态读取失败: %s", e)
         cloud_status = {
@@ -786,7 +805,7 @@ def get_cloud_sync_status():
     if not CLOUD_SYNC_AVAILABLE:
         return jsonify({'success': True, 'cloud_sync': {'enabled': False, 'message': '同步模块不可用'}})
     try:
-        return jsonify({'success': True, 'cloud_sync': sync_status(current_user.id)})
+        return jsonify({'success': True, 'cloud_sync': _desktop_cloud_status(current_user.id, include_remote=True)})
     except Exception as e:
         logger.exception("[CloudSync] 状态检查失败: %s", e)
         return jsonify({

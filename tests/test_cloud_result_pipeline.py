@@ -40,6 +40,7 @@ class CloudPipelineTestCase(unittest.TestCase):
 
     def tearDown(self):
         remote_worker._running_task_ids.clear()
+        remote_worker._heartbeat_states.clear()
         db.session.remove()
         db.drop_all()
         db.session.remove()
@@ -124,6 +125,37 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         self.assertEqual(runtime, payload["runtime"])
         self.assertNotIn("questions", payload["runtime"])
         self.assertNotIn("api_key", payload["runtime"])
+
+    def test_worker_health_tracks_success_failure_and_runtime(self):
+        runtime = {
+            "worker_state": "queued",
+            "running_tasks": 0,
+            "pending_remote_tasks": 2,
+            "sync_backlog": 0,
+            "poll_seconds": 10,
+        }
+        with patch.object(remote_worker.time, "time", return_value=1000):
+            remote_worker._record_heartbeat_attempt(self.user.id, runtime)
+            remote_worker._record_heartbeat_success(self.user.id)
+            health = remote_worker.worker_health(self.user.id)
+
+        self.assertTrue(health["online"])
+        self.assertFalse(health["degraded"])
+        self.assertEqual("queued", health["runtime"]["worker_state"])
+        self.assertEqual(2, health["runtime"]["pending_remote_tasks"])
+
+        with patch.object(remote_worker.time, "time", return_value=1010):
+            remote_worker._record_heartbeat_attempt(self.user.id, runtime)
+            remote_worker._record_heartbeat_failure(self.user.id, "network unavailable")
+            health = remote_worker.worker_health(self.user.id)
+
+        self.assertTrue(health["online"])
+        self.assertTrue(health["degraded"])
+        self.assertIn("network unavailable", health["last_error"])
+
+        with patch.object(remote_worker.time, "time", return_value=1100):
+            health = remote_worker.worker_health(self.user.id)
+        self.assertFalse(health["online"])
 
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)

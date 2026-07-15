@@ -115,6 +115,44 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertEqual(42, payload["_sync_local_id"])
         self.assertIsNone(payload["ai_api_key"])
 
+    def test_current_user_uses_local_cloud_snapshot_for_fast_first_paint(self):
+        worker = {
+            "started": True,
+            "online": True,
+            "runtime": {"worker_state": "ready"},
+        }
+        with (
+            patch.object(web_app, "sync_status", return_value={"enabled": True}) as status,
+            patch("remote_worker.worker_health", return_value=worker),
+        ):
+            response = self.client.get("/api/current-user")
+
+        self.assertEqual(200, response.status_code)
+        status.assert_called_once_with(self.user.id, include_remote=False)
+        self.assertEqual(worker, response.get_json()["cloud_sync"]["worker"])
+
+    def test_cloud_status_refresh_reads_remote_state_and_worker_health(self):
+        worker = {
+            "started": True,
+            "online": True,
+            "runtime": {"worker_state": "queued", "pending_remote_tasks": 2},
+        }
+        with (
+            patch.object(
+                web_app,
+                "sync_status",
+                return_value={"enabled": True, "last_synced_at": "2026-07-16 00:00:00"},
+            ) as status,
+            patch("remote_worker.worker_health", return_value=worker),
+        ):
+            response = self.client.get("/api/cloud-sync/status")
+
+        self.assertEqual(200, response.status_code)
+        status.assert_called_once_with(self.user.id, include_remote=True)
+        payload = response.get_json()["cloud_sync"]
+        self.assertEqual("2026-07-16 00:00:00", payload["last_synced_at"])
+        self.assertEqual(2, payload["worker"]["runtime"]["pending_remote_tasks"])
+
 
 if __name__ == "__main__":
     unittest.main()

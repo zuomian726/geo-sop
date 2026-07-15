@@ -34,6 +34,8 @@ _worker_started = False
 _worker_lock = threading.Lock()
 _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
+_heartbeat_state_lock = threading.Lock()
+_heartbeat_states: dict[int, dict] = {}
 _TERMINAL_REMOTE_STATUSES = {"completed", "failed", "stopped"}
 
 
@@ -65,6 +67,63 @@ def _merge_interval_seconds() -> int:
     except Exception:
         value = 300
     return max(60, min(value, 3600))
+
+
+def _heartbeat_timestamp(epoch: float | None) -> str | None:
+    if not epoch:
+        return None
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
+
+
+def _record_heartbeat_attempt(user_id: int, runtime: dict | None = None) -> None:
+    with _heartbeat_state_lock:
+        state = _heartbeat_states.setdefault(int(user_id), {})
+        state["last_attempt_epoch"] = time.time()
+        state["runtime"] = dict(runtime or {})
+
+
+def _record_heartbeat_success(user_id: int) -> None:
+    with _heartbeat_state_lock:
+        state = _heartbeat_states.setdefault(int(user_id), {})
+        state["last_success_epoch"] = time.time()
+        state["last_error"] = ""
+        state["last_error_epoch"] = None
+
+
+def _record_heartbeat_failure(user_id: int, error: Exception | str) -> None:
+    with _heartbeat_state_lock:
+        state = _heartbeat_states.setdefault(int(user_id), {})
+        state.setdefault("last_attempt_epoch", time.time())
+        state["last_error"] = str(error)[:300]
+        state["last_error_epoch"] = time.time()
+
+
+def worker_health(user_id: int) -> dict:
+    """Return a local, non-sensitive snapshot of the desktop cloud worker."""
+    with _heartbeat_state_lock:
+        state = dict(_heartbeat_states.get(int(user_id), {}))
+        runtime = dict(state.get("runtime") or {})
+
+    now = time.time()
+    last_success = state.get("last_success_epoch")
+    last_error = state.get("last_error", "")
+    last_error_epoch = state.get("last_error_epoch") or 0
+    age_seconds = max(0, int(now - last_success)) if last_success else None
+    stale_after = max(45, _poll_seconds() * 3)
+    online = bool(last_success and age_seconds is not None and age_seconds <= stale_after)
+    degraded = bool(last_error and last_error_epoch >= (last_success or 0))
+    return {
+        "started": bool(_worker_started),
+        "online": online,
+        "degraded": degraded,
+        "stale_after_seconds": stale_after,
+        "age_seconds": age_seconds,
+        "last_attempt_at": _heartbeat_timestamp(state.get("last_attempt_epoch")),
+        "last_success_at": _heartbeat_timestamp(last_success),
+        "last_error_at": _heartbeat_timestamp(last_error_epoch),
+        "last_error": last_error,
+        "runtime": runtime,
+    }
 
 
 def _find_cloud_user() -> User | None:
@@ -354,15 +413,19 @@ def _tick(app) -> None:
         return
 
     user_id = int(user.id)
+    runtime = {}
     try:
         runtime = _runtime_telemetry(user_id)
+        _record_heartbeat_attempt(user_id, runtime)
         heartbeat_message = {
             "collecting": "客户端在线，正在执行云端采集任务",
             "syncing": "客户端在线，正在补传采集结果",
             "queued": "客户端在线，云端任务已进入本地队列",
         }.get(runtime["worker_state"], "客户端在线，等待云端任务")
         report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
+        _record_heartbeat_success(user_id)
     except Exception as exc:
+        _record_heartbeat_failure(user_id, exc)
         logger.warning("[RemoteWorker] heartbeat deferred: %s", exc)
 
     try:

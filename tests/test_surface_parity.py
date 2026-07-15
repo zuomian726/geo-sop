@@ -74,6 +74,17 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("$pruneInstall = !empty($data['prune_install']);", server)
         self.assertIn("if ($pruneInstall) {", server)
 
+    def test_desktop_cloud_status_is_live_and_does_not_block_first_paint(self):
+        app = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        worker = (ROOT / "web_app" / "remote_worker.py").read_text(encoding="utf-8")
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn("include_remote=False", app)
+        self.assertIn("def worker_health(", worker)
+        self.assertIn("last_success_at", worker)
+        self.assertIn("loadCloudSyncStatus", dashboard)
+        self.assertIn("cloudStatusTimer", dashboard)
+        self.assertIn("geo-sop-wordmark.png", dashboard)
+
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
