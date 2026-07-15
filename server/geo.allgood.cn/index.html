@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GEO-SOP | AI 答案采集分析与 GEO 桌面工具</title>
+    <meta name="description" content="GEO-SOP 提供 AI 答案采集分析、GEO-SOP 桌面工具、云端账号同步、品牌曝光监测、引用来源分析、截图留证和 GEO 报告导出。">
+        <meta name="keywords" content="GEO tools, geo工具, generative engine optimization tools, AI search visibility tool, ChatGPT visibility, Claude visibility, Perplexity visibility, Google AI Overviews, AI answer monitoring, brand mention monitoring, GEO-SOP">
+        <link rel="canonical" href="/">
+    <meta name="robots" content="index,follow,max-image-preview:large">
+    <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta property="og:title" content="GEO-SOP | AI 答案采集分析与 GEO 桌面工具">
+    <meta property="og:description" content="AI 答案采集分析、品牌曝光监测、引用来源分析、截图留证、云端账号同步和 GEO 报告导出。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/">
+    <meta property="og:image" content="/public/assets/ai/og-cover-ai.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="/favicon.ico?v=20260528-tktk-icon" sizes="any">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260528-tktk-icon">
+    <link rel="apple-touch-icon" href="/public/assets/apple-touch-icon.png?v=20260528-tktk-icon">
+    <link rel="stylesheet" href="/public/assets/styles.css?v=20260702-tools-geo-seo-v2">
+    <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "GEO-SOP",
+    "alternateName": "GEO-SOP",
+    "url": "",
+    "publisher": {
+        "@type": "Organization",
+        "name": "ALLGOOD Technology INC.",
+        "alternateName": "GEO-SOP",
+        "url": "",
+        "logo": "/public/assets/allgood-logo.png"
+    }
+}</script>
+    <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ALLGOOD Technology INC.",
+    "alternateName": "GEO-SOP",
+    "url": "",
+    "logo": "/public/assets/allgood-logo.png",
+    "image": "/public/assets/ai/about-tuke-team-wall.jpg",
+    "brand": {
+        "@type": "Brand",
+        "name": "GEO-SOP",
+        "alternateName": "GEO-SOP"
+    },
+    "description": "GEO-SOP builds AI answer monitoring and GEO desktop software for brand visibility, evidence collection, citation analysis, and report exports.",
+    "sameAs": [],
+    "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "sales",
+        "email": "support@allgood.cn",
+        "telephone": "",
+        "areaServed": [
+            "US",
+            "Global"
+        ],
+        "availableLanguage": [
+            "English",
+            "Chinese"
+        ]
+    },
+    "address": [
+        {
+            "@type": "PostalAddress",
+            "name": "Operating / Mailing Address",
+            "streetAddress": "9881 NW 26th St",
+            "addressLocality": "Doral",
+            "addressRegion": "FL",
+            "postalCode": "33172",
+            "addressCountry": "US"
+        },
+        {
+            "@type": "PostalAddress",
+            "name": "Registered Address",
+            "streetAddress": "312 W 2nd St",
+            "addressLocality": "Casper",
+            "addressRegion": "WY",
+            "postalCode": "82601",
+            "addressCountry": "US"
+        }
+    ],
+    "knowsAbout": [
+        "Generative engine optimization",
+        "AI answer monitoring",
+        "AI search visibility",
+        "Brand mention monitoring",
+        "GEO reports",
+        "Citation source analysis",
+        "Desktop evidence collection"
+    ]
+}</script>
+</head>
+<body class="">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="/" aria-label="GEO-SOP home">
+            <img src="/public/assets/geosop-wordmark.png" alt="GEO-SOP" width="140" height="40">
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+            <a href="#features" data-en="Features" data-zh="功能">Features</a>
+            <a href="#demo" data-en="Demo" data-zh="在线 Demo">Demo</a>
+            <a href="#download" data-en="Download" data-zh="下载">Download</a>
+            <a href="#roadmap" data-en="Roadmap" data-zh="路线图">Roadmap</a>
+            <a href="#faq" data-en="FAQ" data-zh="常见问题">FAQ</a>
+            <a href="#about" data-en="About" data-zh="关于">About</a>
+            <a href="/login/" data-en="Login" data-zh="登录">Login</a>
+            <a href="/register/" data-en="Register" data-zh="注册">Register</a>
+            <a class="nav-cta" href="/dashboard/" data-en="Dashboard" data-zh="工作台">Dashboard</a>
+        </nav>
+    </div>
+</header>
+<main id="main">
+    <section class="tool-product-hero" data-tool-lang="en">
+    <div class="container tool-hero-inner">
+        <div class="tool-copy-stack">
+            <div class="tool-lang-row">
+                <span class="tool-kicker" data-en="GEO desktop tool" data-zh="GEO 桌面工具">GEO desktop tool</span>
+                <span class="tool-version-badge" id="release-badge">v0.3.18-dev</span>
+                <button class="tool-lang-toggle" type="button" data-lang-toggle aria-label="Switch language">中文</button>
+            </div>
+            <img class="tool-app-icon" src="/public/assets/tools/geo-sop-icon.svg" alt="GEO-SOP icon" width="96" height="96">
+            <h1 data-en="GEO tools for AI search visibility." data-zh="面向 AI 搜索可见度的 GEO 工具。">GEO tools for AI search visibility.</h1>
+            <p class="tool-subhead" data-en="GEO-SOP is a generative engine optimization tool that collects ChatGPT, Claude, Perplexity, Google AI and other AI answers, screenshots, references, and brand exposure signals from one local desktop workspace." data-zh="GEO-SOP 是一款生成式引擎优化工具，可在本机桌面采集 ChatGPT、Claude、Perplexity、Google AI 等 AI 回答、截图留证、引用来源和品牌曝光信号。">GEO-SOP is a generative engine optimization tool that collects ChatGPT, Claude, Perplexity, Google AI and other AI answers, screenshots, references, and brand exposure signals from one local desktop workspace.</p>
+            <p class="tool-keyword-line" data-en="Built for GEO tools, AI SEO tools, answer-engine visibility, and brand mention monitoring workflows." data-zh="适用于 GEO 工具、AI SEO 工具、答案引擎可见度和品牌提及监测工作流。">Built for GEO tools, AI SEO tools, answer-engine visibility, and brand mention monitoring workflows.</p>
+            <div class="tool-download-actions">
+                <a class="tool-demo-hero-link" href="/login/"><span data-en="Login or create account" data-zh="登录或注册账号">Login or create account</span><small data-en="Cloud dashboard + desktop sync" data-zh="云端工作台 + 桌面同步">Cloud dashboard + desktop sync</small></a>
+                <a class="tool-demo-hero-link" href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener"><span data-en="Try online demo" data-zh="在线体验 Demo">Try online demo</span><small>tuke / 123456</small></a>
+                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="Download for macOS" data-zh="下载 macOS 版">Download for macOS</span><small id="release-mac-hero">v0.3.18-dev · DMG · 164 MB</small></a>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup-dev.exe"><span data-en="Download for Windows" data-zh="下载 Windows 版">Download for Windows</span><small id="release-windows-hero" data-en="v0.3.18-dev · EXE setup installer · 184 MB" data-zh="v0.3.18-dev · EXE 安装包 · 184 MB">v0.3.18-dev · EXE setup installer · 184 MB</small></a>
+            </div>
+            <div class="tool-availability" data-en="macOS package includes the desktop app. Windows ships as an EXE setup installer." data-zh="macOS 包含桌面 App。Windows 已切换为 EXE 安装包。">macOS package includes the desktop app. Windows ships as an EXE setup installer.</div>
+            <div class="tool-release-line"><span data-en="Current release" data-zh="当前版本">Current release</span>: <span id="release-current-version">v0.3.18-dev</span></div>
+        </div>
+        <figure class="tool-hero-visual">
+            <img src="/public/assets/tools/geo-hero-product-v010.webp" alt="GEO-SOP desktop dashboard and results screenshots" width="1600" height="1000">
+        </figure>
+    </div>
+</section>
+
+<section class="tool-demo-section" id="demo">
+    <div class="container tool-demo-panel">
+        <div class="tool-demo-copy">
+            <span class="tool-kicker" data-en="Online demo" data-zh="在线 Demo">Online demo</span>
+            <h2 data-en="Try the v0.3 workspace before installing." data-zh="安装前，先体验 v0.3 工作台。">Try the v0.3 workspace before installing.</h2>
+            <p data-en="The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server." data-zh="在线 Demo 已预览商业版工作台：KPI 卡片、AI 分析配置、下一步动作建议、样例 GEO 任务、合成 AI 回答和可导出数据。它运行在只读安全模式，访客可以探索功能，但不会改动服务器数据。">The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server.</p>
+            <div class="tool-demo-stats">
+                <article><strong>6</strong><span data-en="Demo tasks" data-zh="演示任务">Demo tasks</span></article>
+                <article><strong>144</strong><span data-en="Synthetic answers" data-zh="合成回答">Synthetic answers</span></article>
+                <article><strong>4</strong><span data-en="GEO files" data-zh="GEO 稿件">GEO files</span></article>
+            </div>
+        </div>
+        <div class="tool-demo-card">
+            <div class="tool-demo-card-head">
+                <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="52" height="52">
+                <div>
+                    <span data-en="Hosted preview" data-zh="在线预览">Hosted preview</span>
+                    <strong>GEO-SOP Demo</strong>
+                </div>
+            </div>
+            <dl class="tool-demo-login">
+                <div>
+                    <dt data-en="URL" data-zh="访问地址">URL</dt>
+                    <dd><a href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener">geo.allgood.cn/demo/</a></dd>
+                </div>
+                <div>
+                    <dt data-en="Username" data-zh="用户名">Username</dt>
+                    <dd>tuke</dd>
+                </div>
+                <div>
+                    <dt data-en="Password" data-zh="密码">Password</dt>
+                    <dd>123456</dd>
+                </div>
+            </dl>
+            <a class="tool-demo-button" href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener"><span data-en="Open online demo" data-zh="打开在线 Demo">Open online demo</span></a>
+            <p data-en="Read-only safe mode is enabled. Do not enter real platform accounts, API keys, customer data, or private brand materials." data-zh="已开启只读安全模式。请不要输入真实平台账号、API Key、客户数据或私密品牌资料。">Read-only safe mode is enabled. Do not enter real platform accounts, API keys, customer data, or private brand materials.</p>
+        </div>
+    </div>
+</section>
+
+<section class="tool-shot-section">
+    <div class="container tool-shot-grid">
+        <div class="tool-shot-copy">
+            <span class="tool-kicker" data-en="Commercial workspace" data-zh="商业工作台">Commercial workspace</span>
+            <h2 data-en="From collection to next actions." data-zh="从采集结果到下一步动作。">From collection to next actions.</h2>
+        </div>
+        <figure class="tool-shot-card large">
+            <img src="/public/assets/tools/geo-dashboard-commercial-v030.webp" alt="GEO-SOP commercial workspace dashboard screenshot" loading="lazy" width="1440" height="1050">
+        </figure>
+    </div>
+</section>
+
+<section class="tool-feature-strip" id="features">
+    <div class="container tool-feature-row">
+        <article><strong>7+</strong><span data-en="AI platforms" data-zh="AI 平台">AI platforms</span></article>
+        <article><strong>Local</strong><span data-en="Browser profiles" data-zh="浏览器登录态">Browser profiles</span></article>
+        <article><strong>Excel</strong><span data-en="GEO reports" data-zh="GEO 报告">GEO reports</span></article>
+        <article><strong>ZIP</strong><span data-en="Screenshot archives" data-zh="截图归档">Screenshot archives</span></article>
+    </div>
+</section>
+
+<section class="tool-seo-section alt" id="about">
+    <div class="container tool-seo-grid">
+        <div>
+            <span class="tool-kicker" data-en="About GEO-SOP" data-zh="关于 GEO-SOP">About GEO-SOP</span>
+            <h2 data-en="A practical GEO workspace for teams entering the AI answer era." data-zh="面向 AI 答案时代的实用 GEO 工作台。">A practical GEO workspace for teams entering the AI answer era.</h2>
+            <p data-en="GEO-SOP focuses on one concrete problem: when customers ask AI tools about your category, does your brand appear, is it described accurately, and which sources shape the answer?" data-zh="GEO-SOP 专注解决一个具体问题：当客户在 AI 工具里询问你的品类时，你的品牌是否出现、描述是否准确，以及哪些来源影响了答案。">GEO-SOP focuses on one concrete problem: when customers ask AI tools about your category, does your brand appear, is it described accurately, and which sources shape the answer?</p>
+            <p data-en="The product combines desktop browser collection, cloud account sync, screenshot evidence, citation source analysis, and AI-assisted next actions so brand, SEO, content, and growth teams can make decisions from observable data." data-zh="产品结合桌面浏览器采集、云端账号同步、截图证据、引用来源分析和 AI 辅助下一步动作，帮助品牌、SEO、内容和增长团队基于可观察数据做决策。">The product combines desktop browser collection, cloud account sync, screenshot evidence, citation source analysis, and AI-assisted next actions so brand, SEO, content, and growth teams can make decisions from observable data.</p>
+        </div>
+        <div class="tool-seo-list">
+            <article>
+                <strong data-en="Built around evidence" data-zh="围绕证据构建">Built around evidence</strong>
+                <span data-en="Every collection can keep answers, screenshots, platform state, references, and exports for later review." data-zh="每一次采集都可以保留回答、截图、平台状态、引用来源和导出文件，方便后续复盘。">Every collection can keep answers, screenshots, platform state, references, and exports for later review.</span>
+            </article>
+            <article>
+                <strong data-en="Desktop first, cloud synced" data-zh="桌面优先，云端同步">Desktop first, cloud synced</strong>
+                <span data-en="Sensitive platform login and browser collection stay on the user's computer, while cloud accounts keep tasks and dashboards connected." data-zh="敏感的平台登录和浏览器采集留在用户本机完成，云端账号负责同步任务和看板。">Sensitive platform login and browser collection stay on the user's computer, while cloud accounts keep tasks and dashboards connected.</span>
+            </article>
+            <article>
+                <strong data-en="Made for GEO workflows" data-zh="为 GEO 工作流设计">Made for GEO workflows</strong>
+                <span data-en="The workflow is designed for brand visibility, AI answer quality, source analysis, content planning, and recurring reporting." data-zh="工作流面向品牌可见度、AI 回答质量、来源分析、内容规划和周期性报告。">The workflow is designed for brand visibility, AI answer quality, source analysis, content planning, and recurring reporting.</span>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="tool-seo-section">
+    <div class="container tool-seo-grid">
+        <div>
+            <span class="tool-kicker" data-en="What this GEO tool measures" data-zh="这个 GEO 工具监测什么">What this GEO tool measures</span>
+            <h2 data-en="Track how answer engines mention, rank, and cite your brand." data-zh="监测答案引擎如何提及、排序和引用你的品牌。">Track how answer engines mention, rank, and cite your brand.</h2>
+            <p data-en="Use GEO-SOP to run repeatable prompts, capture evidence, compare AI answers, export local reports, and review whether your brand appears in AI search results for target topics." data-zh="使用 GEO-SOP 执行可复用提示词、采集证据截图、对比 AI 回答、导出本地报告，并检查你的品牌是否出现在目标话题的 AI 搜索结果中。">Use GEO-SOP to run repeatable prompts, capture evidence, compare AI answers, export local reports, and review whether your brand appears in AI search results for target topics.</p>
+        </div>
+        <div class="tool-seo-list">
+            <article>
+                <strong data-en="AI answer monitoring" data-zh="AI 回答监测">AI answer monitoring</strong>
+                <span data-en="Check ChatGPT, Claude, Perplexity and Google AI responses for brand mentions, competitors, citations, and missing facts." data-zh="检查 ChatGPT、Claude、Perplexity 和 Google AI 回答中的品牌提及、竞品、引用来源和缺失事实。">Check ChatGPT, Claude, Perplexity and Google AI responses for brand mentions, competitors, citations, and missing facts.</span>
+            </article>
+            <article>
+                <strong data-en="GEO report export" data-zh="GEO 报告导出">GEO report export</strong>
+                <span data-en="Save screenshots, references, Excel files, and ZIP archives for SEO, GEO, PR, and brand teams." data-zh="保存截图、引用来源、Excel 文件和 ZIP 归档，供 SEO、GEO、公关和品牌团队复盘。">Save screenshots, references, Excel files, and ZIP archives for SEO, GEO, PR, and brand teams.</span>
+            </article>
+            <article>
+                <strong data-en="Local privacy workflow" data-zh="本地隐私工作流">Local privacy workflow</strong>
+                <span data-en="Run browser profiles and evidence collection locally instead of sending raw brand research into a shared SaaS workspace." data-zh="在本地运行浏览器登录态和证据采集，避免把原始品牌研究直接放进共享 SaaS 工作区。">Run browser profiles and evidence collection locally instead of sending raw brand research into a shared SaaS workspace.</span>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="tool-shot-section alt">
+    <div class="container tool-two-up">
+        <figure class="tool-shot-card">
+            <img src="/public/assets/tools/geo-dashboard-ai-setup-v030.webp" alt="GEO-SOP AI analysis API setup screenshot" loading="lazy" width="1440" height="1050">
+        </figure>
+        <div class="tool-mini-copy">
+            <span class="tool-kicker" data-en="AI analysis" data-zh="AI 分析">AI analysis</span>
+            <h2 data-en="Bring your own API key. Get next actions." data-zh="导入你的 API Key，生成下一步动作。">Bring your own API key. Get next actions.</h2>
+            <div class="tool-check-grid">
+                <div data-en="API URL + Key setup" data-zh="API URL + Key 配置">API URL + Key setup</div>
+                <div data-en="Model name input" data-zh="模型名称输入">Model name input</div>
+                <div data-en="Fallback guidance without a key" data-zh="无 Key 时展示配置引导">Fallback guidance without a key</div>
+                <div data-en="AI observations and next actions" data-zh="AI 观察与下一步动作">AI observations and next actions</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="tool-download-section" id="download">
+    <div class="container">
+        <div class="tool-download-head">
+            <span class="tool-kicker" data-en="Download" data-zh="下载">Download</span>
+            <h2 data-en="Choose your desktop build." data-zh="选择你的桌面版本。">Choose your desktop build.</h2>
+        </div>
+        <div class="tool-platform-grid">
+            <article class="tool-platform-card featured">
+                <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="64" height="64">
+                <span>macOS</span>
+                <h3 data-en="Mac desktop build" data-zh="Mac 桌面版">Mac desktop build</h3>
+                <ul>
+                    <li data-en="macOS 12 Monterey or later" data-zh="macOS 12 Monterey 或以上">macOS 12 Monterey or later</li>
+                    <li data-en="Apple Silicon or Intel Mac" data-zh="Apple Silicon 或 Intel Mac">Apple Silicon or Intel Mac</li>
+                    <li data-en="4 GB RAM minimum, 8 GB recommended" data-zh="最低 4GB 内存，建议 8GB">4 GB RAM minimum, 8 GB recommended</li>
+                    <li data-en="Requires internet on first launch" data-zh="首次启动需要联网安装依赖">Requires internet on first launch</li>
+                </ul>
+                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="Download DMG" data-zh="下载 DMG">Download DMG</span><small id="release-mac-card">v0.3.18-dev · 164 MB</small></a>
+            </article>
+            <article class="tool-platform-card">
+                <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="64" height="64">
+                <span>Windows</span>
+                <h3 data-en="Windows setup installer" data-zh="Windows 安装包">Windows setup installer</h3>
+                <ul>
+                    <li data-en="Windows 10/11, 64-bit" data-zh="Windows 10/11，64 位">Windows 10/11, 64-bit</li>
+                    <li data-en="Native desktop app; Python is not required" data-zh="原生桌面应用，无需安装 Python">Native desktop app; Python is not required</li>
+                    <li data-en="Includes the application runtime and Chromium" data-zh="内置应用运行时和 Chromium 浏览器">Includes the application runtime and Chromium</li>
+                    <li data-en="Unsigned preview build may show SmartScreen" data-zh="未签名预览版可能触发 SmartScreen 提示">Unsigned preview build may show SmartScreen</li>
+                </ul>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup-dev.exe"><span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span><small id="release-windows-card">v0.3.18-dev · 184 MB</small></a>
+            </article>
+        </div>
+        <div class="tool-release-note">
+            <span id="release-notes-title" data-en="What is new in v0.3.18-dev" data-zh="v0.3.18-dev 更新内容">What is new in v0.3.18-dev</span>
+            <p data-en="Windows is now a native one-click installer with the runtime and Chromium included. Cloud tasks are claimed safely when the same account is online on multiple devices." data-zh="Windows 现为内置运行时和 Chromium 的原生一键安装包；同一账号多台设备在线时，云端任务也会安全认领，避免重复执行。">Windows is now a native one-click installer with the runtime and Chromium included. Cloud tasks are claimed safely when the same account is online on multiple devices.</p>
+        </div>
+        <section class="tool-roadmap-panel" id="roadmap">
+            <div class="tool-roadmap-head">
+                <span class="tool-kicker" data-en="Roadmap" data-zh="产品路线图">Roadmap</span>
+                <h3 data-en="A clearer path: detect first, automate next." data-zh="先做好检测与舆情分析，再进入全自动 GEO 任务。">A clearer path: detect first, automate next.</h3>
+                <p data-en="We keep the roadmap intentionally short: v1.0 focuses on detection and sentiment analysis; v2.0 focuses on fully automated GEO tasks. Detailed fixes stay in the changelog." data-zh="公开路线图保持克制：v1.0 聚焦检测和舆情分析，v2.0 聚焦全自动 GEO 任务。更细的修复记录放在更新记录里。">We keep the roadmap intentionally short: v1.0 focuses on detection and sentiment analysis; v2.0 focuses on fully automated GEO tasks. Detailed fixes stay in the changelog.</p>
+            </div>
+            <div class="tool-roadmap-grid">
+                <article class="active">
+                    <span data-en="Current" data-zh="当前版本">Current</span>
+                    <h4>v0.3-dev</h4>
+                    <p data-en="Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo." data-zh="桌面预览版：本地采集、截图留证、导出、KPI 看板、AI 分析配置和在线 Demo。">Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo.</p>
+                </article>
+                <article>
+                    <span data-en="v1.0 target" data-zh="v1.0 目标">v1.0 target</span>
+                    <h4>v1.0</h4>
+                    <p data-en="Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync." data-zh="实现检测和舆情分析：稳定采集、品牌曝光、引用来源、KPI 看板、导出，以及本地和云端数据同步。">Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync.</p>
+                </article>
+                <article>
+                    <span data-en="v2.0 target" data-zh="v2.0 目标">v2.0 target</span>
+                    <h4>v2.0</h4>
+                    <p data-en="Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports." data-zh="实现全自动 GEO 任务：云端创建任务、本机执行采集、队列重试、登录态提醒、自动分析和自动报告。">Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports.</p>
+                </article>
+            </div>
+            <div class="tool-roadmap-detail-grid">
+                <article>
+                    <strong data-en="Current focus" data-zh="当前重点">Current focus</strong>
+                    <span data-en="Make analysis useful first" data-zh="先把分析做强">Make analysis useful first</span>
+                    <p data-en="Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations." data-zh="核心评分、图表洞察、AI 下一步动作、稳定导出和清晰的文件保存位置。">Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations.</p>
+                </article>
+                <article>
+                    <strong data-en="v1.0 focus" data-zh="v1.0 重点">v1.0 focus</strong>
+                    <span data-en="Detection and sentiment analysis" data-zh="检测与舆情分析">Detection and sentiment analysis</span>
+                    <p data-en="Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations." data-zh="品牌曝光检测、引用来源提取、关键词舆情、AI 辅助舆情、证据导出和清晰的 KPI 解释。">Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations.</p>
+                </article>
+                <article>
+                    <strong data-en="v2.0 focus" data-zh="v2.0 重点">v2.0 focus</strong>
+                    <span data-en="Fully automated GEO tasks" data-zh="全自动 GEO 任务">Fully automated GEO tasks</span>
+                    <p data-en="Server task scheduling, local worker execution, safe retries, login-state recovery prompts, run logs, and per-user isolation." data-zh="服务器下发任务、本地工作端执行、安全重试、登录态恢复提示、运行日志和用户级数据隔离。">Server task scheduling, local worker execution, safe retries, login-state recovery prompts, run logs, and per-user isolation.</p>
+                </article>
+            </div>
+            <div class="tool-changelog-list">
+                <div>
+                    <strong>v0.3.x-dev</strong>
+                    <span data-en="Active desktop preview updates: export path visibility, OpenAI/Anthropic provider modes, DeepSeek handling, AI loading feedback, and compact analysis dashboard." data-zh="当前桌面预览版更新：导出路径可见、OpenAI/Anthropic 接口模式、DeepSeek 处理、AI 分析等待反馈和精简分析看板。">Active desktop preview updates: export path visibility, OpenAI/Anthropic provider modes, DeepSeek handling, AI loading feedback, and compact analysis dashboard.</span>
+                </div>
+                <div>
+                    <strong>v1.0</strong>
+                    <span data-en="Planned: detection workflow, reference-source analysis, sentiment analysis, synchronized desktop/cloud dashboard." data-zh="规划：检测工作流、引用来源分析、舆情分析、本地和云端一致的数据看板。">Planned: detection workflow, reference-source analysis, sentiment analysis, synchronized desktop/cloud dashboard.</span>
+                </div>
+                <div>
+                    <strong>v2.0</strong>
+                    <span data-en="Planned: fully automated GEO task scheduling, local execution, retries, logs, and automatic reports." data-zh="规划：全自动 GEO 任务调度、本机执行、失败重试、运行日志和自动报告。">Planned: fully automated GEO task scheduling, local execution, retries, logs, and automatic reports.</span>
+                </div>
+            </div>
+        </section>
+        <div class="tool-security-note">
+            <div class="tool-security-intro">
+                <span class="tool-kicker" data-en="Security Notice" data-zh="安全提示">Security Notice</span>
+                <h3 data-en="Unsigned builds may trigger system warnings." data-zh="未正式签名版本可能触发系统安全提示。">Unsigned builds may trigger system warnings.</h3>
+                <p data-en="This release is locally signed but not yet Apple-notarized or Windows code-signed, so macOS or Windows may warn that the publisher cannot be verified." data-zh="当前版本已做本地签名，但尚未完成 Apple 公证或 Windows 代码签名，所以 macOS 或 Windows 可能提示无法验证发布者。">This release is locally signed but not yet Apple-notarized or Windows code-signed, so macOS or Windows may warn that the publisher cannot be verified.</p>
+            </div>
+            <div class="tool-security-grid">
+                <article>
+                    <div class="tool-security-card-head">
+                        <span>macOS</span>
+                        <strong>Gatekeeper</strong>
+                    </div>
+                    <p data-en="Testing workaround: right-click the app and choose Open, or remove quarantine on the mounted DMG app." data-zh="测试版处理：右键点击 App 选择“打开”，或对 DMG 挂载盘里的 App 移除隔离属性。">Testing workaround: right-click the app and choose Open, or remove quarantine on the mounted DMG app.</p>
+                    <code id="release-gatekeeper-command">xattr -dr com.apple.quarantine<br>"/Volumes/GEO-SOP v0.3.18-dev/GEO-SOP.app"</code>
+                    <p class="tool-security-action" data-en="Production fix: Apple Developer ID signing + notarization." data-zh="正式方案：Apple Developer ID 签名 + notarization 公证。">Production fix: Apple Developer ID signing + notarization.</p>
+                </article>
+                <article>
+                    <div class="tool-security-card-head">
+                        <span>Windows</span>
+                        <strong>SmartScreen</strong>
+                    </div>
+                    <p data-en="Testing workaround: click More info, then choose Run anyway when the warning appears." data-zh="测试版处理：出现提示时点击“更多信息”，再选择“仍要运行”。">Testing workaround: click More info, then choose Run anyway when the warning appears.</p>
+                    <p class="tool-security-action" data-en="Production fix: OV/EV code signing certificate + signed installer." data-zh="正式方案：OV/EV 代码签名证书 + 已签名安装包。">Production fix: OV/EV code signing certificate + signed installer.</p>
+                </article>
+            </div>
+        </div>
+        <section class="tool-faq-panel" id="faq">
+            <div class="tool-roadmap-head">
+                <span class="tool-kicker" data-en="GEO tools FAQ" data-zh="GEO 工具常见问题">GEO tools FAQ</span>
+                <h3 data-en="Questions people ask before using a GEO tool." data-zh="使用 GEO 工具前常见的问题。">Questions people ask before using a GEO tool.</h3>
+            </div>
+            <div class="tool-faq-grid">
+                <article>
+                    <h4 data-en="What is a GEO tool?" data-zh="什么是 GEO 工具？">What is a GEO tool?</h4>
+                    <p data-en="A GEO tool helps teams monitor how generative engines and AI search systems answer questions about brands, categories, competitors, and buying decisions." data-zh="GEO 工具帮助团队监测生成式引擎和 AI 搜索系统如何回答品牌、品类、竞品和购买决策相关问题。">A GEO tool helps teams monitor how generative engines and AI search systems answer questions about brands, categories, competitors, and buying decisions.</p>
+                </article>
+                <article>
+                    <h4 data-en="Does GEO-SOP replace Google SEO tools?" data-zh="GEO-SOP 会替代 Google SEO 工具吗？">Does GEO-SOP replace Google SEO tools?</h4>
+                    <p data-en="No. Use it beside Google Search Console, crawlers, rank trackers, and analytics. GEO-SOP focuses on AI answers, screenshots, references, and local evidence collection." data-zh="不会。它应该和 Google Search Console、爬虫、排名工具和分析工具一起使用。GEO-SOP 重点监测 AI 回答、截图、引用来源和本地证据。">No. Use it beside Google Search Console, crawlers, rank trackers, and analytics. GEO-SOP focuses on AI answers, screenshots, references, and local evidence collection.</p>
+                </article>
+                <article>
+                    <h4 data-en="Which GEO keywords should I test?" data-zh="应该测试哪些 GEO 关键词？">Which GEO keywords should I test?</h4>
+                    <p data-en="Start with buyer questions, category comparisons, brand alternatives, local market prompts, and problem-solution queries that your customers may ask ChatGPT or other AI tools." data-zh="从买家问题、品类对比、品牌替代、本地市场提示词，以及客户可能在 ChatGPT 等 AI 工具里提问的问题-解决方案关键词开始。">Start with buyer questions, category comparisons, brand alternatives, local market prompts, and problem-solution queries that your customers may ask ChatGPT or other AI tools.</p>
+                </article>
+            </div>
+        </section>
+    </div>
+</section>
+
+<script type="application/ld+json" id="software-schema">
+{
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "SoftwareApplication",
+            "name": "GEO-SOP",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": [
+                "macOS",
+                "Windows"
+            ],
+            "url": "/tools",
+            "downloadUrl": "/downloads/GEO-SOP-Setup-dev.exe",
+            "softwareVersion": "v0.3.18-dev",
+            "description": "GEO-SOP is a GEO tool for AI search visibility, generative engine optimization monitoring, AI answer screenshots, brand exposure tracking, and GEO report exports.",
+            "publisher": {
+                "@type": "Organization",
+                "name": "GEO-SOP",
+                "url": ""
+            },
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD",
+                "availability": "https://schema.org/InStock"
+            }
+        },
+        {
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "What is a GEO tool?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "A GEO tool helps teams monitor how generative engines and AI search systems answer questions about brands, categories, competitors, and buying decisions."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does GEO-SOP replace Google SEO tools?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "No. GEO-SOP is designed to work beside Google Search Console, crawlers, rank trackers, and analytics. It focuses on AI answers, screenshots, references, and local evidence collection."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Which GEO keywords should I test?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Start with buyer questions, category comparisons, brand alternatives, local market prompts, and problem-solution queries that customers may ask ChatGPT or other AI tools."
+                    }
+                }
+            ]
+        }
+    ]
+}</script>
+
+<script>
+(function () {
+  const root = document.querySelector('[data-tool-lang]');
+  const button = document.querySelector('[data-lang-toggle]');
+  if (!root || !button) return;
+  const applyLang = lang => {
+    root.dataset.toolLang = lang;
+    document.querySelectorAll('[data-en][data-zh]').forEach(el => {
+      el.textContent = el.dataset[lang];
+    });
+    button.textContent = lang === 'en' ? '中文' : 'English';
+    try { localStorage.setItem('geoToolLang', lang); } catch (e) {}
+  };
+  let lang = 'en';
+  try {
+    const saved = localStorage.getItem('geoToolLang');
+    lang = saved || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+  } catch (e) {}
+  applyLang(lang);
+  button.addEventListener('click', () => applyLang(root.dataset.toolLang === 'en' ? 'zh' : 'en'));
+
+  const applyRelease = async () => {
+    try {
+      const response = await fetch('/update.json', { cache: 'no-store' });
+      if (!response.ok) return;
+      const release = await response.json();
+      const rawVersion = String(release.version || '');
+      if (!/^[0-9A-Za-z.-]+$/.test(rawVersion)) return;
+      const version = 'v' + rawVersion.replace(/^v/, '');
+      const mac = release.downloads && release.downloads.macos ? release.downloads.macos : {};
+      const windows = release.downloads && release.downloads.windows ? release.downloads.windows : {};
+      const macSize = String(mac.size || '');
+      const windowsSize = String(windows.size || '');
+
+      const setText = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+      };
+      setText('release-badge', version);
+      setText('release-current-version', version);
+      setText('release-mac-hero', version + ' · DMG · ' + macSize);
+      setText('release-mac-card', version + ' · ' + macSize);
+      setText('release-windows-card', version + ' · ' + windowsSize);
+
+      const windowsHero = document.getElementById('release-windows-hero');
+      if (windowsHero) {
+        windowsHero.dataset.en = version + ' · EXE setup installer · ' + windowsSize;
+        windowsHero.dataset.zh = version + ' · EXE 安装包 · ' + windowsSize;
+      }
+      const notesTitle = document.getElementById('release-notes-title');
+      if (notesTitle) {
+        notesTitle.dataset.en = 'What is new in ' + version;
+        notesTitle.dataset.zh = version + ' 更新内容';
+      }
+      const gatekeeper = document.getElementById('release-gatekeeper-command');
+      if (gatekeeper) {
+        gatekeeper.replaceChildren(
+          document.createTextNode('xattr -dr com.apple.quarantine'),
+          document.createElement('br'),
+          document.createTextNode('"/Volumes/GEO-SOP ' + version + '/GEO-SOP.app"')
+        );
+      }
+      document.querySelectorAll('a[href="/downloads/GEO-SOP-macOS-dev.dmg"]').forEach(link => {
+        if (mac.url) link.href = mac.url;
+      });
+      document.querySelectorAll('a[href="/downloads/GEO-SOP-Setup-dev.exe"]').forEach(link => {
+        if (windows.url) link.href = windows.url;
+      });
+      const schema = document.getElementById('software-schema');
+      if (schema) {
+        const data = JSON.parse(schema.textContent);
+        const software = (data['@graph'] || []).find(item => item['@type'] === 'SoftwareApplication');
+        if (software) {
+          software.softwareVersion = version;
+          if (windows.url) software.downloadUrl = windows.url;
+          schema.textContent = JSON.stringify(data);
+        }
+      }
+      applyLang(root.dataset.toolLang || 'en');
+    } catch (error) {
+      console.warn('Release manifest unavailable', error);
+    }
+  };
+  applyRelease();
+})();
+</script>
+</main>
+<footer class="site-footer">
+    <div class="container footer-grid">
+        <div>
+            <a class="brand footer-brand" href="/">
+                <img src="/public/assets/allgood-logo.png" alt="ALLGOOD" width="144" height="48">
+            </a>
+            <p>AI answer collection, GEO visibility monitoring, citation analysis, and desktop evidence workflows for brand teams.</p>
+        </div>
+        <div>
+            <h2>Product</h2>
+            <a href="#features">Features</a>
+            <a href="#demo">Online Demo</a>
+            <a href="#download">Download</a>
+            <a href="/dashboard/">Cloud Dashboard</a>
+        </div>
+        <div>
+            <h2>Use Cases</h2>
+            <a href="#features">AI Answer Monitoring</a>
+            <a href="#features">Brand Exposure Tracking</a>
+            <a href="#features">Citation Source Analysis</a>
+            <a href="#features">GEO Report Export</a>
+        </div>
+        <div>
+            <h2>Resources</h2>
+            <a href="#roadmap">Roadmap</a>
+            <a href="#faq">FAQ</a>
+            <a href="#about">About GEO-SOP</a>
+            <a href="/login/">Login</a>
+        </div>
+        <div>
+            <h2>Contact</h2>
+            <a href="/register/">Create account</a>
+            <a href="/login/">Login</a>
+            <a href="#about">Company information</a>
+            <a href="mailto:support@allgood.cn">support@allgood.cn</a>
+        </div>
+    </div>
+    <div class="container footer-bottom">
+        <span>&copy; 2026 GEO-SOP. An ALLGOOD product. All rights reserved.</span>
+        <span>Built for crawlable, helpful, people-first content.</span>
+    </div>
+</footer>
+<script src="/public/assets/site.js?v=20260529-growth-v2" defer></script>
+</body>
+</html>
