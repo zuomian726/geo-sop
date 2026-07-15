@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.27-dev",
+  "version": "0.3.28-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T23:55:00+08:00",
+  "released_at": "2026-07-16T00:16:00+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "客户端工作区同步默认改为非破坏性合并，新安装或空本地数据库不会删除云端历史记录。",
-    "普通登录、后台同步和断网补传都会保留既有云端任务、结果、稿件与舆情配置。",
-    "同步接口会返回实际合并模式，并已通过空数据再次同步的线上隔离验证。"
+    "桌面看板首屏不再等待云端状态请求，网络缓慢或云端暂时不可用时也能立即进入本地工作区。",
+    "顶部实时连接状态会显示心跳、任务排队、采集执行、结果回传和连接错误，并每 15 秒自动刷新。",
+    "桌面头部已统一使用正式 GEO-SOP 字标，并补充 41 项自动化测试与真实浏览器渲染验证。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.27-dev",
+      "version": "0.3.28-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.27-dev-macOS.dmg",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.28-dev-macOS.dmg",
       "size": "165 MB",
-      "sha256": "03b72bafe60197ab7c116d8690713bf2a27c72d197fb6b3dda39777c1dedb2f0"
+      "sha256": "fc9dcc67f2fcaf4746bf0f055c718eedca6619a00c50ca4567d7ec7d911e9671"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.27-dev",
+      "version": "0.3.28-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.27-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.28-dev.exe",
       "size": "185 MB",
-      "sha256": "1d88a5e21fcfccc51caef105a1cc0b772065e4db7bc187d34d864ac8d55deebb"
+      "sha256": "6676976557a78c7204856f4734c90097776094a5635450f2e48a975c47fa115c"
     }
   }
 }
