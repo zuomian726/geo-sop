@@ -34,12 +34,29 @@ class SurfaceParityTests(unittest.TestCase):
             "results",
             "result",
             "references",
+            "reference_analysis",
+            "reference_domains",
+            "reference_trends",
             "geo_coverage",
             "export_geo",
             "export_screenshots_zip",
             "remote_status",
         }
         self.assertTrue(expected <= actions, expected - actions)
+
+    def test_cloud_reference_analysis_has_lazy_ui_and_api_renderers(self):
+        source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        expected_markers = {
+            'id="reference-analysis"',
+            'id="referenceRanking"',
+            'id="referenceTrend"',
+            "function loadReferenceAnalysis()",
+            "function renderReferenceRanking(data)",
+            "function renderReferenceTrend(data)",
+            "IntersectionObserver",
+        }
+        missing = {marker for marker in expected_markers if marker not in source}
+        self.assertFalse(missing, missing)
 
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):

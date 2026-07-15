@@ -138,6 +138,89 @@ function geo_dashboard_limit(): int {
     return max(1, min(500, $limit));
 }
 
+function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplicate = false): array {
+    $where = ['cloud_user_id=?'];
+    $params = [$cloudUserId];
+    $taskId = (int)($_GET['task_id'] ?? 0);
+    $installId = trim((string)($_GET['install_id'] ?? ''));
+    $platform = trim((string)($_GET['platform'] ?? ''));
+    $dateStart = trim((string)($_GET['date_start'] ?? $_GET['start_date'] ?? ''));
+    $dateEnd = trim((string)($_GET['date_end'] ?? $_GET['end_date'] ?? ''));
+    if ($taskId > 0) {
+        $where[] = 'local_task_id=?';
+        $params[] = $taskId;
+    }
+    if ($installId !== '') {
+        $where[] = 'install_id=?';
+        $params[] = $installId;
+    }
+    if ($platform !== '') {
+        $where[] = 'platform=?';
+        $params[] = $platform;
+    }
+    if ($dateStart !== '') {
+        $where[] = 'result_at>=?';
+        $params[] = $dateStart . ' 00:00:00';
+    }
+    if ($dateEnd !== '') {
+        $where[] = 'result_at<=?';
+        $params[] = $dateEnd . ' 23:59:59';
+    }
+
+    $sql = 'SELECT payload,result_at FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY result_at ASC,id ASC LIMIT 20000';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $fullCounts = [];
+    $topCounts = [];
+    $dailyFull = [];
+    $dailyTop = [];
+    $seenUrls = [];
+    $totalResults = 0;
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $totalResults++;
+        $date = substr((string)($row['result_at'] ?? ''), 0, 10);
+        foreach (geo_dashboard_refs(geo_dashboard_payload($row['payload'] ?? '')) as $ref) {
+            if (!is_array($ref)) continue;
+            $url = trim((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
+            if ($url === '') continue;
+            $urlKey = geo_dashboard_url_key($url, false);
+            if ($deduplicate && $urlKey !== '') {
+                if (isset($seenUrls[$urlKey])) continue;
+                $seenUrls[$urlKey] = true;
+            }
+            $full = geo_dashboard_domain($url);
+            $top = geo_dashboard_main_domain_from_url($url);
+            if ($full !== '') {
+                $fullCounts[$full] = ($fullCounts[$full] ?? 0) + 1;
+                if ($date !== '') $dailyFull[$date][$full] = ($dailyFull[$date][$full] ?? 0) + 1;
+            }
+            if ($top !== '') {
+                $topCounts[$top] = ($topCounts[$top] ?? 0) + 1;
+                if ($date !== '') $dailyTop[$date][$top] = ($dailyTop[$date][$top] ?? 0) + 1;
+            }
+        }
+    }
+    arsort($fullCounts);
+    arsort($topCounts);
+    ksort($dailyFull);
+    ksort($dailyTop);
+    return [
+        'total_results' => $totalResults,
+        'full_counts' => $fullCounts,
+        'top_counts' => $topCounts,
+        'daily_full' => $dailyFull,
+        'daily_top' => $dailyTop,
+    ];
+}
+
+function geo_dashboard_reference_items(array $counts, int $limit = 0): array {
+    $items = [];
+    foreach (($limit > 0 ? array_slice($counts, 0, $limit, true) : $counts) as $name => $count) {
+        $items[] = ['name' => (string)$name, 'domain' => (string)$name, 'count' => (int)$count];
+    }
+    return $items;
+}
+
 function geo_dashboard_task_map(PDO $pdo, int $cloudUserId): array {
     $stmt = $pdo->prepare('SELECT install_id,local_id,name,status FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY id DESC');
     $stmt->execute([$cloudUserId]);
@@ -901,6 +984,57 @@ try {
         $assets = geo_dashboard_asset_map($pdo, $cloudUserId, [['install_id' => $installId, 'local_result_id' => $localId]]);
         $key = $installId . ':' . $localId;
         geo_json(['success' => true, 'result' => geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null)]);
+    }
+
+    if ($action === 'reference_analysis') {
+        $deduplicate = strtolower((string)($_GET['deduplicate'] ?? 'true')) !== 'false';
+        $scan = geo_dashboard_reference_scan($pdo, $cloudUserId, $deduplicate);
+        geo_json([
+            'success' => true,
+            'full_data' => geo_dashboard_reference_items($scan['full_counts']),
+            'top_data' => geo_dashboard_reference_items($scan['top_counts']),
+            'total_results' => $scan['total_results'],
+            'total_references' => array_sum($scan['full_counts']),
+            'deduplicated' => $deduplicate,
+        ]);
+    }
+
+    if ($action === 'reference_domains') {
+        $level = (string)($_GET['level'] ?? 'top') === 'full' ? 'full' : 'top';
+        $scan = geo_dashboard_reference_scan($pdo, $cloudUserId, false);
+        $counts = $level === 'full' ? $scan['full_counts'] : $scan['top_counts'];
+        geo_json([
+            'success' => true,
+            'level' => $level,
+            'domains' => array_keys($counts),
+            'counts' => $counts,
+        ]);
+    }
+
+    if ($action === 'reference_trends') {
+        $level = (string)($_GET['level'] ?? 'top') === 'full' ? 'full' : 'top';
+        $topN = max(1, min(20, (int)($_GET['top_n'] ?? 10)));
+        $selected = $_GET['domains'] ?? [];
+        if (!is_array($selected)) $selected = array_filter(array_map('trim', explode(',', (string)$selected)));
+        $selected = array_values(array_unique(array_filter(array_map('strval', $selected))));
+        $scan = geo_dashboard_reference_scan($pdo, $cloudUserId, false);
+        $counts = $level === 'full' ? $scan['full_counts'] : $scan['top_counts'];
+        $daily = $level === 'full' ? $scan['daily_full'] : $scan['daily_top'];
+        $domains = $selected ?: array_slice(array_keys($counts), 0, $topN);
+        $dates = array_keys($daily);
+        $series = [];
+        foreach ($domains as $domain) {
+            $values = [];
+            foreach ($dates as $date) $values[] = (int)($daily[$date][$domain] ?? 0);
+            $series[] = ['name' => $domain, 'type' => 'line', 'smooth' => true, 'data' => $values];
+        }
+        geo_json([
+            'success' => true,
+            'level' => $level,
+            'dates' => $dates,
+            'series' => $series,
+            'top_domains' => $domains,
+        ]);
     }
 
     if ($action === 'references') {

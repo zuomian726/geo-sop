@@ -281,6 +281,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 :root{--blue:#409eff;--blue2:#1769ff;--cyan:#00a6b2;--ink:#1f2937;--muted:#7b8aa0;--line:#dfe6f0;--soft:#f3f6fb;--card:#fff;--dark:#07111f;--good:#67c23a}
 	*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel,.tabs{position:relative}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px;padding-right:120px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.collapse-toggle{position:absolute;top:18px;right:20px;height:30px;padding:0 11px;border-radius:4px;font-size:12px;background:#f8fafc}.panel.is-collapsed{padding-bottom:22px}.panel.is-collapsed>:not(.kicker):not(h2):not(.collapse-toggle){display:none}.tabs.is-collapsed .tab-body{display:none}.tabs.is-collapsed .tab-nav{border-bottom:0}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;padding-right:110px}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.connection-diagnosis{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:16px 0;padding:16px 18px;border:1px solid #d0d5dd;border-left:4px solid #98a2b3;border-radius:6px;background:#f8fafc}.connection-diagnosis.healthy,.connection-diagnosis.demo{border-left-color:#12b76a;background:#f0fdf4}.connection-diagnosis.warning{border-left-color:#f79009;background:#fffaeb}.connection-diagnosis.offline{border-left-color:#f04438;background:#fff5f5}.connection-diagnosis strong{display:block;font-size:17px;margin-bottom:5px}.diagnosis-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.diagnosis-stats{display:flex;gap:8px;flex-wrap:wrap}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.panel h2{padding-right:96px}.collapse-toggle{top:16px;right:14px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}.connection-diagnosis{align-items:flex-start;flex-direction:column}}
 	select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.geo-summary-item{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px}.geo-summary-item span{display:block;color:var(--muted);font-size:12px;font-weight:800}.geo-summary-item strong{display:block;font-size:24px;margin-top:6px}.geo-title-row{cursor:pointer}.geo-title-main{display:flex;align-items:center;gap:10px;font-weight:800}.geo-caret{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#667085;font-size:12px}.geo-child-row{background:#fbfdff}.geo-url-list{padding:8px 0}.geo-url-card{display:grid;grid-template-columns:minmax(260px,1fr) 150px 150px 170px;gap:14px;align-items:start;padding:12px 14px;border-bottom:1px solid #edf1f7}.geo-url-card:last-child{border-bottom:0}.geo-url{color:#175cd3;word-break:break-all;line-height:1.5}.geo-detail-list{margin-top:8px;display:grid;gap:7px}.geo-detail-item{padding:8px 10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:6px;color:#475467;line-height:1.5}.geo-muted{color:#7b8aa0;font-size:12px}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}.geo-summary{grid-template-columns:1fr 1fr}.geo-url-card{grid-template-columns:1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}.geo-summary{grid-template-columns:1fr}}
+	.reference-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.reference-ranking{display:grid;gap:12px;margin-top:16px}.reference-rank-row{display:grid;grid-template-columns:minmax(120px,220px) 1fr 58px;gap:12px;align-items:center}.reference-rank-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reference-trend{min-height:260px;display:grid;place-items:center;margin-top:12px}.reference-trend svg{width:100%;height:auto;min-height:220px}.reference-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.reference-legend span{display:inline-flex;align-items:center;gap:6px;color:#667085;font-size:12px}.reference-legend i{width:10px;height:10px;border-radius:999px}@media(max-width:720px){.reference-summary{grid-template-columns:1fr}.reference-rank-row{grid-template-columns:110px 1fr 46px}}
 </style>
 </head>
 <body>
@@ -349,8 +350,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <nav class="tab-nav">
             <a class="active" href="#insights">数据看板</a>
             <a href="#create-task">任务管理</a>
-            <a href="#sources">引用参考源分析</a>
-            <a href="#trend">引用参考源走势图</a>
+            <a href="#reference-analysis">引用参考源分析</a>
+            <a href="#reference-analysis">引用参考源走势图</a>
             <a href="#geo">GEO稿件被引用分析</a>
             <a href="#ai-settings">智慧舆情设置</a>
         </nav>
@@ -439,6 +440,43 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                     <?php endforeach; ?>
                     <?php if(!$weakQuestions): ?><div class="empty">暂无问题数据。</div><?php endif; ?>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel" id="reference-analysis" style="margin-top:16px" data-collapsible="reference-analysis" data-collapse-default="closed">
+        <span class="kicker">SOURCE ANALYSIS</span>
+        <h2>引用参考源分析与走势</h2>
+        <p class="muted">查看 AI 回答引用了哪些网站，并按任务、平台和时间观察来源变化。默认去重排行，走势图保留每天实际引用次数。</p>
+        <div class="query-grid">
+            <label>关联任务<select id="referenceTask"><option value="">全部任务</option></select></label>
+            <label>AI 平台<select id="referencePlatform"><option value="">全部平台</option><?php foreach($supportedPlatforms as $platformId => $platform): ?><option value="<?=geo_h($platformId)?>"><?=geo_h((string)$platform['name'])?></option><?php endforeach; ?></select></label>
+            <label>开始日期<input id="referenceStart" type="date"></label>
+            <label>结束日期<input id="referenceEnd" type="date"></label>
+            <label>域名层级<select id="referenceLevel"><option value="top">一级域名</option><option value="full">完整域名</option></select></label>
+            <label>展示数量<select id="referenceTopN"><option value="5">TOP 5</option><option value="10" selected>TOP 10</option><option value="20">TOP 20</option></select></label>
+        </div>
+        <div class="query-actions">
+            <button class="primary" type="button" onclick="loadReferenceAnalysis()">刷新分析</button>
+            <button type="button" onclick="resetReferenceAnalysis()">重置</button>
+            <span class="query-count" id="referenceStatus">滚动到本区域后自动加载</span>
+        </div>
+        <div class="reference-summary">
+            <div class="geo-summary-item"><span>分析回答</span><strong id="referenceResultTotal">0</strong></div>
+            <div class="geo-summary-item"><span>去重引用</span><strong id="referenceCitationTotal">0</strong></div>
+            <div class="geo-summary-item"><span>引用域名</span><strong id="referenceDomainTotal">0</strong></div>
+        </div>
+        <div class="chart-grid">
+            <div class="chart-panel">
+                <span class="mini-label">引用排行</span>
+                <h3>AI 最常引用哪些来源？</h3>
+                <div class="reference-ranking" id="referenceRanking"><div class="empty">正在等待加载引用数据。</div></div>
+            </div>
+            <div class="chart-panel">
+                <span class="mini-label">引用走势</span>
+                <h3>主要来源最近如何变化？</h3>
+                <div class="reference-trend" id="referenceTrend"><div class="empty">正在等待加载走势数据。</div></div>
+                <div class="reference-legend" id="referenceLegend"></div>
             </div>
         </div>
     </section>
@@ -678,7 +716,7 @@ async function loadRemoteStatus(){
 async function loadCloudTasks(){
     try {
         var data = await geoApi({action: 'tasks'});
-        var selects = [document.getElementById('queryTask'), document.getElementById('geoTask')].filter(Boolean);
+        var selects = [document.getElementById('queryTask'), document.getElementById('geoTask'), document.getElementById('referenceTask')].filter(Boolean);
         data.tasks.forEach(function(task){
             selects.forEach(function(select){
                 var option = document.createElement('option');
@@ -793,6 +831,145 @@ function exportCloudGeo(){
 
 function exportCloudScreenshots(){
     window.location.href = '/api/dashboard/?' + buildCloudQueryParams('export_screenshots_zip').toString();
+}
+
+var referenceState = { loaded: false, loading: false };
+
+function referenceDateValue(daysAgo){
+    var date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date.toISOString().slice(0, 10);
+}
+
+function buildReferenceParams(action){
+    var task = document.getElementById('referenceTask');
+    var selected = task.options[task.selectedIndex];
+    return {
+        action: action,
+        task_id: task.value || '',
+        install_id: selected ? (selected.dataset.installId || '') : '',
+        platform: document.getElementById('referencePlatform').value,
+        date_start: document.getElementById('referenceStart').value,
+        date_end: document.getElementById('referenceEnd').value,
+        level: document.getElementById('referenceLevel').value,
+        top_n: document.getElementById('referenceTopN').value
+    };
+}
+
+function renderReferenceRanking(data){
+    var level = document.getElementById('referenceLevel').value;
+    var topN = parseInt(document.getElementById('referenceTopN').value || '10', 10);
+    var allRows = level === 'full' ? (data.full_data || []) : (data.top_data || []);
+    var rows = allRows.slice(0, topN);
+    var ranking = document.getElementById('referenceRanking');
+    document.getElementById('referenceDomainTotal').textContent = allRows.length;
+    if (!rows.length) {
+        ranking.innerHTML = '<div class="empty">当前筛选条件下没有引用来源。</div>';
+        return;
+    }
+    var max = Math.max.apply(null, rows.map(function(row){ return Number(row.count || 0); })) || 1;
+    ranking.innerHTML = rows.map(function(row){
+        var width = Math.max(2, Math.round(Number(row.count || 0) / max * 100));
+        return '<div class="reference-rank-row" title="' + h(row.name || row.domain || '') + '">' +
+            '<span>' + h(row.name || row.domain || '未知来源') + '</span>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:' + width + '%"></div></div>' +
+            '<strong>' + h(row.count || 0) + ' 次</strong>' +
+        '</div>';
+    }).join('');
+}
+
+function renderReferenceTrend(data){
+    var trend = document.getElementById('referenceTrend');
+    var legend = document.getElementById('referenceLegend');
+    var dates = Array.isArray(data.dates) ? data.dates : [];
+    var series = Array.isArray(data.series) ? data.series : [];
+    if (!dates.length || !series.length) {
+        trend.innerHTML = '<div class="empty">当前筛选条件下没有引用走势。</div>';
+        legend.innerHTML = '';
+        return;
+    }
+    var colors = ['#1769ff','#00a6b2','#f79009','#12b76a','#7f56d9','#e83e8c','#667085','#f04438','#2e90fa','#039855'];
+    var width = 760, height = 230, left = 38, right = 12, top = 16, bottom = 34;
+    var chartWidth = width - left - right, chartHeight = height - top - bottom;
+    var maxValue = 1;
+    series.forEach(function(item){ (item.data || []).forEach(function(value){ maxValue = Math.max(maxValue, Number(value || 0)); }); });
+    var grid = [0, .5, 1].map(function(ratio){
+        var y = top + chartHeight * ratio;
+        var label = Math.round(maxValue * (1 - ratio));
+        return '<line x1="' + left + '" y1="' + y + '" x2="' + (width - right) + '" y2="' + y + '" stroke="#e7edf5"/>' +
+            '<text x="' + (left - 8) + '" y="' + (y + 4) + '" text-anchor="end" fill="#7b8aa0" font-size="11">' + label + '</text>';
+    }).join('');
+    var lines = series.map(function(item, index){
+        var values = item.data || [];
+        var points = values.map(function(value, pointIndex){
+            var x = left + (dates.length === 1 ? chartWidth / 2 : chartWidth * pointIndex / (dates.length - 1));
+            var y = top + chartHeight - (Number(value || 0) / maxValue * chartHeight);
+            return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        return '<polyline fill="none" stroke="' + colors[index % colors.length] + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="' + points + '"><title>' + h(item.name || '') + '</title></polyline>';
+    }).join('');
+    var firstDate = dates[0] || '', lastDate = dates[dates.length - 1] || '';
+    trend.innerHTML = '<svg class="reference-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="引用来源走势图">' +
+        grid + lines +
+        '<text x="' + left + '" y="' + (height - 8) + '" fill="#7b8aa0" font-size="11">' + h(firstDate) + '</text>' +
+        '<text x="' + (width - right) + '" y="' + (height - 8) + '" text-anchor="end" fill="#7b8aa0" font-size="11">' + h(lastDate) + '</text>' +
+        '</svg>';
+    legend.innerHTML = series.map(function(item, index){
+        return '<span><i style="background:' + colors[index % colors.length] + '"></i>' + h(item.name || '未知来源') + '</span>';
+    }).join('');
+}
+
+async function loadReferenceAnalysis(){
+    if (referenceState.loading) return;
+    referenceState.loading = true;
+    var status = document.getElementById('referenceStatus');
+    status.textContent = '正在读取云端引用数据...';
+    try {
+        var analysisParams = buildReferenceParams('reference_analysis');
+        analysisParams.deduplicate = 'true';
+        var trendParams = buildReferenceParams('reference_trends');
+        var responses = await Promise.all([geoApi(analysisParams), geoApi(trendParams)]);
+        var analysis = responses[0], trend = responses[1];
+        document.getElementById('referenceResultTotal').textContent = analysis.total_results || 0;
+        document.getElementById('referenceCitationTotal').textContent = analysis.total_references || 0;
+        renderReferenceRanking(analysis);
+        renderReferenceTrend(trend);
+        referenceState.loaded = true;
+        status.textContent = '分析已更新';
+    } catch (error) {
+        status.textContent = '分析失败：' + (error.message || '请稍后重试');
+        document.getElementById('referenceRanking').innerHTML = '<div class="empty">' + h(error.message || '引用分析加载失败') + '</div>';
+        document.getElementById('referenceTrend').innerHTML = '<div class="empty">引用走势加载失败。</div>';
+    } finally {
+        referenceState.loading = false;
+    }
+}
+
+function resetReferenceAnalysis(){
+    ['referenceTask','referencePlatform'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('referenceStart').value = referenceDateValue(30);
+    document.getElementById('referenceEnd').value = referenceDateValue(0);
+    document.getElementById('referenceLevel').value = 'top';
+    document.getElementById('referenceTopN').value = '10';
+    loadReferenceAnalysis();
+}
+
+function initReferenceAnalysis(){
+    document.getElementById('referenceStart').value = referenceDateValue(30);
+    document.getElementById('referenceEnd').value = referenceDateValue(0);
+    var section = document.getElementById('reference-analysis');
+    if (!section) return;
+    if (!('IntersectionObserver' in window)) {
+        loadReferenceAnalysis();
+        return;
+    }
+    var observer = new IntersectionObserver(function(entries){
+        if (entries.some(function(entry){ return entry.isIntersecting; }) && !referenceState.loaded) {
+            observer.disconnect();
+            loadReferenceAnalysis();
+        }
+    }, {rootMargin: '300px 0px'});
+    observer.observe(section);
 }
 
 function buildGeoParams(){
@@ -960,6 +1137,7 @@ function initCollapsibleSections(){
 
 document.addEventListener('DOMContentLoaded', function(){
     initCollapsibleSections();
+    initReferenceAnalysis();
     updateQueryPagination();
     loadRemoteStatus();
     window.setInterval(loadRemoteStatus, 15000);
