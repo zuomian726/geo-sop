@@ -1,33 +1,33 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.31-dev",
+  "version": "0.3.32-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-16T02:08:23+08:00",
+  "released_at": "2026-07-16T02:28:33+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "云端引用分析与 GEO 稿件分析改用轻量引用摘要，大型账户不再批量读取完整回答数据。",
-    "截图 ZIP 导出只读取文件定位字段，并对截图资源分块查询，避免大型任务产生超长 SQL。",
-    "GEO Excel、引用趋势与稿件分析改为数据库逐行流式处理，真实 4,767 条结果测试峰值内存降至 2 MB。",
-    "正式同步接口和 Demo 统一写入引用摘要，历史结果已完成事务化回填。",
-    "修复 128 MB PHP 内存限制下查询或导出可能失败的问题，并通过 46 项自动测试和线上回归。"
+    "桌面云端工作器现在检测真实线程存活状态，异常停止后可由看板状态刷新自动恢复。",
+    "工作器启动失败会完整回滚状态，后续可以自动重试，无需重启整个 App。",
+    "本机退出登录会先向云端上报离线，再清除云端 Token 并暂停任务领取。",
+    "已有和新保存的云端账户 Token 文件权限均收紧为仅当前系统用户可读写。",
+    "本地任务、历史结果和浏览器登录状态不会因退出云端账号而删除，并通过 51 项自动测试。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.31-dev",
+      "version": "0.3.32-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.31-dev-macOS.dmg",
-      "size": "162 MB",
-      "sha256": "0643e38f034e6c6a34d029eb2cfcfca0a57ecaaca16d3670e9231ea597c0383d"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.32-dev-macOS.dmg",
+      "size": "165 MB",
+      "sha256": "dfd5825ed400845f5ee8a449e6d9dc80e857e6101096acdba465b218bf9fb708"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.31-dev",
+      "version": "0.3.32-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.31-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.32-dev.exe",
       "size": "185 MB",
-      "sha256": "1af62cf29df564d45399c8c7ab057f19a2cade66811f31b5ed5fb3826d825c6c"
+      "sha256": "03c2da48145e1aa7b7ba55bd88cfe9968dca418a647de04ffb95f1c4f0c54a37"
     }
   }
 }
