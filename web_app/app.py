@@ -3529,6 +3529,13 @@ def _build_geo_overview(user_id):
         })
 
     ai_ready = bool(config and config.enable_ai_sentiment and config.ai_api_url and config.ai_api_key and config.ai_model_name)
+    latest_insight = None
+    if config and config.latest_insight:
+        try:
+            parsed_insight = json.loads(config.latest_insight)
+            latest_insight = parsed_insight if isinstance(parsed_insight, dict) else None
+        except (TypeError, json.JSONDecodeError):
+            latest_insight = None
     return {
         'summary': {
             'tasks': len(tasks),
@@ -3555,7 +3562,9 @@ def _build_geo_overview(user_id):
             'platform': _ai_api_mode(config) if config else 'openai',
             'api_url': config.ai_api_url if config and config.ai_api_url else '',
             'model': config.ai_model_name if config and config.ai_model_name else '',
-        }
+        },
+        'latest_insight': latest_insight,
+        'latest_insight_generated_at': config.latest_insight_generated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if config and config.latest_insight_generated_at else None,
     }
 
 
@@ -3782,7 +3791,18 @@ def run_ai_insights_analysis():
         else:
             raw = data.get('choices', [{}])[0].get('message', {}).get('content', '')
         parsed = json.loads(_extract_json_text(raw), strict=False)
-        return jsonify({'success': True, 'analysis': parsed, 'overview': overview, 'api_mode': mode})
+        if not isinstance(parsed, dict):
+            raise ValueError('AI 返回结果不是有效的 JSON 对象')
+        config.latest_insight = json.dumps(parsed, ensure_ascii=False)
+        config.latest_insight_generated_at = now_cst()
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'analysis': parsed,
+            'generated_at': config.latest_insight_generated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+            'overview': overview,
+            'api_mode': mode,
+        })
     except requests.exceptions.HTTPError as e:
         status_code = e.response.status_code if e.response is not None else 'unknown'
         body = ''

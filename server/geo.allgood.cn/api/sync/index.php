@@ -378,10 +378,12 @@ try {
     }
 
     foreach ($configs as $syncConfig) {
+        $configInstallId = trim((string)($syncConfig['_sync_install_id'] ?? '')) ?: $installId;
+        $configLocalId = (int)($syncConfig['_sync_local_id'] ?? $syncConfig['local_id'] ?? $syncConfig['id'] ?? 0);
         upsert($pdo, 'geo_sync_sentiment_configs', [
             'cloud_user_id' => $cloudUserId,
-            'install_id' => $installId,
-            'local_id' => (int)($syncConfig['local_id'] ?? $syncConfig['id'] ?? 0),
+            'install_id' => $configInstallId,
+            'local_id' => $configLocalId,
             'local_user_id' => $localUserId,
             'user_key' => $userKey,
             'name' => (string)($syncConfig['name'] ?? ''),

@@ -216,6 +216,10 @@ def _with_local_id(payload: dict) -> dict:
 
 def _config_payload(config: SentimentConfig) -> dict:
     payload = _with_local_id(config.to_dict())
+    source = _model_cloud_source(config)
+    if source:
+        payload["_sync_install_id"] = source[0]
+        payload["_sync_local_id"] = source[1]
     if not should_sync_keys():
         payload["ai_api_key"] = None
     return payload
@@ -240,10 +244,7 @@ def build_workspace_payload(user_id: int) -> dict:
         manuscript for manuscript in GeoManuscript.query.filter_by(user_id=user.id).order_by(GeoManuscript.id.asc()).all()
         if not _model_cloud_source(manuscript)
     ]
-    configs = [
-        config for config in SentimentConfig.query.filter_by(user_id=user.id).order_by(SentimentConfig.id.asc()).all()
-        if not _model_cloud_source(config)
-    ]
+    configs = SentimentConfig.query.filter_by(user_id=user.id).order_by(SentimentConfig.id.asc()).all()
 
     user_payload = _with_local_id(user.to_dict())
     return {
@@ -585,6 +586,8 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
                 existing.ai_api_url = payload.get("ai_api_url")
                 existing.ai_model_name = payload.get("ai_model_name")
                 existing.ai_prompt = payload.get("ai_prompt")
+                existing.latest_insight = _json_text(payload.get("latest_insight"), None) if payload.get("latest_insight") is not None else None
+                existing.latest_insight_generated_at = _parse_dt(payload.get("latest_insight_generated_at"))
                 existing.is_default = bool(payload.get("is_default"))
                 updated["sentiment_configs"] += 1
             else:
@@ -601,6 +604,8 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
             ai_api_key=payload.get("ai_api_key"),
             ai_model_name=payload.get("ai_model_name"),
             ai_prompt=payload.get("ai_prompt"),
+            latest_insight=_json_text(payload.get("latest_insight"), None) if payload.get("latest_insight") is not None else None,
+            latest_insight_generated_at=_parse_dt(payload.get("latest_insight_generated_at")),
             is_default=bool(payload.get("is_default")),
             cloud_source_install_id=source[0],
             cloud_source_local_id=source[1],

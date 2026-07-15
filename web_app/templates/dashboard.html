@@ -739,6 +739,7 @@ body {
                                 </el-alert>
                                 <div v-if="aiInsight.summary" style="margin-top: 16px;">
                                     <el-alert :title="aiInsight.summary" type="success" show-icon :closable="false"></el-alert>
+                                    <p v-if="aiInsightGeneratedAt" class="empty-hint" style="margin: 10px 0 0;">最近分析：[[ formatDate(aiInsightGeneratedAt) ]]</p>
                                     <h4 style="margin: 18px 0 10px;">关键观察</h4>
                                     <ul class="ai-list">
                                         <li v-for="item in aiInsight.observations" :key="item">[[ item ]]</li>
@@ -2044,6 +2045,7 @@ const app = createApp({
                 risks: [],
                 experiments: []
             },
+            aiInsightGeneratedAt: '',
             quickAiConfig: {
                 ai_platform: 'openai',
                 ai_api_url: '',
@@ -2432,6 +2434,10 @@ const app = createApp({
                 const response = await axios.get('/api/insights/overview');
                 if (response.data.success) {
                     this.insights = response.data.data;
+                    if (this.insights.latest_insight?.summary) {
+                        this.aiInsight = this.insights.latest_insight;
+                        this.aiInsightGeneratedAt = this.insights.latest_insight_generated_at || '';
+                    }
                     this.quickAiConfig.ai_platform = this.insights.ai_config.platform || this.quickAiConfig.ai_platform || 'openai';
                     this.quickAiConfig.ai_api_url = this.insights.ai_config.api_url || this.quickAiConfig.ai_api_url;
                     this.quickAiConfig.ai_model_name = this.insights.ai_config.model || this.quickAiConfig.ai_model_name;
@@ -2536,6 +2542,7 @@ const app = createApp({
                 const response = await axios.post('/api/insights/ai-analysis', {}, { timeout: 90000 });
                 if (response.data.success) {
                     this.aiInsight = response.data.analysis || this.aiInsight;
+                    this.aiInsightGeneratedAt = response.data.generated_at || new Date().toISOString();
                     ElMessage.success('AI 分析已生成');
                 }
             } catch (error) {

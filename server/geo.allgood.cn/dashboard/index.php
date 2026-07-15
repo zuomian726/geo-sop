@@ -136,18 +136,32 @@ unset($clientRow);
 $configStmt = $pdo->prepare('SELECT name,is_default,payload,local_updated_at,synced_at FROM geo_sync_sentiment_configs WHERE cloud_user_id=? ORDER BY COALESCE(local_updated_at, synced_at) DESC, id DESC LIMIT 10');
 $configStmt->execute([$uid]);
 $configRows = $configStmt->fetchAll();
+$latestInsight = null;
+$latestInsightGeneratedAt = '';
 foreach ($configRows as &$configRow) {
     $configPayload = geo_decode_payload($configRow['payload'] ?? '');
     $configRow['platform'] = (string)($configPayload['ai_platform'] ?? '');
     $configRow['model'] = (string)($configPayload['ai_model_name'] ?? '');
     $configRow['api_host'] = (string)(parse_url((string)($configPayload['ai_api_url'] ?? ''), PHP_URL_HOST) ?: '');
-    $configRow['has_key'] = trim((string)($configPayload['ai_api_key'] ?? '')) !== '';
+    $configRow['metadata_ready'] = !empty($configPayload['enable_ai_sentiment'])
+        && trim((string)($configPayload['ai_api_url'] ?? '')) !== ''
+        && trim((string)($configPayload['ai_model_name'] ?? '')) !== '';
+    if ($latestInsight === null && is_array($configPayload['latest_insight'] ?? null)) {
+        $latestInsight = $configPayload['latest_insight'];
+        $latestInsightGeneratedAt = (string)($configPayload['latest_insight_generated_at'] ?? '');
+    }
 }
 unset($configRow);
 
 $taskStmt = $pdo->prepare('SELECT * FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY synced_at DESC LIMIT 80');
 $taskStmt->execute([$uid]);
 $syncedTasks = $taskStmt->fetchAll();
+
+$taskMetricStmt = $pdo->prepare("SELECT COUNT(*) total, COALESCE(SUM(status IN ('running','paused')),0) running FROM geo_sync_tasks WHERE cloud_user_id=?");
+$taskMetricStmt->execute([$uid]);
+$taskMetricRow = $taskMetricStmt->fetch() ?: [];
+$totalTaskCount = (int)($taskMetricRow['total'] ?? 0);
+$runningTasks = (int)($taskMetricRow['running'] ?? 0);
 
 $runStmt = $pdo->prepare('SELECT * FROM geo_sync_runs WHERE cloud_user_id=? ORDER BY synced_at DESC LIMIT 1');
 $runStmt->execute([$uid]);
@@ -160,9 +174,20 @@ $totalResults = (int)($metricRow['total'] ?? 0);
 $exposedResults = (int)($metricRow['exposed'] ?? 0);
 $activePlatforms = (int)($metricRow['platforms'] ?? 0);
 
-$screenshotStmt = $pdo->prepare('SELECT COALESCE(SUM(has_screenshot),0) c FROM geo_sync_results WHERE cloud_user_id=?');
-$screenshotStmt->execute([$uid]);
-$screenshotCount = (int)($screenshotStmt->fetch()['c'] ?? 0);
+$screenshotCount = 0;
+try {
+    $screenshotStmt = $pdo->prepare("SELECT COUNT(DISTINCT CONCAT(install_id, ':', local_result_id)) c FROM geo_sync_assets WHERE cloud_user_id=? AND kind='screenshot'");
+    $screenshotStmt->execute([$uid]);
+    $screenshotCount = (int)($screenshotStmt->fetch()['c'] ?? 0);
+} catch (Throwable $e) {
+    $screenshotStmt = $pdo->prepare('SELECT COALESCE(SUM(has_screenshot),0) c FROM geo_sync_results WHERE cloud_user_id=?');
+    $screenshotStmt->execute([$uid]);
+    $screenshotCount = (int)($screenshotStmt->fetch()['c'] ?? 0);
+}
+
+$manuscriptStmt = $pdo->prepare('SELECT COUNT(*) c FROM geo_sync_manuscripts WHERE cloud_user_id=?');
+$manuscriptStmt->execute([$uid]);
+$manuscriptCount = (int)($manuscriptStmt->fetch()['c'] ?? 0);
 
 $referenceStmt = $pdo->prepare('SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0');
 $referenceStmt->execute([$uid]);
@@ -193,26 +218,21 @@ foreach ($questionStmt->fetchAll() ?: [] as $row) {
     $questionStats[(string)$row['question']] = ['question' => (string)$row['question'], 'answers' => (int)$row['answers'], 'exposed' => (int)$row['exposed']];
 }
 
-$referencePreviewStmt = $pdo->prepare('SELECT reference_domains FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0 ORDER BY result_at DESC,id DESC LIMIT 1000');
-$referencePreviewStmt->execute([$uid]);
-foreach ($referencePreviewStmt->fetchAll() ?: [] as $row) {
-    $domains = json_decode((string)($row['reference_domains'] ?? ''), true);
-    if (!is_array($domains)) continue;
-    foreach ($domains as $domain) {
-        $domain = trim((string)$domain);
-        if ($domain !== '') $referenceCounts[$domain] = ($referenceCounts[$domain] ?? 0) + 1;
+$referenceCursor = 0;
+$referencePreviewStmt = $pdo->prepare('SELECT id,reference_domains FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0 AND id>? ORDER BY id ASC LIMIT 1000');
+do {
+    $referencePreviewStmt->execute([$uid, $referenceCursor]);
+    $referenceBatch = $referencePreviewStmt->fetchAll() ?: [];
+    foreach ($referenceBatch as $row) {
+        $referenceCursor = max($referenceCursor, (int)$row['id']);
+        $domains = json_decode((string)($row['reference_domains'] ?? ''), true);
+        if (!is_array($domains)) continue;
+        foreach ($domains as $domain) {
+            $domain = trim((string)$domain);
+            if ($domain !== '') $referenceCounts[$domain] = ($referenceCounts[$domain] ?? 0) + 1;
+        }
     }
-}
-
-$completedTasks = 0;
-$runningTasks = 0;
-$failedTasks = 0;
-foreach ($syncedTasks as $task) {
-    $status = (string)($task['status'] ?? '');
-    if ($status === 'completed') $completedTasks++;
-    if (in_array($status, ['running', 'paused', 'pending'], true)) $runningTasks++;
-    if ($status === 'failed') $failedTasks++;
-}
+} while (count($referenceBatch) === 1000);
 
 uasort($platformStats, fn($a, $b) => $b['answers'] <=> $a['answers']);
 arsort($referenceCounts);
@@ -229,7 +249,9 @@ $screenshotRate = geo_percent($screenshotCount, $totalResults);
 $referenceRate = geo_percent($referenceResultCount, $totalResults);
 $dataQuality = $totalResults ? round($screenshotRate * 0.45 + $referenceRate * 0.35 + min($totalResults, 20) / 20 * 100 * 0.2, 1) : 0.0;
 $coverageScore = round(min($activePlatforms / 4 * 100, 100), 1);
-$sourceScore = round(min($referenceDomains / 8 * 100, 100), 1);
+$domainSourceScore = min($referenceDomains / 8 * 100, 100);
+$manuscriptSourceScore = min($manuscriptCount / 5 * 100, 100);
+$sourceScore = round($domainSourceScore * 0.65 + $manuscriptSourceScore * 0.35, 1);
 $geoScore = round($exposureRate * 0.38 + $coverageScore * 0.22 + $sourceScore * 0.2 + $dataQuality * 0.2, 1);
 
 if (!$syncedTasks) {
@@ -311,7 +333,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <p class="muted">API URL、Key 和模型保存在本机客户端。配置完成后，可生成观察、风险和下一步动作，并随采集结果同步到云端看板。</p>
                 <?php if($configRows): ?>
                 <?php foreach(array_slice($configRows, 0, 2) as $config): ?>
-                <p class="local-note"><strong><?=geo_h((string)$config['name'])?></strong> · <?=geo_h($config['platform'] ?: 'OpenAI 兼容')?> / <?=geo_h($config['model'] ?: '未设置模型')?> · <?= $config['has_key'] ? 'Key 已配置' : '等待 Key' ?></p>
+                <p class="local-note"><strong><?=geo_h((string)$config['name'])?></strong> · <?=geo_h($config['platform'] ?: 'OpenAI 兼容')?> / <?=geo_h($config['model'] ?: '未设置模型')?> · <?= $config['metadata_ready'] ? '配置已同步' : '等待完整配置' ?><br>API Key 仅保存在本机</p>
                 <?php endforeach; ?>
                 <?php else: ?><p class="local-note">当前账号还没有同步的舆情配置。</p><?php endif; ?>
                 <button class="btn small primary" onclick="openLocalApp('ai-settings')">在本机配置 AI</button>
@@ -322,7 +344,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
     <?php if($message): ?><div class="msg"><?=geo_h($message)?></div><?php endif; ?>
 
     <section class="metric-grid">
-        <div class="metric-card"><span>监测任务</span><strong><?=geo_h((string)count($syncedTasks))?></strong><small class="muted"><?=geo_h((string)$runningTasks)?> 个运行/暂停中</small></div>
+        <div class="metric-card"><span>监测任务</span><strong><?=geo_h((string)$totalTaskCount)?></strong><small class="muted"><?=geo_h((string)$runningTasks)?> 个运行/暂停中</small></div>
         <div class="metric-card"><span>采集回答</span><strong><?=geo_h((string)$totalResults)?></strong><small class="muted">覆盖 <?=geo_h((string)$activePlatforms)?> 个 AI 平台</small></div>
         <div class="metric-card"><span>品牌曝光率</span><strong><?=geo_h((string)$exposureRate)?>%</strong><small class="muted">回答中命中品牌词的比例</small></div>
         <div class="metric-card"><span>引用域名</span><strong><?=geo_h((string)$referenceDomains)?></strong><small class="muted">截图留证 <?=geo_h((string)$screenshotCount)?> 条</small></div>
@@ -350,6 +372,27 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                     <p class="muted"><?=geo_h($nextAction['detail'])?></p>
                 </div>
             </div>
+
+            <?php if(is_array($latestInsight) && trim((string)($latestInsight['summary'] ?? '')) !== ''): ?>
+            <div class="chart-panel" style="margin-top:16px">
+                <span class="mini-label">AI 分析<?= $latestInsightGeneratedAt !== '' ? ' · ' . geo_h($latestInsightGeneratedAt) : '' ?></span>
+                <h3><?=geo_h((string)$latestInsight['summary'])?></h3>
+                <div class="chart-grid" style="margin-top:8px">
+                    <div>
+                        <strong>关键观察</strong>
+                        <?php foreach(array_slice(is_array($latestInsight['observations'] ?? null) ? $latestInsight['observations'] : [], 0, 5) as $item): ?>
+                        <p class="muted">• <?=geo_h((string)$item)?></p>
+                        <?php endforeach; ?>
+                    </div>
+                    <div>
+                        <strong>下一步动作</strong>
+                        <?php foreach(array_slice(is_array($latestInsight['actions'] ?? null) ? $latestInsight['actions'] : [], 0, 5) as $item): ?>
+                        <p class="muted">• <?=geo_h((string)$item)?></p>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <div class="analysis-card-grid">
                 <div class="analysis-card"><span class="mini-label">品牌出现率 · <?=geo_h(geo_score_label($exposureRate))?></span><strong><?=geo_h((string)$exposureRate)?>%</strong><p class="muted">AI 回答里提到你的比例</p></div>

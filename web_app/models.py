@@ -243,6 +243,8 @@ class SentimentConfig(db.Model):
     
     # AI分析Prompt
     ai_prompt = db.Column(db.Text)
+    latest_insight = db.Column(db.Text)
+    latest_insight_generated_at = db.Column(db.DateTime)
     
     # 是否为默认配置
     is_default = db.Column(db.Boolean, default=False)
@@ -257,6 +259,10 @@ class SentimentConfig(db.Model):
     tasks = db.relationship('MonitorTask', backref='sentiment_config', lazy=True)
     
     def to_dict(self):
+        try:
+            latest_insight = json.loads(self.latest_insight) if self.latest_insight else None
+        except (TypeError, json.JSONDecodeError):
+            latest_insight = None
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -269,6 +275,8 @@ class SentimentConfig(db.Model):
             'ai_api_key': self.ai_api_key,
             'ai_model_name': self.ai_model_name,
             'ai_prompt': self.ai_prompt,
+            'latest_insight': latest_insight,
+            'latest_insight_generated_at': self.latest_insight_generated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00') if self.latest_insight_generated_at else None,
             'is_default': self.is_default,
             'cloud_source_install_id': self.cloud_source_install_id,
             'cloud_source_local_id': self.cloud_source_local_id,
@@ -291,6 +299,8 @@ def ensure_local_sync_schema():
         'sentiment_configs': {
             'cloud_source_install_id': 'VARCHAR(64)',
             'cloud_source_local_id': 'INTEGER',
+            'latest_insight': 'TEXT',
+            'latest_insight_generated_at': 'DATETIME',
         },
     }
     inspector = inspect(db.engine)
