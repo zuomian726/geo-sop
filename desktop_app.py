@@ -21,6 +21,13 @@ from version import APP_NAME, APP_VERSION
 ROOT_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 WEB_APP_DIR = ROOT_DIR / "web_app"
 
+# The Windows installer ships Playwright Chromium beside the executable.
+# Configure its location before collector modules import Playwright.
+if getattr(sys, "frozen", False) and sys.platform.startswith("win"):
+    bundled_browsers = Path(sys.executable).resolve().parent / "ms-playwright"
+    if bundled_browsers.exists():
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(bundled_browsers))
+
 os.environ.setdefault("GEO_DESKTOP_MODE", "1")
 os.environ.setdefault("GEO_REQUIRE_LOGIN", "1")
 os.environ.setdefault("GEO_CLOUD_SYNC_URL", "https://geo.allgood.cn/api")
@@ -35,7 +42,8 @@ def _boot_log(message: str):
     if os.environ.get("GEO_DEBUG_BOOT") != "1":
         return
     try:
-        with open("/tmp/geo_sop_boot.log", "a", encoding="utf-8") as f:
+        log_path = Path(os.environ.get("TEMP") or "/tmp") / "geo_sop_boot.log"
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%H:%M:%S')} {message}\n")
     except Exception:
         pass

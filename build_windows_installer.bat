@@ -2,7 +2,19 @@
 setlocal
 cd /d "%~dp0" || exit /b 1
 
-if "%APP_VERSION%"=="" set APP_VERSION=0.3.17-dev
+if "%APP_VERSION%"=="" set APP_VERSION=0.3.18-dev
+
+if not exist "dist\GEO-SOP\GEO-SOP.exe" (
+  echo Native GEO-SOP application was not found. Building it now...
+  call build_windows_exe.bat
+  if errorlevel 1 exit /b 1
+)
+
+if not exist ".playwright-browsers" (
+  echo Bundled Chromium runtime was not found.
+  if "%CI%"=="" pause
+  exit /b 1
+)
 
 where ISCC.exe >nul 2>nul
 if errorlevel 1 (

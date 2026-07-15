@@ -899,8 +899,13 @@ def pull_remote_tasks(user_id: int) -> dict:
         if not remote_id or not isinstance(payload, dict):
             skipped.append({"remote_task_id": remote_id, "reason": "invalid payload"})
             continue
-        if any(_task_has_remote_id(task, remote_id) for task in existing_tasks):
-            skipped.append({"remote_task_id": remote_id, "reason": "already imported"})
+        existing_remote_task = next((task for task in existing_tasks if _task_has_remote_id(task, remote_id)), None)
+        if existing_remote_task:
+            skipped.append({
+                "remote_task_id": remote_id,
+                "local_task_id": int(existing_remote_task.id),
+                "reason": "already imported",
+            })
             continue
 
         questions = payload.get("questions") or []

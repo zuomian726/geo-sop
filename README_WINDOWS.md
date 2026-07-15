@@ -1,24 +1,35 @@
 # GEO-SOP Windows Package
 
-Version: 0.3.13-dev
+Version: 0.3.18-dev
 
-This ZIP is a Windows desktop package, not a signed commercial installer yet.
+The public Windows download is a native setup EXE. It includes the GEO-SOP
+desktop runtime and Playwright Chromium, so customers do not need Python,
+PowerShell commands, or a separate browser download.
 
-## Run Locally
+## Install
 
-1. Unzip this package.
-2. Double-click `Install GEO-SOP.bat`.
-3. If Python is missing, the installer will try to install Python 3.12 through Windows Package Manager.
+1. Download `GEO-SOP-Setup-dev.exe` from geo.allgood.cn.
+2. Double-click the setup file and finish the installation.
+3. Launch GEO-SOP from the Start menu or the optional desktop shortcut.
+4. Sign in with the same geo.allgood.cn account used by the cloud dashboard.
 
-The first launch creates `.venv-desktop`, installs dependencies, and starts the local desktop app.
+The installed application keeps its SQLite database, browser profiles, exports,
+and cloud account token in the current Windows user's application-data folder.
+Normal upgrades do not remove that data.
 
-If Windows shows "The system cannot find the path specified", usually the ZIP was not fully extracted or a build script was clicked by mistake. Re-extract the ZIP to a normal folder such as `D:\GEO-SOP`, then double-click `Start GEO-SOP.bat`.
+The current development build is not yet code-signed. Windows SmartScreen may
+show an unknown-publisher warning; choose `More info` and then `Run anyway`.
 
-`Start GEO-SOP.bat` and `install.bat` are also safe to double-click. Both forward to the same installer.
+## Source Package
+
+`Install GEO-SOP.bat`, `Start GEO-SOP.bat`, and the Python bootstrap remain in
+the repository for development and recovery only. Customers should use the
+native setup EXE.
 
 ## Build EXE On Windows
 
-For developers only: double-click `build_windows_exe.bat`.
+For developers only: run `build_windows_exe.bat`, then
+`build_windows_installer.bat` on Windows.
 
 The generated EXE is written to:
 
@@ -26,4 +37,6 @@ The generated EXE is written to:
 dist\GEO-SOP\GEO-SOP.exe
 ```
 
-For commercial distribution, build on Windows and sign the EXE or installer with an OV/EV code-signing certificate.
+The build downloads Playwright Chromium into `.playwright-browsers` and embeds
+it in the Inno Setup installer. A production release should still sign the EXE
+and installer with an OV/EV code-signing certificate.

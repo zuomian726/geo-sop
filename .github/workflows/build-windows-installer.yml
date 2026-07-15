@@ -6,11 +6,17 @@ on:
       app_version:
         description: "GEO-SOP version"
         required: true
-        default: "0.3.17-dev"
+        default: "0.3.18-dev"
   push:
     branches:
       - main
     paths:
+      - "desktop_app.py"
+      - "web_app/**"
+      - "platforms/**"
+      - "tools/**"
+      - "requirements-desktop.txt"
+      - "build_windows_exe.bat"
       - "Install GEO-SOP.bat"
       - "Install GEO-SOP.ps1"
       - "Start GEO-SOP.bat"
@@ -18,6 +24,7 @@ on:
       - "run_windows_desktop.bat"
       - "build_windows_installer.bat"
       - "installer/windows/**"
+      - "tests/**"
       - "version.py"
       - ".github/workflows/build-windows-installer.yml"
 
@@ -28,13 +35,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-desktop.txt
+          python -m unittest discover -s tests -v
+
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
+
+      - name: Build native desktop application
+        shell: cmd
+        env:
+          CI: "1"
+          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.18-dev' }}
+        run: build_windows_exe.bat
+
+      - name: Verify bundled browser
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist\GEO-SOP\GEO-SOP.exe")) { throw "Native application was not created." }
+          $browser = Get-ChildItem ".playwright-browsers" -Recurse -Filter "chrome.exe" | Select-Object -First 1
+          if (-not $browser) { throw "Bundled Playwright Chromium was not found." }
+          Write-Host "Chromium: $($browser.FullName)"
 
       - name: Build setup EXE
         shell: cmd
         env:
-          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.17-dev' }}
+          CI: "1"
+          APP_VERSION: ${{ github.event.inputs.app_version || '0.3.18-dev' }}
         run: build_windows_installer.bat
 
       - name: Verify installer
@@ -44,6 +78,7 @@ jobs:
           if (-not $file) { throw "Installer EXE was not created." }
           Write-Host "Installer: $($file.FullName)"
           Write-Host "Size: $($file.Length)"
+          if ($file.Length -lt 50000000) { throw "Installer is unexpectedly small; native runtime or Chromium may be missing." }
           Get-FileHash $file.FullName -Algorithm SHA256
 
       - name: Upload artifact

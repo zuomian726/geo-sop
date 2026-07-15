@@ -68,6 +68,20 @@ function geo_platform_name(string $platform): string {
 }
 
 $message = '';
+function geo_remote_status_label(string $status): string {
+    return [
+        'pending' => '等待客户端',
+        'claimed' => '客户端已认领',
+        'imported' => '已导入本机',
+        'queued' => '本机排队中',
+        'running' => '正在采集',
+        'completed' => '采集完成',
+        'failed' => '采集失败',
+        'stopped' => '已停止',
+        'skipped' => '已跳过',
+        'pulled' => '已导入本机',
+    ][$status] ?? ($status !== '' ? $status : '未知');
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($isDemoUser) {
         $message = '在线 Demo 为只读安全模式，不能创建或修改任务。';
@@ -493,7 +507,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <p class="muted">云端下发任务是从网页创建、等待客户端执行的队列；本地同步任务是桌面端已经采集并同步回来的历史任务。</p>
         <h3 style="margin:18px 0 8px">云端下发任务</h3>
         <div class="table-wrap"><table><tr><th>ID</th><th>任务</th><th>状态</th><th>客户端</th><th>本地任务</th><th>创建时间</th></tr>
-        <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status"><?=geo_h($r['status'])?></span></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['created_at'])?></td></tr><?php endforeach; ?>
+        <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status" title="<?=geo_h($r['last_status_message'] ?: '')?>"><?=geo_h(geo_remote_status_label((string)$r['status']))?></span></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['created_at'])?></td></tr><?php endforeach; ?>
         <?php if(!$remoteRows): ?><tr><td colspan="6"><div class="empty">暂无远程任务。</div></td></tr><?php endif; ?>
         </table></div>
         <h3 style="margin:22px 0 8px">客户端连接状态</h3>

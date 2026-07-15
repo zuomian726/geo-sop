@@ -1,5 +1,21 @@
 # GEO-SOP Release Notes
 
+## v0.3.18-dev - 2026-07-15
+
+### Added
+
+- Windows setup now installs a native PyInstaller desktop application with its Playwright Chromium runtime included.
+- The installed Windows app no longer requires Python, `winget`, dependency installation, or a first-run browser download.
+- Windows setup registers the `geo-sop://` protocol so cloud dashboard actions can launch the installed app.
+
+### Fixed
+
+- Cloud tasks are atomically claimed by one desktop client, preventing duplicate execution when the same account is online on multiple computers.
+- Unacknowledged task claims are released after ten minutes so another online client can recover them.
+- Remote task status updates are accepted only from the client that owns the claim.
+- Repeated task pulls now acknowledge the existing local task ID instead of creating a duplicate or leaving the cloud task stuck.
+- Cloud task states use consistent `claimed`, `imported`, `running`, `completed`, `failed`, and `skipped` semantics in the server dashboard.
+
 ## v0.3.17-dev - 2026-07-13
 
 - Existing desktops now incrementally merge cloud records from other devices instead of restoring only into an empty database.

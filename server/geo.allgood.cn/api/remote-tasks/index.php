@@ -38,6 +38,8 @@ function geo_remote_ensure_schema(PDO $pdo): void {
     geo_add_column($pdo, 'geo_remote_tasks', 'finished_at', "DATETIME NULL");
     geo_add_column($pdo, 'geo_remote_tasks', 'last_status_message', "TEXT NULL");
     geo_add_column($pdo, 'geo_remote_tasks', 'status_payload', "LONGTEXT NULL");
+    // Older deployments used `pulled` for the same state now called `imported`.
+    $pdo->exec("UPDATE geo_remote_tasks SET status='imported' WHERE status='pulled'");
 }
 
 function geo_remote_body(): array {
@@ -76,18 +78,54 @@ if ($isDemoUser && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $route === 'base') {
     $installId = trim((string)($_GET['install_id'] ?? ''));
     $userKey = trim((string)($_GET['user_key'] ?? ''));
-    $sql = "SELECT id,name,payload,status,created_at FROM geo_remote_tasks
+    if ($installId === '' || $userKey === '') {
+        geo_json(['success' => false, 'message' => 'install_id and user_key required'], 400);
+    }
+
+    $now = geo_now();
+    try {
+        $pdo->beginTransaction();
+        // A client normally acknowledges a claim within seconds. Releasing an
+        // abandoned claim lets another signed-in device recover the task.
+        $reclaim = $pdo->prepare("UPDATE geo_remote_tasks
+            SET status='pending', assigned_install_id=NULL, assigned_user_key=NULL,
+                pulled_at=NULL, updated_at=?, last_status_message='客户端认领超时，任务已重新排队'
+            WHERE cloud_user_id=?
+              AND (status='claimed' OR (status='pending' AND assigned_install_id IS NOT NULL AND assigned_install_id<>''))
+              AND updated_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)");
+        $reclaim->execute([$now, $cloudUserId]);
+
+        // UPDATE obtains row locks, so two desktop clients cannot claim the
+        // same unassigned task at the same time.
+        $claim = $pdo->prepare("UPDATE geo_remote_tasks
+            SET status='claimed', assigned_install_id=?, assigned_user_key=?,
+                pulled_at=COALESCE(pulled_at, ?), updated_at=?, last_status_message='客户端已认领，等待本地导入'
             WHERE cloud_user_id=? AND status='pending'
               AND (assigned_install_id IS NULL OR assigned_install_id='' OR assigned_install_id=?)
-            ORDER BY id ASC LIMIT 20";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$cloudUserId, $installId]);
-    $rows = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $row['payload'] = json_decode((string)$row['payload'], true) ?: [];
-        $rows[] = $row;
+            ORDER BY id ASC LIMIT 20");
+        $claim->execute([$installId, $userKey, $now, $now, $cloudUserId, $installId]);
+
+        $stmt = $pdo->prepare("SELECT id,name,payload,status,created_at FROM geo_remote_tasks
+            WHERE cloud_user_id=? AND status='claimed' AND assigned_install_id=?
+            ORDER BY id ASC LIMIT 20");
+        $stmt->execute([$cloudUserId, $installId]);
+        $rows = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $row['payload'] = json_decode((string)$row['payload'], true) ?: [];
+            $rows[] = $row;
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        geo_json(['success' => false, 'message' => 'failed to claim remote tasks', 'error' => $e->getMessage()], 500);
     }
-    geo_json(['success' => true, 'tasks' => $rows, 'install_id' => $installId, 'user_key' => $userKey]);
+    geo_json([
+        'success' => true,
+        'tasks' => $rows,
+        'install_id' => $installId,
+        'user_key' => $userKey,
+        'claim_ttl_seconds' => 600,
+    ]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'heartbeat') {
@@ -119,16 +157,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'ack') {
     foreach ($imported as $item) {
         $remoteTaskId = (int)($item['remote_task_id'] ?? 0);
         $localTaskId = (int)($item['local_task_id'] ?? 0);
-        if ($remoteTaskId <= 0 || !geo_remote_task_row($pdo, $cloudUserId, $remoteTaskId)) {
+        if ($remoteTaskId <= 0 || $installId === '' || !geo_remote_task_row($pdo, $cloudUserId, $remoteTaskId)) {
             continue;
         }
         $stmt = $pdo->prepare("UPDATE geo_remote_tasks
             SET status='imported', assigned_install_id=?, assigned_user_key=?, local_task_id=?, pulled_at=?, updated_at=?, last_status_message=?
-            WHERE id=? AND cloud_user_id=?");
-        $stmt->execute([$installId, $userKey, $localTaskId ?: null, $now, $now, '客户端已导入任务', $remoteTaskId, $cloudUserId]);
-        $updated[] = $remoteTaskId;
+            WHERE id=? AND cloud_user_id=? AND status='claimed' AND assigned_install_id=?");
+        $stmt->execute([$installId, $userKey, $localTaskId ?: null, $now, $now, '客户端已导入任务', $remoteTaskId, $cloudUserId, $installId]);
+        if ($stmt->rowCount() > 0) $updated[] = $remoteTaskId;
     }
-    geo_json(['success' => true, 'updated' => $updated]);
+    $skipped = is_array($data['skipped'] ?? null) ? $data['skipped'] : [];
+    foreach ($skipped as $item) {
+        $remoteTaskId = (int)($item['remote_task_id'] ?? 0);
+        $reason = trim((string)($item['reason'] ?? '客户端跳过任务'));
+        $existingLocalTaskId = (int)($item['local_task_id'] ?? 0);
+        if ($remoteTaskId <= 0 || $installId === '') continue;
+        $status = $reason === 'already imported' ? 'imported' : 'skipped';
+        $stmt = $pdo->prepare("UPDATE geo_remote_tasks
+            SET status=?, assigned_user_key=?, local_task_id=COALESCE(?, local_task_id),
+                pulled_at=COALESCE(pulled_at, ?), updated_at=?, last_status_message=?
+            WHERE id=? AND cloud_user_id=? AND status='claimed' AND assigned_install_id=?");
+        $stmt->execute([$status, $userKey, $existingLocalTaskId ?: null, $now, $now, $reason, $remoteTaskId, $cloudUserId, $installId]);
+        if ($stmt->rowCount() > 0) $updated[] = $remoteTaskId;
+    }
+    geo_json(['success' => true, 'updated' => array_values(array_unique($updated))]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
@@ -141,8 +193,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
     if ($remoteTaskId <= 0 || $status === '') {
         geo_json(['success' => false, 'message' => 'remote_task_id and status required'], 400);
     }
-    if (!geo_remote_task_row($pdo, $cloudUserId, $remoteTaskId)) {
+    $remoteTask = geo_remote_task_row($pdo, $cloudUserId, $remoteTaskId);
+    if (!$remoteTask) {
         geo_json(['success' => false, 'message' => 'remote task not found'], 404);
+    }
+    if ($installId === '' || (string)($remoteTask['assigned_install_id'] ?? '') !== $installId) {
+        geo_json(['success' => false, 'message' => 'remote task is assigned to another client'], 409);
     }
     $allowed = ['imported', 'queued', 'running', 'completed', 'failed', 'stopped', 'skipped'];
     if (!in_array($status, $allowed, true)) {
