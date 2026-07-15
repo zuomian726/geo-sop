@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -92,17 +93,8 @@ function geo_dashboard_main_domain_from_url(string $url): string {
 }
 
 function geo_dashboard_platform_name(string $platform): string {
-    $map = [
-        'doubao' => '豆包',
-        'deepseek' => 'DeepSeek',
-        'kimi' => 'Kimi',
-        'qianwen' => '通义千问',
-        'yuanbao' => '腾讯元宝',
-        'chatgpt' => 'ChatGPT',
-        'gemini' => 'Gemini',
-        'wenxin' => '文心一言',
-    ];
-    return $map[$platform] ?? $platform;
+    $catalog = geo_platform_catalog();
+    return (string)($catalog[$platform]['name'] ?? $platform);
 }
 
 function geo_dashboard_percent(int $part, int $total): float {

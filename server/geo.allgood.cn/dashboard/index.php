@@ -449,7 +449,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <p class="muted">按稿件/文章标题聚合同一篇内容，展开后查看每个 URL 是否被 AI 回答引用，以及对应的平台、问题和引用来源。</p>
         <div class="query-grid">
             <label>关联任务<select id="geoTask"><option value="">全部任务</option></select></label>
-            <label>AI 平台<select id="geoPlatform"><option value="">全部平台</option><option value="doubao">豆包</option><option value="deepseek">DeepSeek</option><option value="kimi">Kimi</option><option value="qianwen">通义千问</option><option value="yuanbao">腾讯元宝</option><option value="chatgpt">ChatGPT</option><option value="gemini">Gemini</option><option value="wenxin">文心一言</option></select></label>
+            <label>AI 平台<select id="geoPlatform"><option value="">全部平台</option><?php foreach($supportedPlatforms as $platformId => $platform): ?><option value="<?=geo_h($platformId)?>"><?=geo_h((string)$platform['name'])?></option><?php endforeach; ?></select></label>
             <label>日期<input id="geoDate" type="date"></label>
             <label>开始日期<input id="geoStart" type="date"></label>
             <label>结束日期<input id="geoEnd" type="date"></label>
@@ -481,7 +481,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <p class="muted">服务端会读取同一账号同步上来的任务、回答、引用来源和截图。平台登录和真实采集仍在本机 App 内完成。</p>
         <div class="query-grid">
             <label>监测任务<select id="queryTask"><option value="">全部任务</option></select></label>
-            <label>AI 平台<select id="queryPlatform"><option value="">全部平台</option><option value="doubao">豆包</option><option value="deepseek">DeepSeek</option><option value="kimi">Kimi</option><option value="qianwen">通义千问</option><option value="yuanbao">腾讯元宝</option><option value="chatgpt">ChatGPT</option><option value="gemini">Gemini</option><option value="wenxin">文心一言</option></select></label>
+            <label>AI 平台<select id="queryPlatform"><option value="">全部平台</option><?php foreach($supportedPlatforms as $platformId => $platform): ?><option value="<?=geo_h($platformId)?>"><?=geo_h((string)$platform['name'])?></option><?php endforeach; ?></select></label>
             <label>关键词<input id="queryKeyword" placeholder="问题或回答关键词"></label>
             <label>开始日期<input id="queryStart" type="date"></label>
             <label>结束日期<input id="queryEnd" type="date"></label>

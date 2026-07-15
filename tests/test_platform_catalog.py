@@ -36,10 +36,15 @@ class PlatformCatalogTests(unittest.TestCase):
         self.assertEqual({item["id"]: item["name"] for item in PLATFORM_CATALOG}, cloud_names)
 
     def test_cloud_dashboard_uses_canonical_platform_names(self):
-        source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
-        function_body = source.split("function geo_platform_name", 1)[1].split("}\n", 1)[0]
-        self.assertIn("geo_platform_catalog()", function_body)
-        self.assertNotIn("'gemini'", function_body)
+        dashboard_source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        api_source = (ROOT / "server" / "geo.allgood.cn" / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        for source in (dashboard_source, api_source):
+            function_body = source.split("function geo_", 1)[1].split("platform_name", 1)[1].split("}\n", 1)[0]
+            self.assertIn("geo_platform_catalog()", function_body)
+            self.assertNotIn("'gemini'", function_body)
+
+        self.assertIn("foreach($supportedPlatforms as $platformId => $platform)", dashboard_source)
+        self.assertNotIn('<option value="gemini">', dashboard_source)
 
 
 if __name__ == "__main__":
