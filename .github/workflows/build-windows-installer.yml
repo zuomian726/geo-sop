@@ -91,6 +91,22 @@ jobs:
           $env:GEO_BOOT_LOG_PATH = $bootLog
           $env:GEO_FORCE_BROWSER = "1"
           $env:GEO_DATA_DIR = $smokeData
+          $env:GEO_DESKTOP_MODE = "1"
+          $env:GEO_REQUIRE_LOGIN = "1"
+          $env:PYTHONPATH = "$pwd;$pwd\web_app"
+          @'
+          from app import app
+          from models import User, db
+
+          with app.app_context():
+              db.create_all()
+              user = User.query.filter_by(username="ci-smoke").first()
+              if not user:
+                  user = User(username="ci-smoke", email="ci-smoke@localhost")
+                  db.session.add(user)
+              user.set_password("ci-smoke-password")
+              db.session.commit()
+          '@ | python
           $process = Start-Process "dist\GEO-SOP\GEO-SOP.exe" -PassThru
           try {
             $port = $null
@@ -131,6 +147,17 @@ jobs:
             if (-not (Test-Path $smokeData)) {
               throw "Native application did not initialize its local data directory."
             }
+            $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+            $loginBody = @{ username = "ci-smoke"; password = "ci-smoke-password"; cloud_login = $false } | ConvertTo-Json
+            $login = Invoke-RestMethod "http://127.0.0.1:$port/login" -Method Post -ContentType "application/json" -Body $loginBody -WebSession $session
+            if (-not $login.success) { throw "Native application local smoke login failed." }
+            $browserBody = @{ browser_path = "C:\Program Files\Google\Chrome\Application\chrome.exe" } | ConvertTo-Json
+            $saved = Invoke-RestMethod "http://127.0.0.1:$port/api/browser/config" -Method Post -ContentType "application/json" -Body $browserBody -WebSession $session
+            if (-not $saved.success) { throw "Native application browser config save failed." }
+            $browserConfig = Join-Path $smokeData "browser_config.json"
+            if (-not (Test-Path $browserConfig)) { throw "Browser config was not written to the user data directory." }
+            $installedConfig = Get-ChildItem "dist\GEO-SOP" -Recurse -Filter "browser_config.json" -ErrorAction SilentlyContinue
+            if ($installedConfig) { throw "Browser config was written into the installed application directory." }
             Write-Host "Native startup smoke test passed on port $port."
             Get-Content $bootLog
           } finally {

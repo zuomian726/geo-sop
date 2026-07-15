@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -13,9 +14,64 @@ for path in (str(ROOT), str(WEB_APP)):
         sys.path.insert(0, path)
 
 import browser_utils  # noqa: E402
+import browser_config  # noqa: E402
 
 
 class BrowserRuntimeTests(unittest.TestCase):
+    def test_browser_config_is_saved_in_user_data_directory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            user_data = root / "user-data"
+            legacy_path = root / "installed-app" / "browser_config.json"
+
+            with (
+                patch.object(browser_config, "app_data_dir", return_value=str(user_data)),
+                patch.object(browser_config, "LEGACY_CONFIG_FILE", legacy_path),
+            ):
+                browser_config.save_browser_config("  C:\\Browser\\chrome.exe  ")
+                saved = browser_config.load_browser_config()
+
+            self.assertEqual("C:\\Browser\\chrome.exe", saved["browser_path"])
+            self.assertTrue((user_data / "browser_config.json").is_file())
+            self.assertFalse(legacy_path.exists())
+
+    def test_legacy_browser_config_is_migrated_without_modifying_installation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            user_data = root / "user-data"
+            legacy_path = root / "installed-app" / "browser_config.json"
+            legacy_path.parent.mkdir(parents=True)
+            legacy_contents = '{"browser_path":"D:\\\\Chrome\\\\chrome.exe","candidates":[]}'
+            legacy_path.write_text(legacy_contents, encoding="utf-8")
+
+            with (
+                patch.object(browser_config, "app_data_dir", return_value=str(user_data)),
+                patch.object(browser_config, "LEGACY_CONFIG_FILE", legacy_path),
+            ):
+                loaded = browser_config.load_browser_config()
+
+            self.assertEqual("D:\\Chrome\\chrome.exe", loaded["browser_path"])
+            self.assertEqual(legacy_contents, legacy_path.read_text(encoding="utf-8"))
+            migrated = json.loads((user_data / "browser_config.json").read_text(encoding="utf-8"))
+            self.assertEqual(loaded, migrated)
+
+    def test_invalid_user_config_falls_back_to_legacy_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            user_data = root / "user-data"
+            user_data.mkdir()
+            (user_data / "browser_config.json").write_text("not-json", encoding="utf-8")
+            legacy_path = root / "legacy-browser-config.json"
+            legacy_path.write_text('{"browser_path":"/Applications/Chrome","candidates":[]}', encoding="utf-8")
+
+            with (
+                patch.object(browser_config, "app_data_dir", return_value=str(user_data)),
+                patch.object(browser_config, "LEGACY_CONFIG_FILE", legacy_path),
+            ):
+                loaded = browser_config.load_browser_config()
+
+            self.assertEqual("/Applications/Chrome", loaded["browser_path"])
+
     def test_system_browser_keeps_priority_over_bundled_chromium(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
