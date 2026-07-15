@@ -1,33 +1,33 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.32-dev",
+  "version": "0.3.33-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-16T02:28:33+08:00",
+  "released_at": "2026-07-16T02:45:25+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "桌面云端工作器现在检测真实线程存活状态，异常停止后可由看板状态刷新自动恢复。",
-    "工作器启动失败会完整回滚状态，后续可以自动重试，无需重启整个 App。",
-    "本机退出登录会先向云端上报离线，再清除云端 Token 并暂停任务领取。",
-    "已有和新保存的云端账户 Token 文件权限均收紧为仅当前系统用户可读写。",
-    "本地任务、历史结果和浏览器登录状态不会因退出云端账号而删除，并通过 51 项自动测试。"
+    "Windows 在系统 Chrome 或 Edge 不可用时，会自动使用安装包内置的 Playwright Chromium。",
+    "所有支持的 AI 平台统一经过同一套浏览器发现、持久化 Profile 和回退逻辑。",
+    "浏览器优先级保持为用户配置路径、本机 Chrome/Edge、内置 Chromium。",
+    "Windows CI 会验证应用自己的浏览器解析器确实能够找到打包目录中的 Chromium。",
+    "macOS 使用本机 Chrome 或 Edge，Windows 内置 Chromium，并通过 54 项自动测试。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.32-dev",
+      "version": "0.3.33-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.32-dev-macOS.dmg",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.33-dev-macOS.dmg",
       "size": "165 MB",
-      "sha256": "dfd5825ed400845f5ee8a449e6d9dc80e857e6101096acdba465b218bf9fb708"
+      "sha256": "7c409dd74e9de3fd6d25dbabd10f48af567bdcd9c085097b5ea5f206ec10f55d"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.32-dev",
+      "version": "0.3.33-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.32-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.33-dev.exe",
       "size": "185 MB",
-      "sha256": "03c2da48145e1aa7b7ba55bd88cfe9968dca418a647de04ffb95f1c4f0c54a37"
+      "sha256": "2f3de649e623dfa474a0b4ecdbd0bf354408e31b6b558b65a1305cf152828b45"
     }
   }
 }
