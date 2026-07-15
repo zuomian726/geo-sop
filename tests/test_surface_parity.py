@@ -103,6 +103,32 @@ class SurfaceParityTests(unittest.TestCase):
             self.assertIn("/downloads/GEO-SOP-Setup-dev.exe", source)
             self.assertIn("/downloads/GEO-SOP-macOS-dev.dmg", source)
 
+    def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
+        seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")
+        self.assertIn("PHP_SAPI !== 'cli'", seed)
+        self.assertIn("WHERE username=?", seed)
+        self.assertNotIn("str_starts_with", seed)
+        self.assertNotIn("cloud_user_id=16", seed)
+        self.assertIn("DEMO_EXPECTED_TASKS = 6", seed)
+        self.assertIn("DEMO_EXPECTED_RESULTS = 144", seed)
+        self.assertIn("DEMO_EXPECTED_MANUSCRIPTS = 4", seed)
+        self.assertIn("demo_json($domains)", seed)
+        self.assertIn("$pdo->rollBack()", seed)
+
+        landing = (ROOT / "server" / "geo.allgood.cn" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('<article><strong>6</strong><span data-en="Demo tasks"', landing)
+        self.assertIn('<article><strong>144</strong><span data-en="Synthetic answers"', landing)
+        self.assertIn('<article><strong>4</strong><span data-en="GEO files"', landing)
+
+    def test_cloud_header_has_a_compact_desktop_breakpoint(self):
+        dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("@media(max-width:1200px)", dashboard)
+        self.assertIn("current-account", dashboard)
+        self.assertIn("header-full-label", dashboard)
+        self.assertIn("header-compact-label", dashboard)
+        self.assertIn("white-space:nowrap", dashboard)
+        self.assertIn(".side-stack{grid-template-columns:repeat(2,minmax(0,1fr))}", dashboard)
+
 
 if __name__ == "__main__":
     unittest.main()
