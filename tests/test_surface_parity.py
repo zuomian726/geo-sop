@@ -95,11 +95,27 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("error: response.data.cloud_sync?.error || ''", dashboard)
         self.assertIn("geo-sop-wordmark.png", dashboard)
 
+    def test_empty_desktop_dashboard_prioritizes_first_run_actions(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('v-if="!hasCollectedResults"', dashboard)
+        self.assertIn("建立第一组可对比的 GEO 基线", dashboard)
+        self.assertIn("hasCollectedResults()", dashboard)
+        self.assertIn("disposeInsightCharts()", dashboard)
+
     def test_desktop_minimum_window_uses_compact_toolbar_and_single_dashboard_load(self):
         dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
         mounted = dashboard.split("async mounted() {", 1)[1].split("beforeUnmount() {", 1)[0]
         self.assertNotIn("this.loadInsightsOverview()", mounted)
         self.assertNotIn("this.loadInsightScorecard()", mounted)
+        self.assertNotIn("this.loadAnalysisData()", mounted)
+        self.assertNotIn("this.loadTrendDomains()", mounted)
+        self.assertNotIn("this.loadTrendData()", mounted)
+        self.assertNotIn("this.loadGeoCoverageData()", mounted)
+        self.assertIn("this.handleTabClick({ name: this.activeTab })", mounted)
+        self.assertIn("analysisLoaded", dashboard)
+        self.assertIn("trendLoaded", dashboard)
+        self.assertIn("geoCoverageLoaded", dashboard)
+        self.assertIn("tab?.props?.name", dashboard)
         self.assertIn("header-actions", dashboard)
         self.assertIn("header-action-label secondary", dashboard)
         self.assertIn("<switch-button />", dashboard)

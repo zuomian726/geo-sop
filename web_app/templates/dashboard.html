@@ -453,6 +453,77 @@ body {
     gap: 16px;
 }
 
+.empty-dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+    gap: 28px;
+    align-items: center;
+    min-height: 300px;
+    padding: 34px 38px;
+    border: 1px solid #dbe6f4;
+    border-radius: 6px;
+    background: #f8fbff;
+}
+
+.empty-dashboard h3 {
+    margin: 10px 0 12px;
+    font-size: 28px;
+}
+
+.empty-dashboard p {
+    margin: 0;
+    color: #66758b;
+    line-height: 1.8;
+}
+
+.empty-dashboard-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+}
+
+.empty-dashboard-steps {
+    display: grid;
+    gap: 0;
+    border-left: 1px solid #dbe6f4;
+    padding-left: 28px;
+}
+
+.empty-dashboard-step {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    padding: 14px 0;
+}
+
+.empty-dashboard-step + .empty-dashboard-step {
+    border-top: 1px solid #e5edf7;
+}
+
+.empty-dashboard-step > span {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #1769ff;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.empty-dashboard-step strong,
+.empty-dashboard-step small {
+    display: block;
+}
+
+.empty-dashboard-step small {
+    color: #7b8aa0;
+    line-height: 1.6;
+    margin-top: 4px;
+}
+
 .chart-panel {
     min-width: 0;
     padding: 18px;
@@ -570,6 +641,15 @@ body {
     .chart-grid,
     .insight-grid {
         grid-template-columns: 1fr;
+    }
+    .empty-dashboard {
+        grid-template-columns: 1fr;
+        padding: 28px;
+    }
+    .empty-dashboard-steps {
+        border-left: 0;
+        border-top: 1px solid #dbe6f4;
+        padding: 18px 0 0;
     }
     .metric-grid,
     .analysis-card-grid {
@@ -760,6 +840,39 @@ body {
             <el-tab-pane name="insights" label="数据看板">
                 <div style="padding: 20px;" v-loading="insightsLoading">
                     <div class="analysis-board" v-loading="scorecardLoading">
+                        <div v-if="!hasCollectedResults" class="empty-dashboard">
+                            <div>
+                                <span class="panel-kicker">First baseline</span>
+                                <h3>建立第一组可对比的 GEO 基线</h3>
+                                <p>先完成一个平台登录，创建包含 3-5 个真实客户问题的任务，再运行一次采集。完成后这里会自动出现曝光率、平台对比、引用来源和趋势。</p>
+                                <div class="empty-dashboard-actions">
+                                    <el-button type="primary" @click="quickCheckAndShowLogin">
+                                        <el-icon><User /></el-icon>
+                                        检测平台登录
+                                    </el-button>
+                                    <el-button @click="showCreateDialog">
+                                        <el-icon><Plus /></el-icon>
+                                        创建监测任务
+                                    </el-button>
+                                </div>
+                            </div>
+                            <div class="empty-dashboard-steps">
+                                <div class="empty-dashboard-step">
+                                    <span>1</span>
+                                    <div><strong>登录一个 AI 平台</strong><small>登录态只保存在当前电脑，不上传账号密码。</small></div>
+                                </div>
+                                <div class="empty-dashboard-step">
+                                    <span>2</span>
+                                    <div><strong>创建第一项监测</strong><small>填写品牌词、问题，并选择需要观察的平台。</small></div>
+                                </div>
+                                <div class="empty-dashboard-step">
+                                    <span>3</span>
+                                    <div><strong>运行并查看结果</strong><small>回答、截图和引用会自动进入数据看板并同步云端。</small></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <template v-else>
                         <div class="analysis-summary">
                             <div class="score-hero">
                                 <span>GEO 健康分</span>
@@ -803,6 +916,7 @@ body {
                                 <div id="sourceDomainChart" class="insight-chart"></div>
                             </div>
                         </div>
+                        </template>
                     </div>
 
                     <div class="insight-grid">
@@ -2223,11 +2337,13 @@ const app = createApp({
             },
             analysisData: [],     // 详细数据（完整域名）
             topAnalysisData: [],  // 聚合数据（顶级域名）
+            analysisLoaded: false,
             mediaChart: null,
             
             // 走势分析
             trending: false,
             trendData: null,
+            trendLoaded: false,
             trendFilter: {
                 platform: '',
                 task_id: null,
@@ -2336,6 +2452,7 @@ const app = createApp({
                 date: ''
             },
             geoCoverageData: [],
+            geoCoverageLoaded: false,
             expandedGeoKeys: [],
             geoSortField: 'cited_count',
             geoSortOrder: 'desc',
@@ -2461,6 +2578,9 @@ const app = createApp({
                 detail: '用 AI 汇总当前采集结果，输出观察、风险和下一轮内容实验。'
             };
         },
+        hasCollectedResults() {
+            return Number(this.insights.summary?.results || 0) > 0;
+        },
         isDemoUser() {
             return this.currentUser?.username === 'tuke';
         },
@@ -2530,11 +2650,8 @@ const app = createApp({
         this.initAnalysisFilter();     // 初始化引用参考源分析筛选（默认最近一月）
         this.initTrendFilter();        // 初始化走势图筛选（默认最近一月）
         this.initGeoFilter();          // 初始化GEO分析筛选
-        this.loadAnalysisData();       // 默认加载分析数据
         this.loadSentimentConfigs();   // 加载舆情配置
-        this.loadTrendDomains();       // 初始化域名列表
-        this.loadTrendData();          // 默认加载走势数据
-        this.loadGeoCoverageData();    // 默认加载GEO分析数据
+        this.handleTabClick({ name: this.activeTab });
         this.updateCurrentStep();
     },
     beforeUnmount() {
@@ -2544,9 +2661,7 @@ const app = createApp({
         Object.keys(this.taskPollers).forEach(taskId => {
             this.clearTaskPolling(taskId);
         });
-        Object.values(this.insightCharts).forEach(chart => {
-            if (chart) chart.dispose();
-        });
+        this.disposeInsightCharts();
     },
     methods: {
         applyDashboardHash() {
@@ -2709,6 +2824,7 @@ const app = createApp({
                     this.quickAiConfig.ai_platform = this.insights.ai_config.platform || this.quickAiConfig.ai_platform || 'openai';
                     this.quickAiConfig.ai_api_url = this.insights.ai_config.api_url || this.quickAiConfig.ai_api_url;
                     this.quickAiConfig.ai_model_name = this.insights.ai_config.model || this.quickAiConfig.ai_model_name;
+                    this.$nextTick(() => this.renderInsightCharts());
                 }
             } catch (error) {
                 console.error('加载数据看板失败:', error);
@@ -2733,9 +2849,21 @@ const app = createApp({
         },
 
         renderInsightCharts() {
+            if (!this.hasCollectedResults) {
+                this.disposeInsightCharts();
+                return;
+            }
             this.renderScoreTrendChart();
             this.renderPlatformExposureChart();
             this.renderSourceDomainChart();
+        },
+
+        disposeInsightCharts() {
+            Object.keys(this.insightCharts).forEach(key => {
+                const chart = this.insightCharts[key];
+                if (chart) chart.dispose();
+                this.insightCharts[key] = null;
+            });
         },
 
         renderScoreTrendChart() {
@@ -2944,24 +3072,28 @@ const app = createApp({
             }
         },
         
-        handleTabClick(tab) {
-            if (tab.name === 'analysis') {
-                if (this.analysisData.length === 0) {
-                    this.loadAnalysisData();
+        async handleTabClick(tab) {
+            const tabName = tab?.paneName || tab?.props?.name || tab?.name || tab;
+            if (tabName === 'analysis') {
+                if (!this.analysisLoaded) {
+                    await this.loadAnalysisData();
                 } else {
                     this.$nextTick(() => {
                         this.renderMediaChart();
                     });
                 }
-            } else if (tab.name === 'trends') {
-                if (this.allDomains.length === 0) {
-                    this.loadAnalysisData();
+            } else if (tabName === 'trends') {
+                if (!this.trendLoaded) {
+                    await Promise.all([this.loadTrendDomains(), this.loadTrendData()]);
+                } else {
+                    this.$nextTick(() => {
+                        this.renderTrendChart();
+                    });
                 }
-                this.$nextTick(() => {
-                    this.renderTrendChart();
-                });
-            } else if (tab.name === 'geo_analysis') {
-                this.loadGeoCoverageData();
+            } else if (tabName === 'geo_analysis') {
+                if (!this.geoCoverageLoaded) {
+                    await this.loadGeoCoverageData();
+                }
             }
         },
 
@@ -2976,6 +3108,7 @@ const app = createApp({
                 const response = await axios.get('/api/analysis/geo-coverage', { params });
                 if (response.data.success) {
                     this.geoCoverageData = response.data.data;
+                    this.geoCoverageLoaded = true;
                     this.expandedGeoKeys = [];
                     this.$nextTick(() => {
                         const firstCited = this.groupedGeoData.find(row => row.is_cited);
@@ -3261,6 +3394,7 @@ const app = createApp({
                 
                 if (response.data.success) {
                     this.trendData = response.data; // 存储完整响应
+                    this.trendLoaded = true;
                     this.$nextTick(() => {
                         this.renderTrendChart();
                     });
@@ -3428,6 +3562,7 @@ const app = createApp({
                 if (response.data.success) {
                     this.analysisData = response.data.full_data;
                     this.topAnalysisData = response.data.top_data;
+                    this.analysisLoaded = true;
                     
                     // 更新走势图可选域名列表
                     this.allDomains = this.analysisData.map(d => d.name);
