@@ -1,5 +1,13 @@
 # GEO-SOP Release Notes
 
+## v0.3.35-dev - 2026-07-16
+
+- macOS 正式拆分为 Apple Silicon 与 Intel 两个原生 DMG，官网不再用一个仅含 arm64 的安装包宣称兼容全部 Mac。
+- Intel 版通过 Rosetta 构建链生成并执行 x86_64 架构校验；Apple Silicon 版继续保持原生 arm64。
+- 客户端更新检查会读取本机 CPU 架构，Intel Mac 自动下载 Intel DMG，Apple 芯片自动下载 Apple Silicon DMG。
+- 官网下载区明确标注两种 Mac 架构，并保留原 Apple Silicon 长期链接以兼容既有分发地址。
+- Gatekeeper 处理命令统一针对拖入“应用程序”后的 App，避免用户照抄 DMG 挂载路径时出现文件不存在。
+
 ## v0.3.34-dev - 2026-07-16
 
 - 浏览器设置改为保存在当前系统用户的数据目录，macOS `/Applications` 与 Windows 安装目录不再承担运行时写入。

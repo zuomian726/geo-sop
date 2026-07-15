@@ -102,6 +102,7 @@ class SurfaceParityTests(unittest.TestCase):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
             self.assertIn("/downloads/GEO-SOP-Setup-dev.exe", source)
             self.assertIn("/downloads/GEO-SOP-macOS-dev.dmg", source)
+            self.assertIn("/downloads/GEO-SOP-macOS-Intel-dev.dmg", source)
 
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")

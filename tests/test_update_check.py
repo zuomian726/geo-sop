@@ -39,6 +39,12 @@ class UpdateCheckTests(unittest.TestCase):
                     "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
                     "size": "166 MB",
                 },
+                "macos_intel": {
+                    "name": "GEO-SOP-macOS-Intel-dev.dmg",
+                    "version": "0.3.19-dev",
+                    "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-Intel-dev.dmg",
+                    "size": "158 MB",
+                },
                 "windows": {
                     "name": "GEO-SOP-Setup-dev.exe",
                     "version": "0.3.19-dev",
@@ -69,6 +75,7 @@ class UpdateCheckTests(unittest.TestCase):
         with (
             patch.object(web_app, "app_info", return_value={"version": "0.3.19-dev"}),
             patch.object(web_app.platform, "system", return_value="Darwin"),
+            patch.object(web_app.platform, "machine", return_value="arm64"),
             patch.object(web_app.requests, "get", return_value=self._response(self._manifest())),
         ):
             update = web_app._check_latest_update()
@@ -76,6 +83,20 @@ class UpdateCheckTests(unittest.TestCase):
         self.assertFalse(update["has_update"])
         self.assertEqual("macos", update["platform"])
         self.assertEqual("GEO-SOP-macOS-dev.dmg", update["download_name"])
+
+    def test_intel_macos_client_receives_intel_package(self):
+        with (
+            patch.object(web_app, "app_info", return_value={"version": "0.3.18-dev"}),
+            patch.object(web_app.platform, "system", return_value="Darwin"),
+            patch.object(web_app.platform, "machine", return_value="x86_64"),
+            patch.object(web_app.requests, "get", return_value=self._response(self._manifest())),
+        ):
+            update = web_app._check_latest_update()
+
+        self.assertTrue(update["has_update"])
+        self.assertEqual("macos_intel", update["platform"])
+        self.assertEqual("GEO-SOP-macOS-Intel-dev.dmg", update["download_name"])
+        self.assertEqual("https://geo.allgood.cn/downloads/GEO-SOP-macOS-Intel-dev.dmg", update["download_url"])
 
     def test_update_service_failure_keeps_dashboard_available(self):
         with (

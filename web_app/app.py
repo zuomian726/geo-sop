@@ -165,6 +165,16 @@ def _version_key(version):
     return tuple(numbers + [rank, prerelease_number])
 
 
+def _update_platform_key():
+    system_name = platform.system().lower()
+    if system_name.startswith('win'):
+        return 'windows'
+    if system_name == 'darwin':
+        machine = platform.machine().strip().lower()
+        return 'macos_intel' if machine in {'x86_64', 'amd64', 'i386'} else 'macos'
+    return 'linux'
+
+
 def _check_latest_update():
     info = app_info()
     update_url = app.config.get('GEO_UPDATE_URL') or os.environ.get('GEO_UPDATE_URL') or 'https://geo.allgood.cn/update.json'
@@ -179,8 +189,7 @@ def _check_latest_update():
         response = requests.get(update_url, timeout=8)
         response.raise_for_status()
         manifest = response.json()
-        system_name = platform.system().lower()
-        platform_key = 'windows' if system_name.startswith('win') else 'macos' if system_name == 'darwin' else 'linux'
+        platform_key = _update_platform_key()
         downloads = manifest.get('downloads') if isinstance(manifest.get('downloads'), dict) else {}
         package = downloads.get(platform_key) if isinstance(downloads.get(platform_key), dict) else {}
         latest_version = str(package.get('version') or manifest.get('version') or current_version)

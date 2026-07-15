@@ -8,6 +8,7 @@ from version import APP_VERSION
 print(APP_VERSION)
 PY
 )
+TARGET_ARCH="${GEO_MACOS_ARCH:-$(uname -m)}"
 APP_NAME="GEO-SOP"
 BUILD_DIR="build"
 DIST_DIR="dist"
@@ -15,14 +16,38 @@ PACKAGE_DIR="release"
 ICON_PNG="web_app/static/img/geo-sop-icon.png"
 ICON_ICNS="${BUILD_DIR}/geo-sop-icon.icns"
 
-if [ ! -d ".venv-build" ]; then
-  python3 -m venv .venv-build
-fi
+case "${TARGET_ARCH}" in
+  arm64)
+    BUILD_VENV=".venv-build"
+    PACKAGE_SUFFIX="macOS-Apple-Silicon"
+    VOLUME_ARCH="Apple Silicon"
+    PYTHON_CMD=("${BUILD_VENV}/bin/python")
+    if [ ! -d "${BUILD_VENV}" ]; then
+      python3 -m venv "${BUILD_VENV}"
+    fi
+    ;;
+  x86_64)
+    BUILD_VENV=".venv-build-x86_64"
+    PACKAGE_SUFFIX="macOS-Intel"
+    VOLUME_ARCH="Intel"
+    if ! arch -x86_64 /usr/bin/true >/dev/null 2>&1; then
+      echo "Rosetta 2 is required to build the Intel macOS package." >&2
+      exit 1
+    fi
+    if [ ! -d "${BUILD_VENV}" ]; then
+      arch -x86_64 /usr/bin/python3 -m venv "${BUILD_VENV}"
+    fi
+    PYTHON_CMD=(arch -x86_64 "${BUILD_VENV}/bin/python")
+    ;;
+  *)
+    echo "Unsupported macOS build architecture: ${TARGET_ARCH}" >&2
+    exit 1
+    ;;
+esac
 
-source .venv-build/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements-desktop.txt
-python -m pip install pyinstaller
+"${PYTHON_CMD[@]}" -m pip install --upgrade pip
+"${PYTHON_CMD[@]}" -m pip install -r requirements-desktop.txt
+"${PYTHON_CMD[@]}" -m pip install pyinstaller
 
 rm -rf "${BUILD_DIR}" "${DIST_DIR}"
 mkdir -p "${BUILD_DIR}" "${PACKAGE_DIR}"
@@ -73,7 +98,7 @@ if [ -f "${ICON_ICNS}" ]; then
   PYINSTALLER_ARGS+=(--icon "${ICON_ICNS}")
 fi
 
-pyinstaller "${PYINSTALLER_ARGS[@]}" desktop_app.py
+MACOSX_DEPLOYMENT_TARGET=11.0 "${PYTHON_CMD[@]}" -m PyInstaller "${PYINSTALLER_ARGS[@]}" desktop_app.py
 
 PLIST_PATH="${DIST_DIR}/${APP_NAME}.app/Contents/Info.plist"
 APP_RESOURCES="${DIST_DIR}/${APP_NAME}.app/Contents/Resources"
@@ -113,7 +138,13 @@ PY
   codesign --force --deep --sign - "${DIST_DIR}/${APP_NAME}.app"
 fi
 
-DMG_PATH="${PACKAGE_DIR}/${APP_NAME}-v${VERSION}-macOS.dmg"
+BUILT_ARCH=$(lipo -archs "${DIST_DIR}/${APP_NAME}.app/Contents/MacOS/${APP_NAME}")
+if [ "${BUILT_ARCH}" != "${TARGET_ARCH}" ]; then
+  echo "Built application architecture ${BUILT_ARCH} does not match requested ${TARGET_ARCH}." >&2
+  exit 1
+fi
+
+DMG_PATH="${PACKAGE_DIR}/${APP_NAME}-v${VERSION}-${PACKAGE_SUFFIX}.dmg"
 DMG_STAGE="${BUILD_DIR}/dmg-stage"
 rm -f "${DMG_PATH}"
 rm -rf "${DMG_STAGE}"
@@ -137,11 +168,11 @@ xattr -dr com.apple.quarantine "/Applications/GEO-SOP.app"
 - 云端账号用于同步任务和分析结果。
 TXT
 hdiutil create \
-  -volname "${APP_NAME} v${VERSION}" \
+  -volname "${APP_NAME} ${VOLUME_ARCH} v${VERSION}" \
   -srcfolder "${DMG_STAGE}" \
   -ov \
   -format UDZO \
   "${DMG_PATH}"
 
 shasum -a 256 "${DMG_PATH}" > "${DMG_PATH}.sha256"
-echo "Built ${DMG_PATH}"
+echo "Built ${DMG_PATH} (${TARGET_ARCH})"

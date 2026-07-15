@@ -1,0 +1,12 @@
+.tool-platform-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .tool-platform-downloads {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

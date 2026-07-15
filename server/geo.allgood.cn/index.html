@@ -19,6 +19,7 @@
     <link rel="shortcut icon" href="/favicon.ico?v=20260528-tktk-icon">
     <link rel="apple-touch-icon" href="/public/assets/apple-touch-icon.png?v=20260528-tktk-icon">
     <link rel="stylesheet" href="/public/assets/styles.css?v=20260702-tools-geo-seo-v2">
+    <link rel="stylesheet" href="/public/assets/geo-sop-release.css?v=20260716-arch-v1">
     <script type="application/ld+json">{
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -130,7 +131,8 @@
             <div class="tool-download-actions">
                 <a class="tool-demo-hero-link" href="/login/"><span data-en="Login or create account" data-zh="登录或注册账号">Login or create account</span><small data-en="Cloud dashboard + desktop sync" data-zh="云端工作台 + 桌面同步">Cloud dashboard + desktop sync</small></a>
                 <a class="tool-demo-hero-link" href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener"><span data-en="Try online demo" data-zh="在线体验 Demo">Try online demo</span><small>tuke / 123456</small></a>
-                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="Download for macOS" data-zh="下载 macOS 版">Download for macOS</span><small id="release-mac-hero">v0.3.34-dev · DMG · 168 MB</small></a>
+                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="macOS · Apple Silicon" data-zh="macOS · Apple 芯片">macOS · Apple Silicon</span><small id="release-mac-hero">v0.3.34-dev · DMG · 168 MB</small></a>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel-dev.dmg"><span data-en="macOS · Intel" data-zh="macOS · Intel 芯片">macOS · Intel</span><small id="release-mac-intel-hero">Intel DMG</small></a>
                 <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup-dev.exe"><span data-en="Download for Windows" data-zh="下载 Windows 版">Download for Windows</span><small id="release-windows-hero" data-en="v0.3.34-dev · EXE setup installer · 185 MB" data-zh="v0.3.34-dev · EXE 安装包 · 185 MB">v0.3.34-dev · EXE setup installer · 185 MB</small></a>
             </div>
             <div class="tool-availability" data-en="macOS package includes the desktop app. Windows ships as an EXE setup installer." data-zh="macOS 包含桌面 App。Windows 已切换为 EXE 安装包。">macOS package includes the desktop app. Windows ships as an EXE setup installer.</div>
@@ -283,11 +285,14 @@
                 <h3 data-en="Mac desktop build" data-zh="Mac 桌面版">Mac desktop build</h3>
                 <ul>
                     <li data-en="macOS 12 Monterey or later" data-zh="macOS 12 Monterey 或以上">macOS 12 Monterey or later</li>
-                    <li data-en="Apple Silicon or Intel Mac" data-zh="Apple Silicon 或 Intel Mac">Apple Silicon or Intel Mac</li>
+                    <li data-en="Separate native builds for Apple Silicon and Intel" data-zh="分别提供 Apple 芯片与 Intel 原生版本">Separate native builds for Apple Silicon and Intel</li>
                     <li data-en="4 GB RAM minimum, 8 GB recommended" data-zh="最低 4GB 内存，建议 8GB">4 GB RAM minimum, 8 GB recommended</li>
                     <li data-en="Application runtime included; collection uses local Chrome or Edge" data-zh="内置应用运行时，采集使用本机 Chrome 或 Edge">Application runtime included; collection uses local Chrome or Edge</li>
                 </ul>
-                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="Download DMG" data-zh="下载 DMG">Download DMG</span><small id="release-mac-card">v0.3.34-dev · 168 MB</small></a>
+                <div class="tool-platform-downloads">
+                    <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS-dev.dmg"><span data-en="Apple Silicon" data-zh="Apple 芯片">Apple Silicon</span><small id="release-mac-card">v0.3.34-dev · 168 MB</small></a>
+                    <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel-dev.dmg"><span>Intel</span><small id="release-mac-intel-card">Intel DMG</small></a>
+                </div>
             </article>
             <article class="tool-platform-card">
                 <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="64" height="64">
@@ -500,8 +505,10 @@
       if (!/^[0-9A-Za-z.-]+$/.test(rawVersion)) return;
       const version = 'v' + rawVersion.replace(/^v/, '');
       const mac = release.downloads && release.downloads.macos ? release.downloads.macos : {};
+      const macIntel = release.downloads && release.downloads.macos_intel ? release.downloads.macos_intel : {};
       const windows = release.downloads && release.downloads.windows ? release.downloads.windows : {};
       const macSize = String(mac.size || '');
+      const macIntelSize = String(macIntel.size || '');
       const windowsSize = String(windows.size || '');
 
       const setText = (id, value) => {
@@ -512,6 +519,8 @@
       setText('release-current-version', version);
       setText('release-mac-hero', version + ' · DMG · ' + macSize);
       setText('release-mac-card', version + ' · ' + macSize);
+      setText('release-mac-intel-hero', version + ' · DMG · ' + macIntelSize);
+      setText('release-mac-intel-card', version + ' · ' + macIntelSize);
       setText('release-windows-card', version + ' · ' + windowsSize);
 
       const windowsHero = document.getElementById('release-windows-hero');
@@ -529,11 +538,14 @@
         gatekeeper.replaceChildren(
           document.createTextNode('xattr -dr com.apple.quarantine'),
           document.createElement('br'),
-          document.createTextNode('"/Volumes/GEO-SOP ' + version + '/GEO-SOP.app"')
+          document.createTextNode('"/Applications/GEO-SOP.app"')
         );
       }
       document.querySelectorAll('a[href="/downloads/GEO-SOP-macOS-dev.dmg"]').forEach(link => {
         if (mac.url) link.href = mac.url;
+      });
+      document.querySelectorAll('a[href="/downloads/GEO-SOP-macOS-Intel-dev.dmg"]').forEach(link => {
+        if (macIntel.url) link.href = macIntel.url;
       });
       document.querySelectorAll('a[href="/downloads/GEO-SOP-Setup-dev.exe"]').forEach(link => {
         if (windows.url) link.href = windows.url;
