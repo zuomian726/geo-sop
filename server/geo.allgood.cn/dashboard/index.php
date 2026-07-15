@@ -115,6 +115,11 @@ $remoteStmt = $pdo->prepare('SELECT * FROM geo_remote_tasks WHERE cloud_user_id=
 $remoteStmt->execute([$uid]);
 $remoteRows = $remoteStmt->fetchAll();
 
+$offlineStmt = $pdo->prepare("UPDATE geo_desktop_clients
+    SET status='offline', message='超过 90 秒未收到客户端心跳', updated_at=NOW()
+    WHERE cloud_user_id=? AND status='online' AND last_seen_at < DATE_SUB(NOW(), INTERVAL 90 SECOND)");
+$offlineStmt->execute([$uid]);
+
 $clientStmt = $pdo->prepare('SELECT install_id,user_key,status,message,payload,last_seen_at FROM geo_desktop_clients WHERE cloud_user_id=? ORDER BY last_seen_at DESC LIMIT 20');
 $clientStmt->execute([$uid]);
 $clientRows = $clientStmt->fetchAll();
@@ -124,7 +129,7 @@ foreach ($clientRows as &$clientRow) {
     $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
     $clientRow['version'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['app_version'] ?? '') : '';
     $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
-$clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
+    $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
 }
 unset($clientRow);
 
