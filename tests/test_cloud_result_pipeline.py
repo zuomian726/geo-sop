@@ -45,6 +45,7 @@ class CloudPipelineTestCase(unittest.TestCase):
         remote_worker._worker_thread = None
         remote_worker._worker_started_epoch = None
         remote_worker._worker_restart_count = 0
+        remote_worker._worker_wakeup.clear()
         db.session.remove()
         db.drop_all()
         db.session.remove()
@@ -227,6 +228,13 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
 
         self.assertFalse(remote_worker._worker_started)
         self.assertIsNone(remote_worker._worker_thread)
+
+    def test_worker_wakeup_starts_worker_and_requests_immediate_retry(self):
+        with patch.object(remote_worker, "start_remote_task_worker", return_value=False) as start:
+            self.assertFalse(remote_worker.wake_remote_task_worker(self.app))
+
+        start.assert_called_once_with(self.app)
+        self.assertTrue(remote_worker._worker_wakeup.is_set())
 
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)

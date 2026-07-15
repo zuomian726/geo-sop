@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}仪表板 - AI答案采集平台{% endblock %}
+{% block title %}数据看板 - GEO-SOP{% endblock %}
 
 {% block styles %}
 .header {
@@ -636,7 +636,16 @@ body {
                     <div class="cloud-status-row"><span>最近心跳</span><strong>[[ cloudHeartbeatTime ]]</strong></div>
                     <div class="cloud-status-row"><span>云端任务</span><strong>[[ cloudWorkerSummary ]]</strong></div>
                     <div v-if="cloudSync.worker?.last_error" style="color: #c45656; line-height: 1.5;">[[ cloudSync.worker.last_error ]]</div>
+                    <div v-if="cloudRecoveryHint" style="color: #66758b; line-height: 1.5; margin-top: 8px;">[[ cloudRecoveryHint ]]</div>
                     <el-button size="small" :loading="cloudStatusLoading" @click="loadCloudSyncStatus">刷新连接状态</el-button>
+                    <el-button
+                        v-if="cloudSync.enabled && (!cloudSync.worker?.online || cloudSync.worker?.degraded)"
+                        size="small"
+                        type="primary"
+                        :loading="cloudReconnectLoading"
+                        @click="reconnectCloudSync">
+                        立即重连
+                    </el-button>
                 </div>
             </el-popover>
             <el-button
@@ -2137,6 +2146,7 @@ const app = createApp({
                 worker: {}
             },
             cloudStatusLoading: false,
+            cloudReconnectLoading: false,
             cloudStatusTimer: null,
             appInfo: {
                 name: 'GEO-SOP',
@@ -2365,9 +2375,9 @@ const app = createApp({
     computed: {
         cloudSyncLabel() {
             if (!this.desktopMode) return '';
-            if (this.cloudSync.error) return '同步异常';
             if (!this.cloudSync.enabled) return '未连接云端';
             const worker = this.cloudSync.worker || {};
+            if (this.cloudSync.error && !worker.online) return '云端连接异常';
             if (worker.degraded && !worker.online) return '云端连接异常';
             if (worker.degraded) return '云端连接波动';
             if (worker.online) {
@@ -2379,6 +2389,7 @@ const app = createApp({
                 };
                 return labels[worker.runtime?.worker_state] || '云端在线';
             }
+            if (worker.stale || worker.last_success_at) return '心跳已中断';
             if (worker.started) return '正在连接云端';
             if (this.cloudSync.last_synced_at) return '云端已同步';
             return '云端已连接';
@@ -2388,7 +2399,7 @@ const app = createApp({
             if (!this.cloudSync.enabled) return 'info';
             if (this.cloudSync.worker?.degraded) return 'danger';
             if (this.cloudSync.worker?.online) return 'success';
-            return this.cloudSync.last_synced_at ? 'success' : 'warning';
+            return 'warning';
         },
         cloudSyncDetail() {
             if (this.cloudSync.error) return this.cloudSync.error;
@@ -2409,6 +2420,16 @@ const app = createApp({
             if (backlog) return `待回传 ${backlog} 个`;
             if (pending) return `排队中 ${pending} 个`;
             return this.cloudSync.worker?.online ? '等待新任务' : '客户端尚未连接';
+        },
+        cloudRecoveryHint() {
+            if (!this.cloudSync.enabled) return '退出后使用云端账号登录，即可恢复双端同步。';
+            if (this.cloudSync.error) return this.cloudSync.error;
+            if (this.cloudSync.worker?.degraded) return '网络恢复后会自动重试，也可以立即重连。';
+            if (this.cloudSync.worker?.stale || this.cloudSync.worker?.last_success_at) {
+                return '心跳已停止，点击立即重连；若仍失败，请重新登录云端账号。';
+            }
+            if (!this.cloudSync.worker?.online) return '首次连接通常在 15 秒内完成。';
+            return '';
         },
         nextStep() {
             if (this.getLoggedInCount && this.platformLoginStatus.length && this.getLoggedInCount() === 0) {
@@ -2583,7 +2604,8 @@ const app = createApp({
                 if (response.data.success) {
                     this.cloudSync = {
                         ...this.cloudSync,
-                        ...(response.data.cloud_sync || {})
+                        ...(response.data.cloud_sync || {}),
+                        error: response.data.cloud_sync?.error || ''
                     };
                 }
             } catch (error) {
@@ -2596,6 +2618,28 @@ const app = createApp({
                 }
             } finally {
                 this.cloudStatusLoading = false;
+            }
+        },
+
+        async reconnectCloudSync() {
+            if (this.cloudReconnectLoading) return;
+            this.cloudReconnectLoading = true;
+            try {
+                const response = await axios.post('/api/cloud-sync/reconnect');
+                if (!response.data.success) throw new Error(response.data.message || '重新连接失败');
+                this.cloudSync = {
+                    ...this.cloudSync,
+                    ...(response.data.cloud_sync || {}),
+                    error: ''
+                };
+                ElMessage.success('正在重新连接云端');
+                window.setTimeout(() => this.loadCloudSyncStatus(true), 1200);
+            } catch (error) {
+                const message = error.response?.data?.message || error.message || '重新连接失败';
+                this.cloudSync = {...this.cloudSync, error: message};
+                ElMessage.warning(message);
+            } finally {
+                this.cloudReconnectLoading = false;
             }
         },
 

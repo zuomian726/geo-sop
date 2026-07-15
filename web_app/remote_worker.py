@@ -35,6 +35,7 @@ _worker_thread: threading.Thread | None = None
 _worker_started_epoch: float | None = None
 _worker_restart_count = 0
 _worker_lock = threading.Lock()
+_worker_wakeup = threading.Event()
 _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
 _heartbeat_state_lock = threading.Lock()
@@ -114,6 +115,7 @@ def worker_health(user_id: int) -> dict:
     age_seconds = max(0, int(now - last_success)) if last_success else None
     stale_after = max(45, _poll_seconds() * 3)
     online = bool(last_success and age_seconds is not None and age_seconds <= stale_after)
+    stale = bool(last_success and not online)
     degraded = bool(last_error and last_error_epoch >= (last_success or 0))
     with _worker_lock:
         thread_alive = bool(_worker_thread and _worker_thread.is_alive())
@@ -125,6 +127,7 @@ def worker_health(user_id: int) -> dict:
         "worker_started_at": _heartbeat_timestamp(worker_started_epoch),
         "restart_count": restart_count,
         "online": online,
+        "stale": stale,
         "degraded": degraded,
         "stale_after_seconds": stale_after,
         "age_seconds": age_seconds,
@@ -489,7 +492,8 @@ def start_remote_task_worker(app) -> bool:
                         _tick(app)
                 except Exception as exc:
                     logger.warning("[RemoteWorker] tick failed: %s", exc)
-                time.sleep(_poll_seconds())
+                _worker_wakeup.wait(_poll_seconds())
+                _worker_wakeup.clear()
         finally:
             with _worker_lock:
                 if _worker_thread is threading.current_thread():
@@ -515,3 +519,10 @@ def start_remote_task_worker(app) -> bool:
             _worker_started_epoch = None
             raise
     return True
+
+
+def wake_remote_task_worker(app) -> bool:
+    """Ensure the worker is alive and request an immediate cloud retry."""
+    started = start_remote_task_worker(app)
+    _worker_wakeup.set()
+    return started

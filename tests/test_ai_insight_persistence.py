@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -151,7 +151,13 @@ class AiInsightPersistenceTests(unittest.TestCase):
             response = self.client.get("/api/cloud-sync/status")
 
         self.assertEqual(200, response.status_code)
-        status.assert_called_once_with(self.user.id, include_remote=True)
+        self.assertEqual(
+            [
+                call(self.user.id, include_remote=False),
+                call(self.user.id, include_remote=True),
+            ],
+            status.call_args_list,
+        )
         ensure_worker.assert_called_once_with(web_app.app)
         payload = response.get_json()["cloud_sync"]
         self.assertEqual("2026-07-16 00:00:00", payload["last_synced_at"])
@@ -166,8 +172,44 @@ class AiInsightPersistenceTests(unittest.TestCase):
         ):
             response = self.client.get("/api/cloud-sync/status")
 
-        self.assertEqual(500, response.status_code)
+        self.assertEqual(200, response.status_code)
         ensure_worker.assert_called_once_with(web_app.app)
+        payload = response.get_json()
+        self.assertTrue(payload["success"])
+        self.assertTrue(payload["cloud_sync"]["worker"]["degraded"])
+
+    def test_remote_status_failure_keeps_local_worker_state(self):
+        worker = {"started": True, "online": True, "degraded": False}
+        with (
+            patch.object(
+                web_app,
+                "sync_status",
+                side_effect=[{"enabled": True}, RuntimeError("request timed out")],
+            ),
+            patch("remote_worker.start_remote_task_worker", return_value=False),
+            patch("remote_worker.worker_health", return_value=worker),
+        ):
+            response = self.client.get("/api/cloud-sync/status")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()["cloud_sync"]
+        self.assertEqual(worker, payload["worker"])
+        self.assertIn("自动重试", payload["error"])
+
+    def test_reconnect_wakes_worker_without_waiting_for_network(self):
+        worker = {"started": True, "online": False, "degraded": False}
+        with (
+            patch.object(web_app, "cloud_sync_enabled", return_value=True),
+            patch.object(web_app, "sync_status", return_value={"enabled": True}),
+            patch("remote_worker.start_remote_task_worker", return_value=False),
+            patch("remote_worker.worker_health", return_value=worker),
+            patch("remote_worker.wake_remote_task_worker", return_value=False) as wake,
+        ):
+            response = self.client.post("/api/cloud-sync/reconnect")
+
+        self.assertEqual(200, response.status_code)
+        wake.assert_called_once_with(web_app.app)
+        self.assertTrue(response.get_json()["success"])
 
     def test_desktop_logout_reports_offline_and_clears_cloud_token(self):
         with (

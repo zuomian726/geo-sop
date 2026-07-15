@@ -84,6 +84,10 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("last_success_at", worker)
         self.assertIn("loadCloudSyncStatus", dashboard)
         self.assertIn("cloudStatusTimer", dashboard)
+        self.assertIn("reconnectCloudSync", dashboard)
+        self.assertIn("/api/cloud-sync/reconnect", app)
+        self.assertIn("def wake_remote_task_worker(", worker)
+        self.assertIn("error: response.data.cloud_sync?.error || ''", dashboard)
         self.assertIn("geo-sop-wordmark.png", dashboard)
 
     def test_desktop_minimum_window_uses_compact_toolbar_and_single_dashboard_load(self):

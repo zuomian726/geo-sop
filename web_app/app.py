@@ -751,7 +751,21 @@ def _desktop_cloud_status(user_id, include_remote=False):
                 'degraded': True,
                 'last_error': str(e)
             }
-    status = sync_status(user_id, include_remote=include_remote)
+    status = sync_status(user_id, include_remote=False)
+    if include_remote and status.get('enabled'):
+        try:
+            status = sync_status(user_id, include_remote=True)
+            status['error'] = ''
+        except Exception as e:
+            logger.warning("[CloudSync] 云端状态读取失败，将保留本地工作器状态: %s", e)
+            message = str(e)
+            if 'HTTP 401' in message or 'HTTP 403' in message:
+                message = '云端登录已失效，请退出后重新登录'
+            elif 'timed out' in message.lower() or 'timeout' in message.lower():
+                message = '连接云端超时，客户端会自动重试'
+            else:
+                message = '暂时无法读取云端状态，客户端会自动重试'
+            status['error'] = message
     if worker_status is not None:
         status['worker'] = worker_status
     return status
@@ -831,10 +845,39 @@ def get_cloud_sync_status():
     except Exception as e:
         logger.exception("[CloudSync] 状态检查失败: %s", e)
         return jsonify({
-            'success': False,
-            'message': '云端同步状态检查失败',
-            'error': str(e)
-        }), 500
+            'success': True,
+            'cloud_sync': {
+                'enabled': cloud_sync_enabled(),
+                'error': '本机同步服务暂时不可用，请点击立即重连',
+                'worker': {
+                    'started': False,
+                    'online': False,
+                    'degraded': True,
+                    'last_error': str(e)[:300],
+                },
+            },
+        })
+
+
+@app.route('/api/cloud-sync/reconnect', methods=['POST'])
+@login_required
+def reconnect_cloud_sync():
+    """Wake the desktop cloud worker without blocking the UI on network I/O."""
+    if not app.config.get('DESKTOP_MODE'):
+        return jsonify({'success': False, 'message': '该操作只能在本机客户端使用'}), 400
+    if not CLOUD_SYNC_AVAILABLE or not cloud_sync_enabled():
+        return jsonify({'success': False, 'message': '请先使用云端账号重新登录'}), 400
+    try:
+        from remote_worker import wake_remote_task_worker
+        wake_remote_task_worker(app)
+        return jsonify({
+            'success': True,
+            'message': '正在重新连接云端',
+            'cloud_sync': _desktop_cloud_status(current_user.id, include_remote=False),
+        })
+    except Exception as e:
+        logger.exception("[CloudSync] 重新连接失败: %s", e)
+        return jsonify({'success': False, 'message': '重新连接失败，请稍后再试'}), 500
 
 
 @app.route('/api/cloud-sync/run', methods=['POST'])
