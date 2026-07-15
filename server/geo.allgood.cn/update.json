@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.19-dev",
+  "version": "0.3.20-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T18:15:00+08:00",
+  "released_at": "2026-07-15T19:05:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "修复 Windows 原生客户端首次启动时卡在数据库初始化的问题。",
-    "Windows 安装包新增启动门禁：必须完成 SQLite 建表并成功打开登录页才允许发布。",
-    "平台登录与检测所需的浏览器能力改为按需加载，客户端首次打开更快。"
+    "修复 Excel 导出无法嵌入 Windows 与 macOS 相对路径截图的问题。",
+    "截图 ZIP 导出使用唯一文件名，避免同名问题截图相互覆盖。",
+    "截图文件缺失时返回明确提示，不再生成空 ZIP 并误报下载成功。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.19-dev",
+      "version": "0.3.20-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.19-dev-macOS.dmg",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.20-dev-macOS.dmg",
       "size": "166 MB",
-      "sha256": "4490eda6fd2b698c15701dfa45762d298a1ea4c67330b068abc2d313b8c20375"
+      "sha256": "3fded55330989739a6ec6ea4fbe727703c00505fcccb0e8e31a326ba9630c3a0"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.19-dev",
+      "version": "0.3.20-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.19-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.20-dev.exe",
       "size": "185 MB",
-      "sha256": "fe9ae8d1475c31a34e0701785084f3acc8144bc0bc67a264dee5c7bc06826e7a"
+      "sha256": "7b6eeb94401de21caddc18afbe8eef2aedffb9241d09039492a13c21e6817e71"
     }
   }
 }
