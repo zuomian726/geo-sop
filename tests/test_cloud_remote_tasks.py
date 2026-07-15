@@ -40,6 +40,8 @@ class RemoteTaskPullTests(unittest.TestCase):
     def tearDown(self):
         db.session.remove()
         db.drop_all()
+        db.session.remove()
+        db.engine.dispose()
         self.context.pop()
         self.temp_dir.cleanup()
 
