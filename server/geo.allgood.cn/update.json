@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.25-dev",
+  "version": "0.3.26-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T22:14:00+08:00",
+  "released_at": "2026-07-15T23:20:00+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "更新检测现已支持最低兼容版本和强制升级策略，协议不兼容时会给出明确提示。",
-    "更新窗口展示当前版本、最新版本、安装包大小和更新内容，并明确保留本地历史数据。",
-    "桌面端通过系统默认浏览器打开同域 HTTPS 官方安装包，避免桌面窗口拦截下载。"
+    "客户端心跳现在会区分等待任务、本地排队、正在采集和等待结果回传。",
+    "云端连接诊断会显示执行中、本地排队和待补传任务数量，任务停留阶段更加清楚。",
+    "心跳只上传运行状态与计数，不上传问题、回答、API Key 或其他业务内容。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.25-dev",
+      "version": "0.3.26-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.25-dev-macOS.dmg",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.26-dev-macOS.dmg",
       "size": "165 MB",
-      "sha256": "c62a42bdab36837cfeb89cf8defb5836fb53871b5cb9d97853a430567b90f932"
+      "sha256": "297bdcb6207a5078a1986a93199652047d426e67321424e9ec3b1a91f85a000f"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.25-dev",
+      "version": "0.3.26-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.25-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.26-dev.exe",
       "size": "185 MB",
-      "sha256": "eb21fd4b956095bff82fe057d0837d56a81a4423953d764505328fb06de16605"
+      "sha256": "f3d74cf4a2acb7a886e11d6e36e3ac69dc9eb509c776408963ad60f808a786e4"
     }
   }
 }
