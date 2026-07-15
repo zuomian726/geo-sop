@@ -166,6 +166,45 @@ body {
 
 .header-title {
     letter-spacing: 0;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.header-actions .el-button {
+    margin-left: 0;
+}
+
+.header-actions .compact-action {
+    min-width: 36px;
+    padding: 0 12px;
+}
+
+.platform-login-dialog .el-dialog__body {
+    padding-top: 10px;
+}
+
+.platform-login-help {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #f5f9ff;
+    border: 1px solid #d7e7ff;
+    border-radius: 6px;
+    color: #49617f;
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.platform-login-help ol {
+    margin: 8px 0 0 20px;
+    padding: 0;
 }
 
 .cloud-status-trigger {
@@ -538,6 +577,26 @@ body {
     }
 }
 
+@media (max-width: 1280px) {
+    .header-action-label.secondary {
+        display: none;
+    }
+    .header-actions .compact-action.secondary {
+        width: 36px;
+        padding: 0;
+    }
+}
+
+@media (max-width: 1100px) {
+    .header-action-label.tertiary {
+        display: none;
+    }
+    .header-actions .compact-action.tertiary {
+        width: 36px;
+        padding: 0;
+    }
+}
+
 @media (max-width: 640px) {
     .container {
         padding: 16px;
@@ -589,28 +648,41 @@ body {
                 [[ updateInfo.required ? '需要升级' : '发现新版本' ]] [[ updateInfo.latest_version ]]
             </el-button>
         </div>
-        <div>
-            <el-button @click="showLimitSettings" :type="todayCollectionCount >= dailyLimit ? 'danger' : 'default'">
-                <el-icon><Warning /></el-icon>
-                采集设置: [[ dailyLimit ]]条 [[ minInterval ]]~[[ maxInterval ]]秒
-            </el-button>
-            <el-button @click="showBrowserSettings">
-                <el-icon><Setting /></el-icon>
-                浏览器设置
-            </el-button>
-            <el-button @click="activeTab = 'sentiment_settings'">
-                <el-icon><Histogram /></el-icon>
-                智慧舆情设置
-            </el-button>
-            <el-button :loading="uploadingCloudAssets" @click="uploadCloudAssets">
-                <el-icon><Upload /></el-icon>
-                上传云端
-            </el-button>
+        <div class="header-actions">
+            <el-tooltip :content="`采集设置：每日 ${dailyLimit} 条，间隔 ${minInterval}~${maxInterval} 秒`" placement="bottom">
+                <el-button class="compact-action secondary" aria-label="采集设置" @click="showLimitSettings" :type="todayCollectionCount >= dailyLimit ? 'danger' : 'default'">
+                    <el-icon><Warning /></el-icon>
+                    <span class="header-action-label secondary">采集设置</span>
+                </el-button>
+            </el-tooltip>
+            <el-tooltip content="浏览器设置" placement="bottom">
+                <el-button class="compact-action secondary" aria-label="浏览器设置" @click="showBrowserSettings">
+                    <el-icon><Setting /></el-icon>
+                    <span class="header-action-label secondary">浏览器设置</span>
+                </el-button>
+            </el-tooltip>
+            <el-tooltip content="智慧舆情设置" placement="bottom">
+                <el-button class="compact-action secondary" aria-label="智慧舆情设置" @click="activeTab = 'sentiment_settings'">
+                    <el-icon><Histogram /></el-icon>
+                    <span class="header-action-label secondary">智慧舆情设置</span>
+                </el-button>
+            </el-tooltip>
+            <el-tooltip content="上传全部本地结果与截图到云端" placement="bottom">
+                <el-button class="compact-action tertiary" aria-label="上传云端" :loading="uploadingCloudAssets" @click="uploadCloudAssets">
+                    <el-icon><Upload /></el-icon>
+                    <span class="header-action-label tertiary">上传云端</span>
+                </el-button>
+            </el-tooltip>
             <el-button type="primary" @click="showCreateDialog">
                 <el-icon><Plus /></el-icon>
                 创建任务
             </el-button>
-            <el-button @click="handleLogout">退出登录</el-button>
+            <el-tooltip content="退出登录" placement="bottom">
+                <el-button class="compact-action tertiary" aria-label="退出登录" @click="handleLogout">
+                    <el-icon><switch-button /></el-icon>
+                    <span class="header-action-label tertiary">退出登录</span>
+                </el-button>
+            </el-tooltip>
         </div>
     </div>
     
@@ -1489,20 +1561,21 @@ body {
     <!-- 登录验证对话框 -->
     <el-dialog 
         v-model="loginDialogVisible" 
-        title="AI平台登录验证"
-        width="700px">
-        <div style="margin-bottom: 20px; color: #666; font-size: 14px;">
+        title="平台账号登录"
+        width="min(820px, calc(100vw - 32px))"
+        class="platform-login-dialog">
+        <div style="margin-bottom: 16px; color: #667085; font-size: 14px;">
             <el-icon style="color: #1890ff;"><info-filled /></el-icon>
-            请确保以下AI平台已登录，未登录的平台将无法采集数据
+            需要采集哪个平台，就先完成对应账号登录。
         </div>
         
-        <el-table :data="platformLoginStatus" style="width: 100%">
-            <el-table-column prop="name" label="AI平台" width="150">
+        <el-table :data="platformLoginStatus" style="width: 100%" max-height="390">
+            <el-table-column prop="name" label="平台" width="130">
                 <template #default="scope">
                     <strong>[[ scope.row.name ]]</strong>
                 </template>
             </el-table-column>
-            <el-table-column prop="status" label="登录状态" width="120" align="center">
+            <el-table-column prop="status" label="状态" width="100" align="center">
                 <template #default="scope">
                     <el-tag 
                         :type="scope.row.isLoggedIn ? 'success' : 'danger'"
@@ -1511,7 +1584,7 @@ body {
                     </el-tag>
                 </template>
             </el-table-column>
-            <el-table-column prop="checkedAt" label="上次检测" width="150">
+            <el-table-column prop="checkedAt" label="上次检测" min-width="180">
                 <template #default="scope">
                     <span style="color: #666; font-size: 12px;">[[ scope.row.checkedAt || '尚未检测' ]]</span>
                     <div v-if="scope.row.statusMessage" style="color: #d46b08; font-size: 12px; margin-top: 4px; line-height: 1.35;">
@@ -1519,15 +1592,7 @@ body {
                     </div>
                 </template>
             </el-table-column>
-            <el-table-column prop="url" label="登录地址">
-                <template #default="scope">
-                    <a :href="scope.row.url" target="_blank" style="color: #1890ff; text-decoration: none;">
-                        [[ scope.row.url ]]
-                        <el-icon style="vertical-align: middle;"><Link /></el-icon>
-                    </a>
-                </template>
-            </el-table-column>
-            <el-table-column label="操作" width="260" align="center">
+            <el-table-column label="操作" width="230" align="right">
                 <template #default="scope">
                     <el-button 
                         v-if="!scope.row.isLoggedIn"
@@ -1554,19 +1619,13 @@ body {
             </el-table-column>
         </el-table>
         
-        <div style="margin-top: 20px; padding: 12px; background: #f0f9ff; border-radius: 4px; border: 1px solid #91d5ff;">
-            <div style="color: #0958d9; font-size: 13px; line-height: 1.6;">
-                <el-icon style="vertical-align: middle;"><info-filled /></el-icon>
-                <strong>提示：</strong>
-                <ul style="margin: 8px 0 0 20px; padding: 0;">
-                    <li>点击"去登录"会打开浏览器窗口，请在浏览器中完成登录</li>
-                    <li>登录完成后，关闭浏览器窗口（或等待自动关闭）</li>
-                    <li>然后点击"重新检测"验证登录状态</li>
-                    <li>登录状态会保存在浏览器中，下次无需重复登录</li>
-                    <li>需要退出某个平台账号时，点击"清除登录"即可删除当前用户的 Cookie</li>
-                    <li>浏览器窗口将在 5 分钟后自动关闭</li>
-                </ul>
-            </div>
+        <div class="platform-login-help">
+            <strong>首次登录只需三步</strong>
+            <ol>
+                <li>点击“去登录”，在打开的本机浏览器中完成账号登录。</li>
+                <li>登录完成后关闭浏览器，回到这里点击“重新检测”。</li>
+                <li>登录状态会保存在本机；需要退出时点击“清除登录”。</li>
+            </ol>
         </div>
         
         <template #footer>
@@ -2452,8 +2511,6 @@ const app = createApp({
         this.initGeoFilter();          // 初始化GEO分析筛选
         this.loadAnalysisData();       // 默认加载分析数据
         this.loadSentimentConfigs();   // 加载舆情配置
-        this.loadInsightsOverview();   // 加载商业看板
-        this.loadInsightScorecard();   // 加载核心分析看板
         this.loadTrendDomains();       // 初始化域名列表
         this.loadTrendData();          // 默认加载走势数据
         this.loadGeoCoverageData();    // 默认加载GEO分析数据
