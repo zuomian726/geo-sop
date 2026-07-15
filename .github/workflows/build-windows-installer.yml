@@ -64,6 +64,62 @@ jobs:
           if (-not $browser) { throw "Bundled Playwright Chromium was not found." }
           Write-Host "Chromium: $($browser.FullName)"
 
+      - name: Smoke test native application startup
+        shell: pwsh
+        run: |
+          $bootLog = Join-Path $env:TEMP "geo_sop_boot.log"
+          $smokeData = Join-Path $env:RUNNER_TEMP "geo-sop-smoke-data"
+          Remove-Item $bootLog -Force -ErrorAction SilentlyContinue
+          Remove-Item $smokeData -Recurse -Force -ErrorAction SilentlyContinue
+          $env:GEO_DEBUG_BOOT = "1"
+          $env:GEO_FORCE_BROWSER = "1"
+          $env:GEO_DATA_DIR = $smokeData
+          $process = Start-Process "dist\GEO-SOP\GEO-SOP.exe" -PassThru
+          try {
+            $port = $null
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              if ($process.HasExited) {
+                $log = if (Test-Path $bootLog) { Get-Content $bootLog -Raw } else { "boot log missing" }
+                throw "Native application exited during startup. $log"
+              }
+              if (Test-Path $bootLog) {
+                $log = Get-Content $bootLog -Raw
+                if ($log -match "creating wsgi server 127\.0\.0\.1:(\d+)") {
+                  $port = [int]$Matches[1]
+                  break
+                }
+              }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $port) {
+              $log = if (Test-Path $bootLog) { Get-Content $bootLog -Raw } else { "boot log missing" }
+              throw "Native application did not report its local server port. $log"
+            }
+
+            $response = $null
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+              try {
+                $response = Invoke-WebRequest "http://127.0.0.1:$port/login" -UseBasicParsing -TimeoutSec 3
+                if ($response.StatusCode -eq 200) { break }
+              } catch {
+                Start-Sleep -Seconds 1
+              }
+            }
+            if (-not $response -or $response.StatusCode -ne 200) {
+              throw "Native application login page was not reachable."
+            }
+            if ($response.Content -notmatch "GEO-SOP") {
+              throw "Native application login page did not contain the product identity."
+            }
+            if (-not (Test-Path $smokeData)) {
+              throw "Native application did not initialize its local data directory."
+            }
+            Write-Host "Native startup smoke test passed on port $port."
+            Get-Content $bootLog
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+
       - name: Build setup EXE
         shell: cmd
         env:
