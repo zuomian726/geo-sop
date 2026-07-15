@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.20-dev",
+  "version": "0.3.21-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T19:05:00+08:00",
+  "released_at": "2026-07-15T19:35:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "修复 Excel 导出无法嵌入 Windows 与 macOS 相对路径截图的问题。",
-    "截图 ZIP 导出使用唯一文件名，避免同名问题截图相互覆盖。",
-    "截图文件缺失时返回明确提示，不再生成空 ZIP 并误报下载成功。"
+    "采集成功后即使同步临时断网，本地任务也不会被错误标记为失败。",
+    "结果、截图和任务终态会在后续心跳中自动补传，无需重新执行任务。",
+    "多个待补传任务会合并工作区同步请求，减少重复上传和服务器压力。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.20-dev",
+      "version": "0.3.21-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.20-dev-macOS.dmg",
-      "size": "166 MB",
-      "sha256": "3fded55330989739a6ec6ea4fbe727703c00505fcccb0e8e31a326ba9630c3a0"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.21-dev-macOS.dmg",
+      "size": "167 MB",
+      "sha256": "dae9208866958b678d740d6371a9ac200adc090daeb3ad2326ee56f48bc2617b"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.20-dev",
+      "version": "0.3.21-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.20-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.21-dev.exe",
       "size": "185 MB",
-      "sha256": "7b6eeb94401de21caddc18afbe8eef2aedffb9241d09039492a13c21e6817e71"
+      "sha256": "2ac12963db609e52cac072be1b93acbba966d57ef2705d9bd5a5c10276528bd5"
     }
   }
 }
