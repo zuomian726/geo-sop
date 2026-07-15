@@ -42,7 +42,9 @@ def _boot_log(message: str):
     if os.environ.get("GEO_DEBUG_BOOT") != "1":
         return
     try:
-        log_path = Path(os.environ.get("TEMP") or "/tmp") / "geo_sop_boot.log"
+        configured_path = os.environ.get("GEO_BOOT_LOG_PATH")
+        log_path = Path(configured_path) if configured_path else Path(os.environ.get("TEMP") or "/tmp") / "geo_sop_boot.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%H:%M:%S')} {message}\n")
     except Exception:
@@ -148,7 +150,9 @@ def _startup_path_from_args() -> str:
 
 
 def main():
+    _boot_log(f"desktop main starting frozen={getattr(sys, 'frozen', False)} root={ROOT_DIR}")
     os.chdir(ROOT_DIR)
+    _boot_log("initializing local database")
     _init_database()
     _start_remote_worker()
 

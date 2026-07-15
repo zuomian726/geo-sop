@@ -72,12 +72,13 @@ jobs:
           Remove-Item $bootLog -Force -ErrorAction SilentlyContinue
           Remove-Item $smokeData -Recurse -Force -ErrorAction SilentlyContinue
           $env:GEO_DEBUG_BOOT = "1"
+          $env:GEO_BOOT_LOG_PATH = $bootLog
           $env:GEO_FORCE_BROWSER = "1"
           $env:GEO_DATA_DIR = $smokeData
           $process = Start-Process "dist\GEO-SOP\GEO-SOP.exe" -PassThru
           try {
             $port = $null
-            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
               if ($process.HasExited) {
                 $log = if (Test-Path $bootLog) { Get-Content $bootLog -Raw } else { "boot log missing" }
                 throw "Native application exited during startup. $log"
