@@ -28,6 +28,19 @@ class PlatformCatalogTests(unittest.TestCase):
         cloud_ids = re.findall(r"^\s*'([a-z0-9_]+)'\s*=>\s*\[", catalog_body, flags=re.MULTILINE)
         self.assertEqual([item["id"] for item in PLATFORM_CATALOG], cloud_ids)
 
+        cloud_names = dict(re.findall(
+            r"^\s*'([a-z0-9_]+)'\s*=>\s*\['name'\s*=>\s*'([^']+)'",
+            catalog_body,
+            flags=re.MULTILINE,
+        ))
+        self.assertEqual({item["id"]: item["name"] for item in PLATFORM_CATALOG}, cloud_names)
+
+    def test_cloud_dashboard_uses_canonical_platform_names(self):
+        source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        function_body = source.split("function geo_platform_name", 1)[1].split("}\n", 1)[0]
+        self.assertIn("geo_platform_catalog()", function_body)
+        self.assertNotIn("'gemini'", function_body)
+
 
 if __name__ == "__main__":
     unittest.main()

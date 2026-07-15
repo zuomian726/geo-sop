@@ -55,17 +55,8 @@ function geo_payload_refs(array $payload): array {
 }
 
 function geo_platform_name(string $platform): string {
-    $map = [
-        'doubao' => '豆包',
-        'deepseek' => 'DeepSeek',
-        'kimi' => 'Kimi',
-        'qianwen' => '通义千问',
-        'yuanbao' => '腾讯元宝',
-        'chatgpt' => 'ChatGPT',
-        'gemini' => 'Gemini',
-        'wenxin' => '文心一言',
-    ];
-    return $map[$platform] ?? $platform;
+    $catalog = geo_platform_catalog();
+    return (string)($catalog[$platform]['name'] ?? $platform);
 }
 
 $message = '';
