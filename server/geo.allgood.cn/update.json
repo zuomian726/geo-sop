@@ -1,41 +1,41 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.35-dev",
+  "version": "0.3.36-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-16T04:00:00+08:00",
+  "released_at": "2026-07-16T05:08:48+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "macOS 分别提供 Apple Silicon 与 Intel 原生安装包，客户端会根据 CPU 架构自动选择更新。",
-    "Mac 包改用经过校验的 Python 3.12 运行时，并固定兼容 macOS 12 的 Playwright 与 NumPy。",
-    "构建会扫描 App 内全部 Mach-O 文件，阻止依赖升级悄悄抬高系统要求。",
-    "Windows 安装包继续内置应用运行时和 Chromium，无需用户另外安装 Python。",
-    "Apple Silicon、Intel 与 Windows 包均通过真实启动验证，自动回归共 60 项。"
+    "修复临时网络错误恢复后仍显示同步异常的问题。",
+    "新增立即重连，可主动唤醒后台线程并马上重试云端心跳。",
+    "心跳中断、登录失效与网络超时现在提供不同的操作提示。",
+    "云端状态查询失败不再影响本地看板，后台同步仍会继续自动重试。",
+    "Apple Silicon、Intel 与 Windows 安装包均通过原生启动验证，自动回归共 70 项。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.35-dev",
+      "version": "0.3.36-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.35-dev-macOS-Apple-Silicon.dmg",
-      "size": "175 MB",
-      "sha256": "aff2415d44633953c82284361352c43704857fff9827acf1e5e053bef6a386d5"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.36-dev-macOS-Apple-Silicon.dmg",
+      "size": "176 MB",
+      "sha256": "f51f734ec6e637c8b1f982f6af475515d9c60eecfa4b52afa3f4d800cb79501d"
     },
     "macos_intel": {
       "name": "GEO-SOP-macOS-Intel-dev.dmg",
-      "version": "0.3.35-dev",
+      "version": "0.3.36-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-Intel-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.35-dev-macOS-Intel.dmg",
-      "size": "183 MB",
-      "sha256": "ad255761ac85370035a1b45ef56a8db4ff1abb1248793b37bf18c69ad9acedd1"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.36-dev-macOS-Intel.dmg",
+      "size": "182 MB",
+      "sha256": "4075f18874886ba0c799a7a3b3d1b1ad111eb590f618c7f7e7234183f687cf98"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.35-dev",
+      "version": "0.3.36-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.35-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.36-dev.exe",
       "size": "146 MB",
-      "sha256": "2e7dac73741796b4c527431d1675cf3b2e68d2e8b9101b07ab8d07b36ca36164"
+      "sha256": "078dbf8782cf584fe1b4d4ed52497bcd5f9d06c6c6b0cc756fe597c747717134"
     }
   }
 }
