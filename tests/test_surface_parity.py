@@ -44,6 +44,9 @@ class SurfaceParityTests(unittest.TestCase):
             "remote_status",
         }
         self.assertTrue(expected <= actions, expected - actions)
+        self.assertIn("客户端离线且版本过旧", source)
+        self.assertIn("online_outdated_clients", source)
+        self.assertIn("if ($outdated) $outdatedClients++", source)
 
     def test_cloud_reference_analysis_has_lazy_ui_and_api_renderers(self):
         source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")

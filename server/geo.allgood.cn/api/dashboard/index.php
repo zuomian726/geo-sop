@@ -575,6 +575,7 @@ try {
         $clientLiveMap = [];
         $onlineClients = 0;
         $outdatedClients = 0;
+        $onlineOutdatedClients = 0;
         $runningTasks = 0;
         $localPendingTasks = 0;
         $syncBacklog = 0;
@@ -587,7 +588,8 @@ try {
             $version = trim((string)($desktop['app_version'] ?? ''));
             $outdated = $version !== '' && $latestVersion !== '' && geo_dashboard_version_is_older($version, $latestVersion);
             if ($live) $onlineClients++;
-            if ($live && $outdated) $outdatedClients++;
+            if ($outdated) $outdatedClients++;
+            if ($live && $outdated) $onlineOutdatedClients++;
             if ($live) {
                 $runningTasks += max(0, (int)($runtime['running_tasks'] ?? 0));
                 $localPendingTasks += max(0, (int)($runtime['pending_remote_tasks'] ?? 0));
@@ -650,7 +652,7 @@ try {
 
         if ($isDemoUser) {
             $diagnosis = ['level' => 'demo', 'title' => '在线 Demo 只读模式', 'detail' => '这里展示样例任务和分析数据，不需要连接桌面客户端。'];
-        } elseif ($onlineClients > 0 && $outdatedClients > 0) {
+        } elseif ($onlineClients > 0 && $onlineOutdatedClients > 0) {
             $diagnosis = ['level' => 'warning', 'title' => '客户端在线，但版本过旧', 'detail' => '请升级到 ' . ($latestVersion ?: '最新版') . '，避免任务同步或状态回传异常。'];
         } elseif ($onlineClients > 0 && $syncBacklog > 0) {
             $diagnosis = ['level' => 'warning', 'title' => '客户端在线，正在补传结果', 'detail' => '还有 ' . $syncBacklog . ' 个任务等待结果或截图回传，请保持 App 运行和网络畅通。'];
@@ -660,6 +662,8 @@ try {
             $diagnosis = ['level' => 'healthy', 'title' => '客户端已接收任务', 'detail' => '本机队列还有 ' . $localPendingTasks . ' 个任务，将按顺序自动执行。'];
         } elseif ($onlineClients > 0) {
             $diagnosis = ['level' => 'healthy', 'title' => '客户端连接正常', 'detail' => '云端任务会自动下发到在线客户端。'];
+        } elseif ($clients && $outdatedClients > 0) {
+            $diagnosis = ['level' => 'offline', 'title' => '客户端离线且版本过旧', 'detail' => '检测到旧版客户端。请先升级到 ' . ($latestVersion ?: '最新版') . '，再启动 GEO-SOP 并登录同一账号。'];
         } elseif ($clients) {
             $diagnosis = ['level' => 'offline', 'title' => '客户端当前离线', 'detail' => '请在电脑上启动 GEO-SOP 并登录同一账号，心跳恢复后任务会自动领取。'];
         } else {
@@ -675,6 +679,7 @@ try {
             'summary' => [
                 'online_clients' => $onlineClients,
                 'outdated_clients' => $outdatedClients,
+                'online_outdated_clients' => $onlineOutdatedClients,
                 'pending_tasks' => $pendingTasks,
                 'running_tasks' => $runningTasks,
                 'local_pending_tasks' => $localPendingTasks,
