@@ -46,9 +46,8 @@ From the repository root:
 
 ```bash
 python -m unittest discover -s tests -v
-GEO_DEMO_USERNAME=... GEO_DEMO_PASSWORD=... \
-  python tools/smoke_cloud_site.py https://geo.allgood.cn
+python tools/smoke_cloud_site.py https://geo.allgood.cn
 ```
 
-The cloud smoke test verifies the public pages, release manifest, Demo login,
+The cloud smoke test verifies the public pages, release manifest, one-click Demo login,
 dashboard queries, Excel export, and the Demo read-only task boundary.

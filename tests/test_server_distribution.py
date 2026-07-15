@@ -72,6 +72,25 @@ class ServerDistributionTests(unittest.TestCase):
         for marker in ("action=overview", "action=export_geo", "action=remote_status", "不能创建或修改任务"):
             self.assertIn(marker, smoke)
 
+    def test_demo_entry_is_one_click_and_read_only_identity_is_centralized(self):
+        common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
+        landing = (SERVER / "demo" / "index.php").read_text(encoding="utf-8")
+        login = (SERVER / "login" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("function geo_demo_username()", common)
+        self.assertIn("function geo_is_demo_user($user)", common)
+        self.assertIn('name="demo_login" value="1"', landing)
+        self.assertIn("一键进入在线 Demo", landing)
+        self.assertIn("$demoLogin ? geo_is_demo_user($user)", login)
+        self.assertIn("一键进入 Demo 工作台", login)
+        for relative in (
+            "api/dashboard/index.php",
+            "api/remote-tasks/index.php",
+            "api/sync/assets/index.php",
+            "dashboard/index.php",
+        ):
+            source = (SERVER / relative).read_text(encoding="utf-8")
+            self.assertIn("geo_is_demo_user(", source, relative)
+
 
 if __name__ == "__main__":
     unittest.main()

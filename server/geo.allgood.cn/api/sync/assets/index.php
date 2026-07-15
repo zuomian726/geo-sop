@@ -22,7 +22,7 @@ $user = geo_auth_user($pdo);
 if (!$user) {
     geo_json(['success' => false, 'message' => 'unauthorized'], 401);
 }
-if (strtolower(trim((string)($user['username'] ?? ''))) === 'tuke') {
+if (geo_is_demo_user($user)) {
     geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);
 }
 

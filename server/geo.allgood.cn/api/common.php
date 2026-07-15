@@ -27,6 +27,15 @@ function geo_now(): string { return date('Y-m-d H:i:s'); }
 function geo_client_ip(): string { return substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 80); }
 function geo_random_token(int $bytes = 32): string { return bin2hex(random_bytes($bytes)); }
 function geo_valid_mobile(string $mobile): bool { return (bool)preg_match('/^1\d{10}$/', $mobile); }
+function geo_demo_username(): string {
+    $username = trim((string)(getenv('GEO_DEMO_USERNAME') ?: 'tuke'));
+    return strtolower($username !== '' ? $username : 'tuke');
+}
+function geo_is_demo_user($user): bool {
+    $username = is_array($user) ? (string)($user['username'] ?? '') : (string)$user;
+    $username = strtolower(trim($username));
+    return $username !== '' && hash_equals(geo_demo_username(), $username);
+}
 function geo_start_session(): void {
     if (session_status() === PHP_SESSION_ACTIVE) return;
     $forwardedProto = strtolower(trim(explode(',', (string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));

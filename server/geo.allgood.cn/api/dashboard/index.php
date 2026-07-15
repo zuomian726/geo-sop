@@ -558,7 +558,7 @@ function geo_dashboard_safe_filename(string $value): string {
 }
 
 $cloudUserId = (int)$user['id'];
-$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
+$isDemoUser = geo_is_demo_user($user);
 $action = (string)($_GET['action'] ?? 'overview');
 
 try {

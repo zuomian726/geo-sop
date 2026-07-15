@@ -251,7 +251,7 @@ function cloud_user_id_for_token(PDO $pdo, array $config, string $token): int {
 function cloud_user_is_demo(PDO $pdo, int $cloudUserId): bool {
     $stmt = $pdo->prepare('SELECT username FROM geo_cloud_users WHERE id=? LIMIT 1');
     $stmt->execute([$cloudUserId]);
-    return strtolower(trim((string)($stmt->fetchColumn() ?: ''))) === 'tuke';
+    return geo_is_demo_user((string)($stmt->fetchColumn() ?: ''));
 }
 
 function clean_ids(array $rows): array {

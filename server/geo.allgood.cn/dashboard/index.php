@@ -10,7 +10,7 @@ if (!$user) {
     header('Location: /login/');
     exit;
 }
-$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
+$isDemoUser = geo_is_demo_user($user);
 $appVersion = '0.3.13-dev';
 $releaseManifest = dirname(__DIR__) . '/update.json';
 if (is_file($releaseManifest)) {

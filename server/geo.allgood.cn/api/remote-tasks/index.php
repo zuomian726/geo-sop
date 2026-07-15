@@ -74,7 +74,7 @@ $pdo->exec("UPDATE geo_desktop_clients
 
 $route = geo_remote_route();
 $cloudUserId = (int)$user['id'];
-$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
+$isDemoUser = geo_is_demo_user($user);
 
 if ($isDemoUser && $_SERVER['REQUEST_METHOD'] === 'POST') {
     geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);

@@ -23,7 +23,7 @@ function demo_date(DateTimeImmutable $base, int $daysAgo, int $hour, int $minute
     return $base->modify("-{$daysAgo} days")->setTime($hour, $minute)->format('Y-m-d H:i:s');
 }
 
-$username = 'tuke';
+$username = geo_demo_username();
 foreach ($argv as $argument) {
     if (strpos($argument, '--username=') === 0) {
         $username = trim(substr($argument, strlen('--username=')));

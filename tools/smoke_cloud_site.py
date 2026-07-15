@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import http.cookiejar
 import json
-import os
 import sys
 import uuid
 from urllib.parse import urlencode
@@ -48,20 +47,15 @@ def main(base_url: str) -> None:
     if status != 200 or set(manifest.get("downloads", {})) != {"macos", "macos_intel", "windows"}:
         raise AssertionError("release manifest does not contain all desktop platforms")
 
-    username = os.environ.get("GEO_DEMO_USERNAME", "")
-    password = os.environ.get("GEO_DEMO_PASSWORD", "")
-    if not username or not password:
-        raise SystemExit("GEO_DEMO_USERNAME and GEO_DEMO_PASSWORD are required")
-
     status, _, body = request(
         opener,
-        base_url + "/login/",
-        data={"username": username, "password": password},
+        base_url + "/login/?demo=1",
+        data={"demo_login": "1"},
         headers={"Accept": "application/json", "X-Requested-With": "fetch"},
     )
     login = json.loads(body.decode("utf-8"))
     if status != 200 or login.get("success") is not True:
-        raise AssertionError("Demo login failed")
+        raise AssertionError("One-click Demo login failed")
 
     status, _, dashboard = request(opener, base_url + "/dashboard/")
     if status != 200 or "在线 Demo 只读模式".encode("utf-8") not in dashboard:
