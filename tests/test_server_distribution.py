@@ -122,6 +122,14 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertEqual(1, source.count("error_page 404 /404.html;"))
         self.assertIn("error_page 404 /404.html;", source[web_location:php_include])
 
+    def test_geo_coverage_uses_install_and_domain_candidate_buckets(self):
+        source = (SERVER / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        coverage = source[source.index("if ($action === 'geo_coverage')"):source.index("if ($action === 'tasks')")]
+        self.assertIn("$manuscriptMatchKeys", coverage)
+        self.assertIn("$bucketKey = (string)$result['install_id'] . '|' . $refDomain", coverage)
+        self.assertIn("geo_dashboard_url_keys_match", coverage)
+        self.assertNotIn("array_keys($manuscripts)", coverage)
+
 
 if __name__ == "__main__":
     unittest.main()

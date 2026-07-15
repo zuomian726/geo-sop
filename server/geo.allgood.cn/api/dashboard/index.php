@@ -62,20 +62,19 @@ function geo_dashboard_url_key(string $url, bool $stripQuery = false): string {
     return trim((string)$url, " \t\n\r\0\x0B/");
 }
 
-function geo_dashboard_url_matches(string $targetUrl, string $referenceUrl): bool {
-    $targetKeys = array_values(array_unique(array_filter([
-        geo_dashboard_url_key($targetUrl, false),
-        geo_dashboard_url_key($targetUrl, true),
+function geo_dashboard_url_match_keys(string $url): array {
+    return array_values(array_unique(array_filter([
+        geo_dashboard_url_key($url, false),
+        geo_dashboard_url_key($url, true),
     ])));
-    $referenceKeys = array_values(array_unique(array_filter([
-        geo_dashboard_url_key($referenceUrl, false),
-        geo_dashboard_url_key($referenceUrl, true),
-    ])));
+}
+
+function geo_dashboard_url_keys_match(array $targetKeys, array $referenceKeys): bool {
     foreach ($targetKeys as $targetKey) {
-        if (mb_strlen($targetKey, 'UTF-8') < 6) continue;
+        if (mb_strlen((string)$targetKey, 'UTF-8') < 6) continue;
         foreach ($referenceKeys as $referenceKey) {
             if ($referenceKey === '') continue;
-            if ($targetKey === $referenceKey || str_contains($referenceKey, $targetKey) || str_contains($targetKey, $referenceKey)) {
+            if ($targetKey === $referenceKey || str_contains((string)$referenceKey, (string)$targetKey) || str_contains((string)$targetKey, (string)$referenceKey)) {
                 return true;
             }
         }
@@ -815,6 +814,7 @@ try {
         $stmt->execute($manuscriptParams);
         $manuscripts = [];
         $manuscriptBuckets = [];
+        $manuscriptMatchKeys = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
             $payload = geo_dashboard_payload($row['payload'] ?? '');
             $taskIds = geo_dashboard_task_ids_from_payload($payload);
@@ -838,7 +838,9 @@ try {
             ];
             $index = count($manuscripts) - 1;
             $domain = geo_dashboard_main_domain_from_url((string)$row['url']);
-            if ($domain !== '') $manuscriptBuckets[$domain][] = $index;
+            $bucketKey = (string)$row['install_id'] . '|' . $domain;
+            $manuscriptBuckets[$bucketKey][] = $index;
+            $manuscriptMatchKeys[$index] = geo_dashboard_url_match_keys((string)$row['url']);
         }
 
         $resultWhere = ['cloud_user_id=?'];
@@ -875,14 +877,14 @@ try {
                 $refUrl = (string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? '');
                 if ($refUrl === '') continue;
                 $refDomain = geo_dashboard_main_domain_from_url($refUrl);
-                $candidateIndexes = $refDomain !== '' && isset($manuscriptBuckets[$refDomain])
-                    ? $manuscriptBuckets[$refDomain]
-                    : array_keys($manuscripts);
+                $bucketKey = (string)$result['install_id'] . '|' . $refDomain;
+                $candidateIndexes = $manuscriptBuckets[$bucketKey] ?? [];
+                if (!$candidateIndexes) continue;
+                $referenceMatchKeys = geo_dashboard_url_match_keys($refUrl);
                 foreach ($candidateIndexes as $manuscriptIndex) {
                     $manuscript = $manuscripts[$manuscriptIndex];
-                    if ($manuscript['install_id'] !== (string)$result['install_id']) continue;
                     if ($manuscript['task_ids'] && !in_array((int)$result['local_task_id'], $manuscript['task_ids'], true)) continue;
-                    if (!geo_dashboard_url_matches((string)$manuscript['url'], $refUrl)) continue;
+                    if (!geo_dashboard_url_keys_match($manuscriptMatchKeys[$manuscriptIndex] ?? [], $referenceMatchKeys)) continue;
                     $manuscripts[$manuscriptIndex]['is_cited'] = true;
                     $manuscripts[$manuscriptIndex]['cited_count']++;
                     if (count($manuscripts[$manuscriptIndex]['details']) < 20) {
