@@ -315,17 +315,27 @@ def _tick(app) -> None:
         return
 
     user_id = int(user.id)
-    report_client_heartbeat(user_id, "online", "客户端在线，等待云端任务")
-    pulled = pull_remote_tasks(user_id)
-    if pulled.get("created"):
-        logger.info("[RemoteWorker] pulled remote tasks: %s", pulled)
+    try:
+        report_client_heartbeat(user_id, "online", "客户端在线，等待云端任务")
+    except Exception as exc:
+        logger.warning("[RemoteWorker] heartbeat deferred: %s", exc)
+
+    try:
+        pulled = pull_remote_tasks(user_id)
+        if pulled.get("created"):
+            logger.info("[RemoteWorker] pulled remote tasks: %s", pulled)
+    except Exception as exc:
+        logger.warning("[RemoteWorker] task pull deferred: %s", exc)
 
     now = time.monotonic()
     if now - _last_cloud_merge_at.get(user_id, 0) >= _merge_interval_seconds():
         _last_cloud_merge_at[user_id] = now
-        merged = restore_workspace_from_cloud(user_id, only_if_empty=False)
-        if merged.get("restored"):
-            logger.info("[RemoteWorker] merged cloud workspace: %s", merged)
+        try:
+            merged = restore_workspace_from_cloud(user_id, only_if_empty=False)
+            if merged.get("restored"):
+                logger.info("[RemoteWorker] merged cloud workspace: %s", merged)
+        except Exception as exc:
+            logger.warning("[RemoteWorker] cloud merge deferred: %s", exc)
 
     _reconcile_terminal_remote_statuses(user_id)
 

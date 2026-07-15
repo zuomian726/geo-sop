@@ -78,6 +78,31 @@ class CloudPipelineTestCase(unittest.TestCase):
 
 
 class RemoteWorkerPipelineTests(CloudPipelineTestCase):
+    def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
+        task = self.create_remote_task(remote_id=109)
+        thread = Mock()
+        thread.start = Mock()
+
+        with (
+            patch.object(remote_worker, "cloud_sync_enabled", return_value=True),
+            patch.object(remote_worker, "_find_cloud_user", return_value=self.user),
+            patch.object(remote_worker, "report_client_heartbeat", side_effect=RuntimeError("heartbeat unavailable")),
+            patch.object(remote_worker, "pull_remote_tasks", side_effect=RuntimeError("pull unavailable")),
+            patch.object(remote_worker, "restore_workspace_from_cloud", side_effect=RuntimeError("restore unavailable")),
+            patch.object(remote_worker, "_reconcile_terminal_remote_statuses"),
+            patch.object(remote_worker.logger, "warning") as warning,
+            patch.object(remote_worker.threading, "Thread", return_value=thread) as thread_factory,
+        ):
+            remote_worker._last_cloud_merge_at[self.user.id] = -10000
+            remote_worker._tick(self.app)
+
+        thread_factory.assert_called_once()
+        call = thread_factory.call_args
+        self.assertIs(call.kwargs["target"], remote_worker._execute_remote_task)
+        self.assertEqual((self.app, self.user.id, task.id, 109), call.kwargs["args"])
+        thread.start.assert_called_once()
+        self.assertGreaterEqual(warning.call_count, 3)
+
     def test_completed_remote_task_syncs_results_assets_and_status(self):
         task = self.create_remote_task(remote_id=101)
 

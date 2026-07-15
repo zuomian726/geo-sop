@@ -129,7 +129,7 @@ foreach ($clientRows as &$clientRow) {
     $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
     $clientRow['version'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['app_version'] ?? '') : '';
     $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
-    $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 60 && (string)$clientRow['status'] === 'online';
+    $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 90 && (string)$clientRow['status'] === 'online';
 }
 unset($clientRow);
 
@@ -284,7 +284,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 <title>GEO-SOP | AI 品牌可见度工作台</title>
 <style>
 :root{--blue:#409eff;--blue2:#1769ff;--cyan:#00a6b2;--ink:#1f2937;--muted:#7b8aa0;--line:#dfe6f0;--soft:#f3f6fb;--card:#fff;--dark:#07111f;--good:#67c23a}
-	*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel,.tabs{position:relative}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px;padding-right:120px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.collapse-toggle{position:absolute;top:18px;right:20px;height:30px;padding:0 11px;border-radius:4px;font-size:12px;background:#f8fafc}.panel.is-collapsed{padding-bottom:22px}.panel.is-collapsed>:not(.kicker):not(h2):not(.collapse-toggle){display:none}.tabs.is-collapsed .tab-body{display:none}.tabs.is-collapsed .tab-nav{border-bottom:0}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;padding-right:110px}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.panel h2{padding-right:96px}.collapse-toggle{top:16px;right:14px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}}
+	*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(310px,.95fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:grid;gap:14px}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel,.tabs{position:relative}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px;padding-right:120px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.collapse-toggle{position:absolute;top:18px;right:20px;height:30px;padding:0 11px;border-radius:4px;font-size:12px;background:#f8fafc}.panel.is-collapsed{padding-bottom:22px}.panel.is-collapsed>:not(.kicker):not(h2):not(.collapse-toggle){display:none}.tabs.is-collapsed .tab-body{display:none}.tabs.is-collapsed .tab-nav{border-bottom:0}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;padding-right:110px}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.connection-diagnosis{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:16px 0;padding:16px 18px;border:1px solid #d0d5dd;border-left:4px solid #98a2b3;border-radius:6px;background:#f8fafc}.connection-diagnosis.healthy,.connection-diagnosis.demo{border-left-color:#12b76a;background:#f0fdf4}.connection-diagnosis.warning{border-left-color:#f79009;background:#fffaeb}.connection-diagnosis.offline{border-left-color:#f04438;background:#fff5f5}.connection-diagnosis strong{display:block;font-size:17px;margin-bottom:5px}.diagnosis-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.diagnosis-stats{display:flex;gap:8px;flex-wrap:wrap}.hidden-section{display:none}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.panel h2{padding-right:96px}.collapse-toggle{top:16px;right:14px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}.connection-diagnosis{align-items:flex-start;flex-direction:column}}
 	select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.geo-summary-item{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px}.geo-summary-item span{display:block;color:var(--muted);font-size:12px;font-weight:800}.geo-summary-item strong{display:block;font-size:24px;margin-top:6px}.geo-title-row{cursor:pointer}.geo-title-main{display:flex;align-items:center;gap:10px;font-weight:800}.geo-caret{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#667085;font-size:12px}.geo-child-row{background:#fbfdff}.geo-url-list{padding:8px 0}.geo-url-card{display:grid;grid-template-columns:minmax(260px,1fr) 150px 150px 170px;gap:14px;align-items:start;padding:12px 14px;border-bottom:1px solid #edf1f7}.geo-url-card:last-child{border-bottom:0}.geo-url{color:#175cd3;word-break:break-all;line-height:1.5}.geo-detail-list{margin-top:8px;display:grid;gap:7px}.geo-detail-item{padding:8px 10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:6px;color:#475467;line-height:1.5}.geo-muted{color:#7b8aa0;font-size:12px}@media(max-width:1100px){.query-grid{grid-template-columns:1fr 1fr}.geo-summary{grid-template-columns:1fr 1fr}.geo-url-card{grid-template-columns:1fr}}@media(max-width:720px){.query-grid{grid-template-columns:1fr}.geo-summary{grid-template-columns:1fr}}
 </style>
 </head>
@@ -549,17 +549,25 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <span class="kicker">Queue</span>
         <h2>任务管理</h2>
         <p class="muted">云端下发任务是从网页创建、等待客户端执行的队列；本地同步任务是桌面端已经采集并同步回来的历史任务。</p>
+        <div class="connection-diagnosis" id="connectionDiagnosis">
+            <div><strong id="diagnosisTitle">正在检查客户端连接...</strong><span class="muted" id="diagnosisDetail">正在读取最近心跳、客户端版本和任务队列。</span></div>
+            <div class="diagnosis-actions">
+                <div class="diagnosis-stats"><span class="pill" id="onlineClientCount">在线 0</span><span class="pill" id="pendingTaskCount">等待 0</span></div>
+                <button type="button" onclick="openLocalApp('dashboard')" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>打开本机 App</button>
+                <a class="btn" href="/#download">下载最新版</a>
+            </div>
+        </div>
         <h3 style="margin:18px 0 8px">云端下发任务</h3>
-        <div class="table-wrap"><table><tr><th>ID</th><th>任务</th><th>状态</th><th>客户端</th><th>本地任务</th><th>创建时间</th></tr>
-        <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status" title="<?=geo_h($r['last_status_message'] ?: '')?>"><?=geo_h(geo_remote_status_label((string)$r['status']))?></span></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['created_at'])?></td></tr><?php endforeach; ?>
-        <?php if(!$remoteRows): ?><tr><td colspan="6"><div class="empty">暂无远程任务。</div></td></tr><?php endif; ?>
-        </table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>状态</th><th>进度说明</th><th>客户端</th><th>本地任务</th><th>更新时间</th></tr></thead><tbody id="remoteTaskRows">
+        <?php foreach($remoteRows as $r): ?><tr><td><?=geo_h($r['id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status" title="<?=geo_h($r['last_status_message'] ?: '')?>"><?=geo_h(geo_remote_status_label((string)$r['status']))?></span></td><td><?=geo_h($r['last_status_message'] ?: '等待状态刷新')?></td><td><?=geo_h($r['assigned_install_id'] ?: '-')?></td><td><?=geo_h($r['local_task_id'] ?: '-')?></td><td><?=geo_h($r['updated_at'])?></td></tr><?php endforeach; ?>
+        <?php if(!$remoteRows): ?><tr><td colspan="7"><div class="empty">暂无远程任务。</div></td></tr><?php endif; ?>
+        </tbody></table></div>
         <h3 style="margin:22px 0 8px">客户端连接状态</h3>
-        <p class="muted">只有同一账号下的桌面客户端保持在线，云端任务才会被自动拉取。超过 60 秒未收到心跳会显示为离线。</p>
-        <div class="table-wrap"><table><tr><th>状态</th><th>客户端</th><th>版本</th><th>平台</th><th>最近心跳</th><th>提示</th></tr>
+        <p class="muted">只有同一账号下的桌面客户端保持在线，云端任务才会被自动拉取。超过 90 秒未收到心跳会显示为离线，本区域每 15 秒自动刷新。</p>
+        <div class="table-wrap"><table><thead><tr><th>状态</th><th>客户端</th><th>版本</th><th>平台</th><th>最近心跳</th><th>提示</th></tr></thead><tbody id="desktopClientRows">
         <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['version'] ?: '-')?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
         <?php if(!$clientRows): ?><tr><td colspan="6"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
-        </table></div>
+        </tbody></table></div>
         <h3 style="margin:22px 0 8px">本地同步任务</h3>
         <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>客户端</th><th>同步时间</th></tr>
         <?php foreach(array_slice($syncedTasks, 0, 30) as $r): ?><tr><td><?=geo_h($r['local_id'])?></td><td><?=geo_h($r['name'])?></td><td><span class="status"><?=geo_h($r['status'] ?: '-')?></span></td><td><?=geo_h($r['install_id'])?></td><td><?=geo_h($r['synced_at'])?></td></tr><?php endforeach; ?>
@@ -590,6 +598,88 @@ async function geoApi(params){
     var data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || '查询失败');
     return data;
+}
+
+var remoteStatusLoading = false;
+
+function remoteStatusPill(status){
+    if (status === 'completed') return 'pill good';
+    if (status === 'failed' || status === 'stopped' || status === 'skipped') return 'pill bad';
+    return 'pill';
+}
+
+function heartbeatAge(seconds){
+    seconds = Math.max(0, Number(seconds || 0));
+    if (seconds < 60) return Math.round(seconds) + ' 秒前';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' 分钟前';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' 小时前';
+    return Math.floor(seconds / 86400) + ' 天前';
+}
+
+function renderRemoteStatus(data){
+    var diagnosis = data.diagnosis || {};
+    var diagnosisBox = document.getElementById('connectionDiagnosis');
+    if (diagnosisBox) {
+        diagnosisBox.classList.remove('healthy', 'warning', 'offline', 'demo');
+        diagnosisBox.classList.add(diagnosis.level || 'offline');
+    }
+    document.getElementById('diagnosisTitle').textContent = diagnosis.title || '客户端状态未知';
+    document.getElementById('diagnosisDetail').textContent = diagnosis.detail || '请稍后重新检查。';
+    document.getElementById('onlineClientCount').textContent = '在线 ' + Number(data.summary?.online_clients || 0);
+    document.getElementById('pendingTaskCount').textContent = '等待 ' + Number(data.summary?.pending_tasks || 0);
+
+    var taskRows = document.getElementById('remoteTaskRows');
+    var tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    if (taskRows) {
+        taskRows.innerHTML = tasks.length ? tasks.map(function(task){
+            return '<tr>' +
+                '<td>' + h(task.id) + '</td>' +
+                '<td>' + h(task.name || '-') + '</td>' +
+                '<td><span class="' + remoteStatusPill(task.status) + '">' + h(task.status_label || task.status) + '</span></td>' +
+                '<td>' + h(task.reason || '-') + '</td>' +
+                '<td>' + h(task.assigned_install_id || '-') + '</td>' +
+                '<td>' + h(task.local_task_id || '-') + '</td>' +
+                '<td>' + h(task.updated_at || '-') + '</td>' +
+            '</tr>';
+        }).join('') : '<tr><td colspan="7"><div class="empty">暂无远程任务。</div></td></tr>';
+    }
+
+    var clientRows = document.getElementById('desktopClientRows');
+    var clients = Array.isArray(data.clients) ? data.clients : [];
+    if (clientRows) {
+        clientRows.innerHTML = clients.length ? clients.map(function(client){
+            var state = client.live ? '<span class="pill good">在线</span>' : '<span class="pill bad">离线</span>';
+            var version = h(client.version || '未知版本');
+            if (client.outdated) version += ' <span class="pill bad">请升级至 ' + h(data.latest_version || '最新版') + '</span>';
+            var heartbeat = h(client.last_seen_at || '-') + '<br><span class="muted">' + h(heartbeatAge(client.age_seconds)) + '</span>';
+            return '<tr>' +
+                '<td>' + state + '</td>' +
+                '<td>' + h(client.install_id || '-') + '</td>' +
+                '<td>' + version + '</td>' +
+                '<td>' + h(client.platform || '-') + '</td>' +
+                '<td>' + heartbeat + '</td>' +
+                '<td>' + h(client.message || '-') + '</td>' +
+            '</tr>';
+        }).join('') : '<tr><td colspan="6"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr>';
+    }
+}
+
+async function loadRemoteStatus(){
+    if (remoteStatusLoading || document.hidden) return;
+    remoteStatusLoading = true;
+    try {
+        renderRemoteStatus(await geoApi({action: 'remote_status'}));
+    } catch (error) {
+        var diagnosisBox = document.getElementById('connectionDiagnosis');
+        if (diagnosisBox) {
+            diagnosisBox.classList.remove('healthy', 'warning', 'demo');
+            diagnosisBox.classList.add('offline');
+        }
+        document.getElementById('diagnosisTitle').textContent = '连接状态暂时无法读取';
+        document.getElementById('diagnosisDetail').textContent = error.message || '请稍后重试。';
+    } finally {
+        remoteStatusLoading = false;
+    }
 }
 
 async function loadCloudTasks(){
@@ -878,6 +968,11 @@ function initCollapsibleSections(){
 document.addEventListener('DOMContentLoaded', function(){
     initCollapsibleSections();
     updateQueryPagination();
+    loadRemoteStatus();
+    window.setInterval(loadRemoteStatus, 15000);
+    document.addEventListener('visibilitychange', function(){
+        if (!document.hidden) loadRemoteStatus();
+    });
     loadCloudTasks().then(function(){
         queryCloudResults(1);
         loadGeoCoverage();

@@ -109,6 +109,38 @@ function geo_dashboard_percent(int $part, int $total): float {
     return $total > 0 ? round($part * 100 / $total, 1) : 0.0;
 }
 
+function geo_dashboard_release_version(): string {
+    $path = '/www/wwwroot/geo.allgood.cn/update.json';
+    if (!is_file($path)) return '';
+    $manifest = json_decode((string)file_get_contents($path), true);
+    return is_array($manifest) ? trim((string)($manifest['version'] ?? '')) : '';
+}
+
+function geo_dashboard_version_numbers(string $version): array {
+    if (!preg_match('/(\d+)\.(\d+)\.(\d+)/', $version, $matches)) return [];
+    return [(int)$matches[1], (int)$matches[2], (int)$matches[3]];
+}
+
+function geo_dashboard_version_is_older(string $version, string $latest): bool {
+    $currentParts = geo_dashboard_version_numbers($version);
+    $latestParts = geo_dashboard_version_numbers($latest);
+    return $currentParts && $latestParts && version_compare(implode('.', $currentParts), implode('.', $latestParts), '<');
+}
+
+function geo_dashboard_remote_status_label(string $status): string {
+    return [
+        'pending' => '等待客户端',
+        'claimed' => '客户端已认领',
+        'imported' => '已导入本机',
+        'queued' => '本机排队中',
+        'running' => '正在采集',
+        'completed' => '采集完成',
+        'failed' => '采集失败',
+        'stopped' => '已停止',
+        'skipped' => '已跳过',
+    ][$status] ?? ($status !== '' ? $status : '未知');
+}
+
 function geo_dashboard_limit(): int {
     $limit = (int)($_GET['limit'] ?? 100);
     return max(1, min(500, $limit));
@@ -428,9 +460,110 @@ function geo_dashboard_safe_filename(string $value): string {
 }
 
 $cloudUserId = (int)$user['id'];
+$isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
 $action = (string)($_GET['action'] ?? 'overview');
 
 try {
+    if ($action === 'remote_status') {
+        $latestVersion = geo_dashboard_release_version();
+        $offlineStmt = $pdo->prepare("UPDATE geo_desktop_clients
+            SET status='offline', message='超过 90 秒未收到客户端心跳', updated_at=NOW()
+            WHERE cloud_user_id=? AND status='online' AND last_seen_at < DATE_SUB(NOW(), INTERVAL 90 SECOND)");
+        $offlineStmt->execute([$cloudUserId]);
+
+        $clientStmt = $pdo->prepare('SELECT install_id,status,message,payload,last_seen_at,TIMESTAMPDIFF(SECOND,last_seen_at,NOW()) age_seconds FROM geo_desktop_clients WHERE cloud_user_id=? ORDER BY last_seen_at DESC LIMIT 20');
+        $clientStmt->execute([$cloudUserId]);
+        $clients = [];
+        $clientLiveMap = [];
+        $onlineClients = 0;
+        $outdatedClients = 0;
+        foreach ($clientStmt->fetchAll() ?: [] as $row) {
+            $payload = geo_dashboard_payload($row['payload'] ?? '');
+            $desktop = is_array($payload['desktop'] ?? null) ? $payload['desktop'] : [];
+            $ageSeconds = max(0, (int)($row['age_seconds'] ?? 0));
+            $live = (string)$row['status'] === 'online' && $ageSeconds <= 90;
+            $version = trim((string)($desktop['app_version'] ?? ''));
+            $outdated = $version !== '' && $latestVersion !== '' && geo_dashboard_version_is_older($version, $latestVersion);
+            if ($live) $onlineClients++;
+            if ($live && $outdated) $outdatedClients++;
+            $installId = (string)$row['install_id'];
+            $clientLiveMap[$installId] = $live;
+            $clients[] = [
+                'install_id' => $installId,
+                'status' => $live ? 'online' : 'offline',
+                'live' => $live,
+                'version' => $version,
+                'version_known' => $version !== '',
+                'outdated' => $outdated,
+                'platform' => trim((string)($desktop['platform'] ?? '')),
+                'last_seen_at' => (string)$row['last_seen_at'],
+                'age_seconds' => $ageSeconds,
+                'message' => (string)($row['message'] ?? ''),
+            ];
+        }
+
+        $taskStmt = $pdo->prepare('SELECT id,name,status,assigned_install_id,local_task_id,created_at,updated_at,started_at,finished_at,last_status_message FROM geo_remote_tasks WHERE cloud_user_id=? ORDER BY id DESC LIMIT 50');
+        $taskStmt->execute([$cloudUserId]);
+        $tasks = [];
+        $pendingTasks = 0;
+        foreach ($taskStmt->fetchAll() ?: [] as $row) {
+            $status = (string)($row['status'] ?? '');
+            $assignedInstallId = trim((string)($row['assigned_install_id'] ?? ''));
+            $assignedLive = $assignedInstallId !== '' && !empty($clientLiveMap[$assignedInstallId]);
+            if ($status === 'pending') {
+                $pendingTasks++;
+                $reason = $onlineClients > 0 ? '客户端在线，等待领取（通常 10 秒内）' : '没有在线客户端，请启动本机 App';
+            } elseif ($status === 'claimed') {
+                $reason = $assignedLive ? '客户端已领取，正在导入本机' : '领取任务的客户端已离线，超时后会自动重新排队';
+            } elseif (in_array($status, ['imported', 'queued'], true)) {
+                $reason = $assignedLive ? '任务已进入本机队列' : '执行客户端已离线，请重新启动 App';
+            } elseif ($status === 'running') {
+                $reason = $assignedLive ? '客户端正在采集并回传进度' : '执行客户端已离线，恢复后会继续补报';
+            } else {
+                $reason = trim((string)($row['last_status_message'] ?? '')) ?: geo_dashboard_remote_status_label($status);
+            }
+            $tasks[] = [
+                'id' => (int)$row['id'],
+                'name' => (string)$row['name'],
+                'status' => $status,
+                'status_label' => geo_dashboard_remote_status_label($status),
+                'assigned_install_id' => $assignedInstallId,
+                'assigned_client_live' => $assignedLive,
+                'local_task_id' => $row['local_task_id'] !== null ? (int)$row['local_task_id'] : null,
+                'created_at' => (string)$row['created_at'],
+                'updated_at' => (string)$row['updated_at'],
+                'reason' => $reason,
+            ];
+        }
+
+        if ($isDemoUser) {
+            $diagnosis = ['level' => 'demo', 'title' => '在线 Demo 只读模式', 'detail' => '这里展示样例任务和分析数据，不需要连接桌面客户端。'];
+        } elseif ($onlineClients > 0 && $outdatedClients === 0) {
+            $diagnosis = ['level' => 'healthy', 'title' => '客户端连接正常', 'detail' => '云端任务会自动下发到在线客户端。'];
+        } elseif ($onlineClients > 0) {
+            $diagnosis = ['level' => 'warning', 'title' => '客户端在线，但版本过旧', 'detail' => '请升级到 ' . ($latestVersion ?: '最新版') . '，避免任务同步或状态回传异常。'];
+        } elseif ($clients) {
+            $diagnosis = ['level' => 'offline', 'title' => '客户端当前离线', 'detail' => '请在电脑上启动 GEO-SOP 并登录同一账号，心跳恢复后任务会自动领取。'];
+        } else {
+            $diagnosis = ['level' => 'offline', 'title' => '尚未连接桌面客户端', 'detail' => '请先安装 GEO-SOP，在本机登录当前云端账号。'];
+        }
+
+        geo_json([
+            'success' => true,
+            'demo' => $isDemoUser,
+            'latest_version' => $latestVersion,
+            'checked_at' => geo_now(),
+            'diagnosis' => $diagnosis,
+            'summary' => [
+                'online_clients' => $onlineClients,
+                'outdated_clients' => $outdatedClients,
+                'pending_tasks' => $pendingTasks,
+            ],
+            'clients' => $clients,
+            'tasks' => $tasks,
+        ]);
+    }
+
     if ($action === 'export_geo') {
         @set_time_limit(180);
         $taskNames = geo_dashboard_task_name_map($pdo, $cloudUserId);
