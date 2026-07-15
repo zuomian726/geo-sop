@@ -147,7 +147,10 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("header-full-label", dashboard)
         self.assertIn("header-compact-label", dashboard)
         self.assertIn("white-space:nowrap", dashboard)
-        self.assertIn(".side-stack{grid-template-columns:repeat(2,minmax(0,1fr))}", dashboard)
+        self.assertIn(".side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}", dashboard)
+        self.assertIn(".side-stack{display:contents}", dashboard)
+        self.assertIn("grid-template-columns:minmax(0,1.55fr) minmax(250px,.72fr) minmax(250px,.72fr)", dashboard)
+        self.assertNotIn(".hero-panel{min-height:300px}", dashboard)
 
     def test_cloud_default_date_filters_use_browser_local_date(self):
         dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
