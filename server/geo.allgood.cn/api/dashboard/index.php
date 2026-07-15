@@ -38,6 +38,11 @@ function geo_dashboard_refs(array $payload): array {
     return is_array($refs) ? array_values($refs) : [];
 }
 
+function geo_dashboard_compact_refs(?string $value): array {
+    $refs = json_decode((string)$value, true);
+    return is_array($refs) ? array_values($refs) : [];
+}
+
 function geo_dashboard_domain(string $url): string {
     $url = trim($url);
     if ($url === '') return '';
@@ -138,6 +143,12 @@ function geo_dashboard_limit(): int {
     return max(1, min(500, $limit));
 }
 
+function geo_dashboard_stream_rows(PDO $pdo): void {
+    if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
+        $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+    }
+}
+
 function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplicate = false): array {
     $where = ['cloud_user_id=?'];
     $params = [$cloudUserId];
@@ -167,7 +178,14 @@ function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplic
         $params[] = $dateEnd . ' 23:59:59';
     }
 
-    $sql = 'SELECT payload,result_at FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY result_at ASC,id ASC LIMIT 20000';
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM geo_sync_results WHERE ' . implode(' AND ', $where));
+    $countStmt->execute($params);
+    $totalResults = (int)$countStmt->fetchColumn();
+
+    $referenceWhere = $where;
+    $referenceWhere[] = 'reference_count>0';
+    $sql = 'SELECT reference_items,result_at FROM geo_sync_results WHERE ' . implode(' AND ', $referenceWhere) . ' ORDER BY result_at ASC,id ASC LIMIT 20000';
+    geo_dashboard_stream_rows($pdo);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $fullCounts = [];
@@ -175,11 +193,9 @@ function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplic
     $dailyFull = [];
     $dailyTop = [];
     $seenUrls = [];
-    $totalResults = 0;
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $totalResults++;
         $date = substr((string)($row['result_at'] ?? ''), 0, 10);
-        foreach (geo_dashboard_refs(geo_dashboard_payload($row['payload'] ?? '')) as $ref) {
+        foreach (geo_dashboard_compact_refs($row['reference_items'] ?? '') as $ref) {
             if (!is_array($ref)) continue;
             $url = trim((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
             if ($url === '') continue;
@@ -233,26 +249,33 @@ function geo_dashboard_task_map(PDO $pdo, int $cloudUserId): array {
 
 function geo_dashboard_asset_map(PDO $pdo, int $cloudUserId, array $pairs): array {
     if (!$pairs) return [];
-    $clauses = [];
-    $params = [$cloudUserId];
+    $uniquePairs = [];
     foreach ($pairs as $pair) {
-        $clauses[] = '(install_id=? AND local_result_id=?)';
-        $params[] = (string)$pair['install_id'];
-        $params[] = (int)$pair['local_result_id'];
+        $key = (string)$pair['install_id'] . ':' . (int)$pair['local_result_id'];
+        $uniquePairs[$key] = $pair;
     }
-    $sql = 'SELECT install_id,local_result_id,storage_path,public_url,file_size,updated_at FROM geo_sync_assets WHERE cloud_user_id=? AND kind="screenshot" AND (' . implode(' OR ', $clauses) . ') ORDER BY updated_at DESC';
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
     $assets = [];
-    foreach ($stmt->fetchAll() ?: [] as $row) {
-        $key = (string)$row['install_id'] . ':' . (int)$row['local_result_id'];
-        if (!isset($assets[$key])) {
-            $assets[$key] = [
-                'storage_path' => $row['storage_path'],
-                'url' => $row['public_url'],
-                'file_size' => (int)$row['file_size'],
-                'updated_at' => $row['updated_at'],
-            ];
+    foreach (array_chunk(array_values($uniquePairs), 200) as $chunk) {
+        $clauses = [];
+        $params = [$cloudUserId];
+        foreach ($chunk as $pair) {
+            $clauses[] = '(install_id=? AND local_result_id=?)';
+            $params[] = (string)$pair['install_id'];
+            $params[] = (int)$pair['local_result_id'];
+        }
+        $sql = 'SELECT install_id,local_result_id,storage_path,public_url,file_size,updated_at FROM geo_sync_assets WHERE cloud_user_id=? AND kind="screenshot" AND (' . implode(' OR ', $clauses) . ') ORDER BY updated_at DESC';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $key = (string)$row['install_id'] . ':' . (int)$row['local_result_id'];
+            if (!isset($assets[$key])) {
+                $assets[$key] = [
+                    'storage_path' => $row['storage_path'],
+                    'url' => $row['public_url'],
+                    'file_size' => (int)$row['file_size'],
+                    'updated_at' => $row['updated_at'],
+                ];
+            }
         }
     }
     return $assets;
@@ -337,7 +360,7 @@ function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 50
         $where[] = 'result_at <= ?';
         $params[] = $end . ' 23:59:59';
     }
-    $sql = 'SELECT * FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY platform ASC, question ASC, result_at ASC, id ASC LIMIT ' . max(1, min(10000, $limit));
+    $sql = 'SELECT install_id,local_id,platform,question,local_created_at,synced_at FROM geo_sync_results WHERE ' . implode(' AND ', $where) . ' ORDER BY platform ASC, question ASC, result_at ASC, id ASC LIMIT ' . max(1, min(10000, $limit));
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll() ?: [];
@@ -664,6 +687,7 @@ try {
 
     if ($action === 'export_geo') {
         @set_time_limit(180);
+        geo_dashboard_stream_rows($pdo);
         $taskNames = geo_dashboard_task_name_map($pdo, $cloudUserId);
         $dates = [];
         $groups = [];
@@ -834,12 +858,12 @@ try {
             $resultWhere[] = 'result_at <= ?';
             $resultParams[] = $endDate . ' 23:59:59';
         }
-        $sql = 'SELECT install_id,local_id,local_task_id,platform,question,payload,local_created_at,synced_at FROM geo_sync_results WHERE ' . implode(' AND ', $resultWhere) . ' ORDER BY result_at DESC, id DESC LIMIT 10000';
+        $sql = 'SELECT install_id,local_id,local_task_id,platform,question,reference_items,local_created_at,synced_at FROM geo_sync_results WHERE ' . implode(' AND ', $resultWhere) . ' ORDER BY result_at DESC, id DESC LIMIT 10000';
+        geo_dashboard_stream_rows($pdo);
         $stmt = $pdo->prepare($sql);
         $stmt->execute($resultParams);
         while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $payload = geo_dashboard_payload($result['payload'] ?? '');
-            $refs = geo_dashboard_refs($payload);
+            $refs = geo_dashboard_compact_refs($result['reference_items'] ?? '');
             if (!$refs) continue;
             foreach ($refs as $ref) {
                 if (!is_array($ref)) continue;

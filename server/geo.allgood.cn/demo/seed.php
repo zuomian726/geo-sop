@@ -97,8 +97,8 @@ $taskInsert = $pdo->prepare('INSERT INTO geo_sync_tasks
     (cloud_user_id,install_id,local_id,local_user_id,user_key,name,status,payload,local_created_at,local_updated_at,synced_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?)');
 $resultInsert = $pdo->prepare('INSERT INTO geo_sync_results
-    (cloud_user_id,install_id,local_id,local_task_id,local_user_id,user_key,platform,question,has_brand_exposure,has_screenshot,reference_count,reference_domains,payload,local_created_at,synced_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    (cloud_user_id,install_id,local_id,local_task_id,local_user_id,user_key,platform,question,has_brand_exposure,has_screenshot,reference_count,reference_domains,reference_items,payload,local_created_at,synced_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
 $manuscriptInsert = $pdo->prepare('INSERT INTO geo_sync_manuscripts
     (cloud_user_id,install_id,local_id,local_user_id,user_key,title,url,payload,local_created_at,synced_at)
     VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -187,7 +187,7 @@ try {
                 $resultInsert->execute([
                     $cloudUserId, DEMO_INSTALL_ID, $resultId, $taskId, $cloudUserId, $userKey,
                     $platformId, $question, $exposed ? 1 : 0, $hasScreenshot, count($references),
-                    demo_json($domains), demo_json($payload), $resultAt, $resultAt,
+                    demo_json($domains), demo_json($references), demo_json($payload), $resultAt, $resultAt,
                 ]);
             }
         }

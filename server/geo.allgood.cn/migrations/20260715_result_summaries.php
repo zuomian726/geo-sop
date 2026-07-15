@@ -10,6 +10,7 @@ $columns = [
     'has_screenshot' => 'ALTER TABLE geo_sync_results ADD COLUMN has_screenshot TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure',
     'reference_count' => 'ALTER TABLE geo_sync_results ADD COLUMN reference_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot',
     'reference_domains' => 'ALTER TABLE geo_sync_results ADD COLUMN reference_domains TEXT NULL AFTER reference_count',
+    'reference_items' => 'ALTER TABLE geo_sync_results ADD COLUMN reference_items TEXT NULL AFTER reference_domains',
 ];
 foreach ($columns as $name => $sql) {
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?');
@@ -18,7 +19,7 @@ foreach ($columns as $name => $sql) {
 }
 
 $select = $pdo->prepare('SELECT id,payload FROM geo_sync_results WHERE id>? ORDER BY id ASC LIMIT 250');
-$update = $pdo->prepare('UPDATE geo_sync_results SET has_screenshot=?,reference_count=?,reference_domains=? WHERE id=?');
+$update = $pdo->prepare('UPDATE geo_sync_results SET has_screenshot=?,reference_count=?,reference_domains=?,reference_items=? WHERE id=?');
 $cursor = 0;
 $updated = 0;
 do {
@@ -37,10 +38,15 @@ do {
         }
         if (!is_array($refs)) $refs = [];
         $domains = [];
+        $referenceItems = [];
         foreach ($refs as $ref) {
             if (!is_array($ref)) continue;
             $url = trim((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
             if ($url === '') continue;
+            $referenceItems[] = [
+                'title' => trim((string)($ref['title'] ?? '')),
+                'url' => $url,
+            ];
             if (!preg_match('#^https?://#i', $url)) $url = 'https://' . $url;
             $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?: ''));
             $host = (string)preg_replace('/^www\./', '', $host);
@@ -50,7 +56,13 @@ do {
             trim((string)($payload['screenshot_path'] ?? '')) !== ''
             || trim((string)($payload['screenshot_url'] ?? '')) !== ''
         ) ? 1 : 0;
-        $update->execute([$hasScreenshot, count($refs), json_encode($domains, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $cursor]);
+        $update->execute([
+            $hasScreenshot,
+            count($refs),
+            json_encode($domains, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            json_encode($referenceItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $cursor,
+        ]);
         $updated++;
     }
     $pdo->commit();

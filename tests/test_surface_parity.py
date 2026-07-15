@@ -113,6 +113,8 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("DEMO_EXPECTED_RESULTS = 144", seed)
         self.assertIn("DEMO_EXPECTED_MANUSCRIPTS = 4", seed)
         self.assertIn("demo_json($domains)", seed)
+        self.assertIn("demo_json($references)", seed)
+        self.assertIn("reference_items", seed)
         self.assertIn("$pdo->rollBack()", seed)
 
         landing = (ROOT / "server" / "geo.allgood.cn" / "index.html").read_text(encoding="utf-8")
@@ -137,6 +139,23 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("date.getDate()", dashboard)
         self.assertIn("return localDateValue(date);", dashboard)
         self.assertNotIn("return date.toISOString().slice(0, 10);", dashboard)
+
+    def test_cloud_large_result_queries_use_compact_summaries(self):
+        sync = (ROOT / "server" / "geo.allgood.cn" / "api" / "sync" / "index.php").read_text(encoding="utf-8")
+        api = (ROOT / "server" / "geo.allgood.cn" / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        migration = (ROOT / "server" / "geo.allgood.cn" / "migrations" / "20260715_result_summaries.php").read_text(encoding="utf-8")
+        incremental = (ROOT / "server" / "geo.allgood.cn" / "migrations" / "20260716_reference_items.php").read_text(encoding="utf-8")
+        for source in (sync, migration):
+            self.assertIn("reference_items", source)
+        self.assertIn('(reference_items IS NULL OR reference_items="")', incremental)
+        self.assertIn("$pdo->beginTransaction()", incremental)
+        self.assertIn("SELECT reference_items,result_at", api)
+        self.assertIn("geo_dashboard_compact_refs", api)
+        self.assertIn("array_chunk(array_values($uniquePairs), 200)", api)
+        self.assertIn("function geo_dashboard_stream_rows(PDO $pdo)", api)
+        self.assertGreaterEqual(api.count("geo_dashboard_stream_rows($pdo);"), 3)
+        self.assertNotIn("SELECT payload,result_at FROM geo_sync_results", api)
+        self.assertIn("SELECT install_id,local_id,platform,question,local_created_at,synced_at FROM geo_sync_results", api)
 
 
 if __name__ == "__main__":

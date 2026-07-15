@@ -51,10 +51,15 @@ function result_summary(array $result): array {
     if (!is_array($refs)) $refs = [];
 
     $domains = [];
+    $referenceItems = [];
     foreach ($refs as $ref) {
         if (!is_array($ref)) continue;
         $url = trim((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
         if ($url === '') continue;
+        $referenceItems[] = [
+            'title' => trim((string)($ref['title'] ?? '')),
+            'url' => $url,
+        ];
         if (!preg_match('#^https?://#i', $url)) $url = 'https://' . $url;
         $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?: ''));
         $host = (string)preg_replace('/^www\./', '', $host);
@@ -67,6 +72,7 @@ function result_summary(array $result): array {
         'has_screenshot' => ($screenshotPath !== '' || $screenshotUrl !== '') ? 1 : 0,
         'reference_count' => count($refs),
         'reference_domains' => json_encode($domains, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        'reference_items' => json_encode($referenceItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ];
 }
 
@@ -117,6 +123,7 @@ function ensure_schema(PDO $pdo): void {
             has_screenshot TINYINT(1) NOT NULL DEFAULT 0,
             reference_count INT UNSIGNED NOT NULL DEFAULT 0,
             reference_domains TEXT NULL,
+            reference_items TEXT NULL,
             payload LONGTEXT NOT NULL,
             local_created_at DATETIME NULL,
             synced_at DATETIME NOT NULL,
@@ -187,6 +194,7 @@ function ensure_schema(PDO $pdo): void {
     try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN has_screenshot TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure"); } catch (Throwable $e) {}
     try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot"); } catch (Throwable $e) {}
     try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_domains TEXT NULL AFTER reference_count"); } catch (Throwable $e) {}
+    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_items TEXT NULL AFTER reference_domains"); } catch (Throwable $e) {}
     $resultIndexes = [
         'idx_results_user_time' => 'cloud_user_id, result_at DESC, id DESC',
         'idx_results_user_task_time' => 'cloud_user_id, local_task_id, result_at DESC, id DESC',
@@ -357,10 +365,11 @@ try {
             'has_screenshot' => $summary['has_screenshot'],
             'reference_count' => $summary['reference_count'],
             'reference_domains' => $summary['reference_domains'],
+            'reference_items' => $summary['reference_items'],
             'payload' => payload_json($result),
             'local_created_at' => $result['created_at'] ?? null,
             'synced_at' => $now,
-        ], ['cloud_user_id', 'local_task_id', 'local_user_id', 'user_key', 'platform', 'question', 'has_brand_exposure', 'has_screenshot', 'reference_count', 'reference_domains', 'payload', 'local_created_at', 'synced_at']);
+        ], ['cloud_user_id', 'local_task_id', 'local_user_id', 'user_key', 'platform', 'question', 'has_brand_exposure', 'has_screenshot', 'reference_count', 'reference_domains', 'reference_items', 'payload', 'local_created_at', 'synced_at']);
     }
 
     foreach ($manuscripts as $manuscript) {
