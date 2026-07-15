@@ -77,6 +77,8 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn('"prune_install": False', client)
         self.assertIn("$pruneInstall = !empty($data['prune_install']);", server)
         self.assertIn("if ($pruneInstall) {", server)
+        self.assertIn("cloud_user_is_demo($pdo, $cloudUserId)", server)
+        self.assertNotIn("$cloudUserId === 16", server)
 
     def test_desktop_cloud_status_is_live_and_does_not_block_first_paint(self):
         app = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")

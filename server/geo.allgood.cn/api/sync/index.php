@@ -248,6 +248,12 @@ function cloud_user_id_for_token(PDO $pdo, array $config, string $token): int {
     return 0;
 }
 
+function cloud_user_is_demo(PDO $pdo, int $cloudUserId): bool {
+    $stmt = $pdo->prepare('SELECT username FROM geo_cloud_users WHERE id=? LIMIT 1');
+    $stmt->execute([$cloudUserId]);
+    return strtolower(trim((string)($stmt->fetchColumn() ?: ''))) === 'tuke';
+}
+
 function clean_ids(array $rows): array {
     $ids = [];
     foreach ($rows as $row) {
@@ -317,7 +323,7 @@ try {
     if ($token === '' || $cloudUserId <= 0) {
         json_response(['success' => false, 'message' => 'unauthorized'], 401);
     }
-    if ($cloudUserId === 16) {
+    if (cloud_user_is_demo($pdo, $cloudUserId)) {
         json_response(['success' => false, 'message' => 'online demo is read-only'], 403);
     }
     $pdo->beginTransaction();
