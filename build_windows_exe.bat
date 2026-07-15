@@ -42,6 +42,7 @@ pyinstaller ^
   --onedir ^
   --windowed ^
   --name GEO-SOP ^
+  --paths "%CD%\web_app" ^
   --add-data "web_app;web_app" ^
   --add-data "platforms;platforms" ^
   --add-data "reference_sentiment;reference_sentiment" ^
@@ -51,6 +52,16 @@ pyinstaller ^
   --hidden-import flask_login ^
   --hidden-import flask_sqlalchemy ^
   --hidden-import flask_cors ^
+  --hidden-import app ^
+  --hidden-import config_web ^
+  --hidden-import models ^
+  --hidden-import local_paths ^
+  --hidden-import profile_utils ^
+  --hidden-import cloud_sync ^
+  --hidden-import login_checker ^
+  --hidden-import login_helper ^
+  --hidden-import scheduler ^
+  --hidden-import remote_worker ^
   --hidden-import playwright ^
   --hidden-import requests ^
   --hidden-import openpyxl ^
