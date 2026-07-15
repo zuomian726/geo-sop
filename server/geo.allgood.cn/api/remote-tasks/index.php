@@ -66,6 +66,9 @@ function geo_remote_task_row(PDO $pdo, int $cloudUserId, int $remoteTaskId): ?ar
 }
 
 geo_remote_ensure_schema($pdo);
+$pdo->exec("UPDATE geo_desktop_clients
+    SET status='offline', message='超过 90 秒未收到客户端心跳', updated_at=NOW()
+    WHERE status='online' AND last_seen_at < DATE_SUB(NOW(), INTERVAL 90 SECOND)");
 
 $route = geo_remote_route();
 $cloudUserId = (int)$user['id'];

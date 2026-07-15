@@ -155,11 +155,11 @@ $totalResults = (int)($metricRow['total'] ?? 0);
 $exposedResults = (int)($metricRow['exposed'] ?? 0);
 $activePlatforms = (int)($metricRow['platforms'] ?? 0);
 
-$screenshotStmt = $pdo->prepare("SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND payload LIKE '%screenshot_path%'");
+$screenshotStmt = $pdo->prepare('SELECT COALESCE(SUM(has_screenshot),0) c FROM geo_sync_results WHERE cloud_user_id=?');
 $screenshotStmt->execute([$uid]);
 $screenshotCount = (int)($screenshotStmt->fetch()['c'] ?? 0);
 
-$referenceStmt = $pdo->prepare("SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND payload LIKE '%references%'");
+$referenceStmt = $pdo->prepare('SELECT COUNT(*) c FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0');
 $referenceStmt->execute([$uid]);
 $referenceResultCount = (int)($referenceStmt->fetch()['c'] ?? 0);
 
@@ -182,23 +182,19 @@ foreach ($dailyStmt->fetchAll() ?: [] as $row) {
 $referenceCounts = [];
 $questionStats = [];
 
-$previewStmt = $pdo->prepare('SELECT platform,question,has_brand_exposure,payload,local_created_at,synced_at FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at DESC, id DESC LIMIT 600');
-$previewStmt->execute([$uid]);
-foreach ($previewStmt->fetchAll() ?: [] as $row) {
-    $payload = geo_decode_payload($row['payload'] ?? '');
-    $question = (string)($row['question'] ?? ($payload['question'] ?? ''));
-    $hasExposure = (int)($row['has_brand_exposure'] ?? 0) === 1;
+$questionStmt = $pdo->prepare('SELECT question,COUNT(*) answers,COALESCE(SUM(has_brand_exposure),0) exposed FROM geo_sync_results WHERE cloud_user_id=? AND question<>\'\' GROUP BY question ORDER BY (COALESCE(SUM(has_brand_exposure),0)/COUNT(*)) ASC, answers DESC LIMIT 5');
+$questionStmt->execute([$uid]);
+foreach ($questionStmt->fetchAll() ?: [] as $row) {
+    $questionStats[(string)$row['question']] = ['question' => (string)$row['question'], 'answers' => (int)$row['answers'], 'exposed' => (int)$row['exposed']];
+}
 
-    if ($question !== '') {
-        if (!isset($questionStats[$question])) $questionStats[$question] = ['question' => $question, 'answers' => 0, 'exposed' => 0];
-        $questionStats[$question]['answers']++;
-        if ($hasExposure) $questionStats[$question]['exposed']++;
-    }
-
-    $refs = geo_payload_refs($payload);
-    foreach ($refs as $ref) {
-        if (!is_array($ref)) continue;
-        $domain = geo_domain_from_url((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
+$referencePreviewStmt = $pdo->prepare('SELECT reference_domains FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0 ORDER BY result_at DESC,id DESC LIMIT 1000');
+$referencePreviewStmt->execute([$uid]);
+foreach ($referencePreviewStmt->fetchAll() ?: [] as $row) {
+    $domains = json_decode((string)($row['reference_domains'] ?? ''), true);
+    if (!is_array($domains)) continue;
+    foreach ($domains as $domain) {
+        $domain = trim((string)$domain);
         if ($domain !== '') $referenceCounts[$domain] = ($referenceCounts[$domain] ?? 0) + 1;
     }
 }

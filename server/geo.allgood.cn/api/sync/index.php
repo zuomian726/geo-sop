@@ -42,6 +42,34 @@ function pdo_conn(array $config): PDO {
     ]);
 }
 
+function result_summary(array $result): array {
+    $refs = $result['references'] ?? [];
+    if (is_string($refs)) {
+        $decoded = json_decode($refs, true);
+        $refs = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($refs)) $refs = [];
+
+    $domains = [];
+    foreach ($refs as $ref) {
+        if (!is_array($ref)) continue;
+        $url = trim((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
+        if ($url === '') continue;
+        if (!preg_match('#^https?://#i', $url)) $url = 'https://' . $url;
+        $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?: ''));
+        $host = (string)preg_replace('/^www\./', '', $host);
+        if ($host !== '') $domains[] = $host;
+    }
+
+    $screenshotPath = trim((string)($result['screenshot_path'] ?? ''));
+    $screenshotUrl = trim((string)($result['screenshot_url'] ?? ''));
+    return [
+        'has_screenshot' => ($screenshotPath !== '' || $screenshotUrl !== '') ? 1 : 0,
+        'reference_count' => count($refs),
+        'reference_domains' => json_encode($domains, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+    ];
+}
+
 function ensure_schema(PDO $pdo): void {
     $sqls = [
         "CREATE TABLE IF NOT EXISTS geo_sync_users (
@@ -86,6 +114,9 @@ function ensure_schema(PDO $pdo): void {
             platform VARCHAR(80) NOT NULL,
             question MEDIUMTEXT NOT NULL,
             has_brand_exposure TINYINT(1) NOT NULL DEFAULT 0,
+            has_screenshot TINYINT(1) NOT NULL DEFAULT 0,
+            reference_count INT UNSIGNED NOT NULL DEFAULT 0,
+            reference_domains TEXT NULL,
             payload LONGTEXT NOT NULL,
             local_created_at DATETIME NULL,
             synced_at DATETIME NOT NULL,
@@ -153,6 +184,9 @@ function ensure_schema(PDO $pdo): void {
         try { $pdo->exec("ALTER TABLE {$table} ADD KEY idx_cloud_user (cloud_user_id)"); } catch (Throwable $e) {}
     }
     try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN result_at DATETIME GENERATED ALWAYS AS (COALESCE(local_created_at, synced_at)) STORED"); } catch (Throwable $e) {}
+    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN has_screenshot TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure"); } catch (Throwable $e) {}
+    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot"); } catch (Throwable $e) {}
+    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_domains TEXT NULL AFTER reference_count"); } catch (Throwable $e) {}
     $resultIndexes = [
         'idx_results_user_time' => 'cloud_user_id, result_at DESC, id DESC',
         'idx_results_user_task_time' => 'cloud_user_id, local_task_id, result_at DESC, id DESC',
@@ -308,6 +342,7 @@ try {
     }
 
     foreach ($results as $result) {
+        $summary = result_summary($result);
         upsert($pdo, 'geo_sync_results', [
             'cloud_user_id' => $cloudUserId,
             'install_id' => $installId,
@@ -318,10 +353,13 @@ try {
             'platform' => (string)($result['platform'] ?? ''),
             'question' => (string)($result['question'] ?? ''),
             'has_brand_exposure' => !empty($result['has_brand_exposure']) ? 1 : 0,
+            'has_screenshot' => $summary['has_screenshot'],
+            'reference_count' => $summary['reference_count'],
+            'reference_domains' => $summary['reference_domains'],
             'payload' => payload_json($result),
             'local_created_at' => $result['created_at'] ?? null,
             'synced_at' => $now,
-        ], ['cloud_user_id', 'local_task_id', 'local_user_id', 'user_key', 'platform', 'question', 'has_brand_exposure', 'payload', 'local_created_at', 'synced_at']);
+        ], ['cloud_user_id', 'local_task_id', 'local_user_id', 'user_key', 'platform', 'question', 'has_brand_exposure', 'has_screenshot', 'reference_count', 'reference_domains', 'payload', 'local_created_at', 'synced_at']);
     }
 
     foreach ($manuscripts as $manuscript) {

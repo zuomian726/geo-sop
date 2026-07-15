@@ -115,7 +115,7 @@ function geo_dashboard_limit(): int {
 }
 
 function geo_dashboard_task_map(PDO $pdo, int $cloudUserId): array {
-    $stmt = $pdo->prepare('SELECT install_id,local_id,name,status,payload,local_created_at,local_updated_at,synced_at FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY COALESCE(local_updated_at, synced_at) DESC, id DESC');
+    $stmt = $pdo->prepare('SELECT install_id,local_id,name,status FROM geo_sync_tasks WHERE cloud_user_id=? ORDER BY id DESC');
     $stmt->execute([$cloudUserId]);
     $map = [];
     foreach ($stmt->fetchAll() ?: [] as $row) {
@@ -151,7 +151,7 @@ function geo_dashboard_asset_map(PDO $pdo, int $cloudUserId, array $pairs): arra
     return $assets;
 }
 
-function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = null, int $answerLimit = 0): array {
+function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = null, int $answerLimit = 0, bool $summaryOnly = false): array {
     $payload = geo_dashboard_payload($row['payload'] ?? '');
     $taskKey = (string)$row['install_id'] . ':' . (int)$row['local_task_id'];
     $task = $taskMap[$taskKey] ?? null;
@@ -165,7 +165,7 @@ function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = n
     if ($answerLimit > 0) {
         $answer = mb_substr($answer, 0, $answerLimit, 'UTF-8');
     }
-    return [
+    $item = [
         'id' => (int)$row['id'],
         'install_id' => (string)$row['install_id'],
         'local_id' => (int)$row['local_id'],
@@ -178,13 +178,17 @@ function geo_dashboard_result_item(array $row, array $taskMap, ?array $asset = n
         'has_brand_exposure' => ((int)$row['has_brand_exposure']) === 1,
         'exposed_keywords' => is_array($payload['exposed_keywords'] ?? null) ? array_values($payload['exposed_keywords']) : [],
         'references' => $refs,
-        'reference_count' => count($refs),
+        'reference_count' => isset($row['reference_count']) ? (int)$row['reference_count'] : count($refs),
         'screenshot_path' => (string)($payload['screenshot_path'] ?? ''),
         'screenshot_url' => $asset['url'] ?? null,
         'ai_sentiment' => is_array($aiSentiment) ? $aiSentiment : null,
         'created_at' => $row['local_created_at'] ?: $row['synced_at'],
         'synced_at' => $row['synced_at'],
     ];
+    if ($summaryOnly) {
+        unset($item['references'], $item['exposed_keywords'], $item['screenshot_path'], $item['ai_sentiment']);
+    }
+    return $item;
 }
 
 function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 5000): array {
@@ -753,7 +757,7 @@ try {
         $results = [];
         foreach ($rows as $row) {
             $key = (string)$row['install_id'] . ':' . (int)$row['local_id'];
-            $results[] = geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null, 600);
+            $results[] = geo_dashboard_result_item($row, $taskMap, $assets[$key] ?? null, 600, true);
         }
         geo_json(['success' => true, 'total' => $total, 'limit' => $limit, 'offset' => $offset, 'results' => $results]);
     }
@@ -775,13 +779,14 @@ try {
     }
 
     if ($action === 'references') {
-        $stmt = $pdo->prepare('SELECT payload FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at DESC LIMIT 5000');
+        $stmt = $pdo->prepare('SELECT reference_domains FROM geo_sync_results WHERE cloud_user_id=? AND reference_count>0 ORDER BY result_at DESC LIMIT 5000');
         $stmt->execute([$cloudUserId]);
         $domains = [];
         foreach ($stmt->fetchAll() ?: [] as $row) {
-            foreach (geo_dashboard_refs(geo_dashboard_payload($row['payload'] ?? '')) as $ref) {
-                if (!is_array($ref)) continue;
-                $domain = geo_dashboard_domain((string)($ref['url'] ?? $ref['link'] ?? $ref['domain'] ?? ''));
+            $rowDomains = json_decode((string)($row['reference_domains'] ?? ''), true);
+            if (!is_array($rowDomains)) continue;
+            foreach ($rowDomains as $domain) {
+                $domain = trim((string)$domain);
                 if ($domain !== '') $domains[$domain] = ($domains[$domain] ?? 0) + 1;
             }
         }
@@ -794,39 +799,37 @@ try {
     }
 
     if ($action === 'overview') {
-        $stmt = $pdo->prepare('SELECT platform,has_brand_exposure,payload,local_created_at,synced_at FROM geo_sync_results WHERE cloud_user_id=? ORDER BY result_at ASC LIMIT 5000');
+        $stmt = $pdo->prepare('SELECT COUNT(*) total,COALESCE(SUM(has_brand_exposure),0) exposed,COALESCE(SUM(has_screenshot),0) screenshots,SUM(reference_count>0) reference_results,COUNT(DISTINCT platform) platforms FROM geo_sync_results WHERE cloud_user_id=?');
         $stmt->execute([$cloudUserId]);
-        $rows = $stmt->fetchAll() ?: [];
-        $total = count($rows);
-        $exposed = 0;
-        $screenshots = 0;
-        $referenceResults = 0;
+        $metrics = $stmt->fetch() ?: [];
+        $total = (int)($metrics['total'] ?? 0);
+        $exposed = (int)($metrics['exposed'] ?? 0);
+        $screenshots = (int)($metrics['screenshots'] ?? 0);
+        $referenceResults = (int)($metrics['reference_results'] ?? 0);
         $platforms = [];
-        $daily = [];
-        foreach ($rows as $row) {
-            $payload = geo_dashboard_payload($row['payload'] ?? '');
-            $hasExposure = ((int)$row['has_brand_exposure']) === 1;
-            if ($hasExposure) $exposed++;
-            if (!empty($payload['screenshot_path'])) $screenshots++;
-            $refs = geo_dashboard_refs($payload);
-            if ($refs) $referenceResults++;
+        $platformStmt = $pdo->prepare('SELECT platform,COUNT(*) answers,COALESCE(SUM(has_brand_exposure),0) exposed FROM geo_sync_results WHERE cloud_user_id=? GROUP BY platform ORDER BY answers DESC');
+        $platformStmt->execute([$cloudUserId]);
+        foreach ($platformStmt->fetchAll() ?: [] as $row) {
             $platform = (string)$row['platform'];
-            if (!isset($platforms[$platform])) $platforms[$platform] = ['platform' => $platform, 'platform_name' => geo_dashboard_platform_name($platform), 'answers' => 0, 'exposed' => 0];
-            $platforms[$platform]['answers']++;
-            if ($hasExposure) $platforms[$platform]['exposed']++;
-            $date = substr((string)($row['local_created_at'] ?: $row['synced_at']), 0, 10);
-            if (!isset($daily[$date])) $daily[$date] = ['date' => $date, 'answers' => 0, 'exposed' => 0];
-            $daily[$date]['answers']++;
-            if ($hasExposure) $daily[$date]['exposed']++;
+            $platforms[] = [
+                'platform' => $platform,
+                'platform_name' => geo_dashboard_platform_name($platform),
+                'answers' => (int)$row['answers'],
+                'exposed' => (int)$row['exposed'],
+                'exposure_rate' => geo_dashboard_percent((int)$row['exposed'], (int)$row['answers']),
+            ];
         }
-        foreach ($platforms as &$item) {
-            $item['exposure_rate'] = geo_dashboard_percent((int)$item['exposed'], (int)$item['answers']);
+        $daily = [];
+        $dailyStmt = $pdo->prepare('SELECT date_key,answers,exposed FROM (SELECT DATE(result_at) date_key,COUNT(*) answers,COALESCE(SUM(has_brand_exposure),0) exposed FROM geo_sync_results WHERE cloud_user_id=? GROUP BY date_key ORDER BY date_key DESC LIMIT 366) recent_days ORDER BY date_key ASC');
+        $dailyStmt->execute([$cloudUserId]);
+        foreach ($dailyStmt->fetchAll() ?: [] as $row) {
+            $daily[] = [
+                'date' => (string)$row['date_key'],
+                'answers' => (int)$row['answers'],
+                'exposed' => (int)$row['exposed'],
+                'exposure_rate' => geo_dashboard_percent((int)$row['exposed'], (int)$row['answers']),
+            ];
         }
-        unset($item);
-        foreach ($daily as &$item) {
-            $item['exposure_rate'] = geo_dashboard_percent((int)$item['exposed'], (int)$item['answers']);
-        }
-        unset($item);
         $taskCount = (int)$pdo->query('SELECT COUNT(*) c FROM geo_sync_tasks WHERE cloud_user_id=' . $cloudUserId)->fetch()['c'];
         geo_json([
             'success' => true,
@@ -839,10 +842,10 @@ try {
                 'screenshot_rate' => geo_dashboard_percent($screenshots, $total),
                 'reference_results' => $referenceResults,
                 'reference_rate' => geo_dashboard_percent($referenceResults, $total),
-                'platforms' => count($platforms),
+                'platforms' => (int)($metrics['platforms'] ?? 0),
             ],
-            'platforms' => array_values($platforms),
-            'daily' => array_values($daily),
+            'platforms' => $platforms,
+            'daily' => $daily,
         ]);
     }
 
