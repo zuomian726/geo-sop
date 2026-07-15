@@ -250,6 +250,8 @@ def build_workspace_payload(user_id: int) -> dict:
     user_payload = _with_local_id(user.to_dict())
     return {
         "schema_version": 1,
+        "sync_mode": "merge",
+        "prune_install": False,
         "install_id": get_install_id(),
         "user_key": _user_key(user),
         "synced_from": "geo-sop-desktop",

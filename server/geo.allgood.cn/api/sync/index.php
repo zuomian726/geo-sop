@@ -300,6 +300,7 @@ $results = is_array($data['results'] ?? null) ? $data['results'] : [];
 $manuscripts = is_array($data['manuscripts'] ?? null) ? $data['manuscripts'] : [];
 $configs = is_array($data['sentiment_configs'] ?? null) ? $data['sentiment_configs'] : [];
 $localUserId = (int)($user['id'] ?? 0);
+$pruneInstall = !empty($data['prune_install']);
 
 try {
     $pdo = pdo_conn($config);
@@ -395,10 +396,15 @@ try {
         ], ['cloud_user_id', 'local_user_id', 'user_key', 'name', 'is_default', 'payload', 'local_created_at', 'local_updated_at', 'synced_at']);
     }
 
-    delete_missing($pdo, 'geo_sync_tasks', $cloudUserId, $installId, $userKey, clean_ids($tasks));
-    delete_missing($pdo, 'geo_sync_results', $cloudUserId, $installId, $userKey, clean_ids($results));
-    delete_missing($pdo, 'geo_sync_manuscripts', $cloudUserId, $installId, $userKey, clean_ids($manuscripts));
-    delete_missing($pdo, 'geo_sync_sentiment_configs', $cloudUserId, $installId, $userKey, clean_ids($configs));
+    // Desktop sync is a backup/merge operation by default. An empty or partial
+    // local database must never erase cloud history during login or recovery.
+    // Future deletion propagation must opt in explicitly and carry tombstones.
+    if ($pruneInstall) {
+        delete_missing($pdo, 'geo_sync_tasks', $cloudUserId, $installId, $userKey, clean_ids($tasks));
+        delete_missing($pdo, 'geo_sync_results', $cloudUserId, $installId, $userKey, clean_ids($results));
+        delete_missing($pdo, 'geo_sync_manuscripts', $cloudUserId, $installId, $userKey, clean_ids($manuscripts));
+        delete_missing($pdo, 'geo_sync_sentiment_configs', $cloudUserId, $installId, $userKey, clean_ids($configs));
+    }
 
     $counts = [
         'users' => 1,
@@ -411,7 +417,14 @@ try {
     $stmt->execute([$cloudUserId, $installId, $localUserId, $userKey, 'success', 'workspace synced via api', payload_json($counts), $now]);
 
     $pdo->commit();
-    json_response(['success' => true, 'install_id' => $installId, 'user_key' => $userKey, 'counts' => $counts, 'synced_at' => $now]);
+    json_response([
+        'success' => true,
+        'install_id' => $installId,
+        'user_key' => $userKey,
+        'sync_mode' => $pruneInstall ? 'replace' : 'merge',
+        'counts' => $counts,
+        'synced_at' => $now,
+    ]);
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();

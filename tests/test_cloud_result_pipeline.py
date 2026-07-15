@@ -78,6 +78,11 @@ class CloudPipelineTestCase(unittest.TestCase):
 
 
 class RemoteWorkerPipelineTests(CloudPipelineTestCase):
+    def test_workspace_sync_defaults_to_non_destructive_merge(self):
+        payload = cloud_sync.build_workspace_payload(self.user.id)
+        self.assertEqual("merge", payload["sync_mode"])
+        self.assertFalse(payload["prune_install"])
+
     def test_runtime_telemetry_reports_queue_collection_and_sync_backlog(self):
         task = self.create_remote_task(remote_id=110)
 

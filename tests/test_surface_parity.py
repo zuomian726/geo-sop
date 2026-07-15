@@ -66,6 +66,14 @@ class SurfaceParityTests(unittest.TestCase):
         for marker in ("worker_state", "running_tasks", "local_pending_tasks", "sync_backlog"):
             self.assertIn(marker, api)
 
+    def test_cloud_sync_is_non_destructive_unless_explicitly_requested(self):
+        client = (ROOT / "web_app" / "cloud_sync.py").read_text(encoding="utf-8")
+        server = (ROOT / "server" / "geo.allgood.cn" / "api" / "sync" / "index.php").read_text(encoding="utf-8")
+        self.assertIn('"sync_mode": "merge"', client)
+        self.assertIn('"prune_install": False', client)
+        self.assertIn("$pruneInstall = !empty($data['prune_install']);", server)
+        self.assertIn("if ($pruneInstall) {", server)
+
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
