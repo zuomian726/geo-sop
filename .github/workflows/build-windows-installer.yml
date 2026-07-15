@@ -74,7 +74,11 @@ jobs:
           if (-not (Test-Path "dist\GEO-SOP\GEO-SOP.exe")) { throw "Native application was not created." }
           $browser = Get-ChildItem ".playwright-browsers" -Recurse -Filter "chrome.exe" | Select-Object -First 1
           if (-not $browser) { throw "Bundled Playwright Chromium was not found." }
+          $env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path ".playwright-browsers").Path
+          $resolved = python -c "from browser_utils import _bundled_browser_candidates; paths = _bundled_browser_candidates(); assert paths, 'application browser resolver found no bundled Chromium'; print(paths[0])"
+          if (-not (Test-Path $resolved)) { throw "Application browser resolver returned an invalid path: $resolved" }
           Write-Host "Chromium: $($browser.FullName)"
+          Write-Host "Application resolver: $resolved"
 
       - name: Smoke test native application startup
         shell: pwsh

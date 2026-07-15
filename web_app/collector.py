@@ -97,9 +97,10 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
         import importlib
         platform_module = importlib.import_module(f'platforms.{platform_id}')
         
-        # yiyan 平台使用独立的浏览器配置（使用自己的 launch_browser 函数）
-        if platform_id == 'yiyan' and hasattr(platform_module, 'launch_browser'):
-            print(f"[平台 {platform_id}] 使用独立浏览器配置")
+        # Only explicitly opted-in modules may replace the shared browser
+        # resolver; all supported platforms otherwise get the same fallback.
+        if getattr(platform_module, 'USE_CUSTOM_BROWSER', False) and hasattr(platform_module, 'launch_browser'):
+            print(f"[平台 {platform_id}] 使用平台专用浏览器配置")
             browser, context, page = platform_module.launch_browser(profile_dir=get_profile_dir(platform_id, user_id))
             
             try:

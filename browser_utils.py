@@ -5,7 +5,9 @@
 """
 import os
 import subprocess
+import sys
 import time
+from pathlib import Path
 from browser_config import get_browser_candidates
 
 def launch_debug_browser(platform_key: str, user_data_dir: str):
@@ -279,14 +281,42 @@ _IGNORE_DEFAULT_ARGS = [
 ]
 
 
+def _bundled_browser_candidates() -> list[str]:
+    roots = []
+    configured_root = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if configured_root:
+        roots.append(Path(configured_root))
+    if getattr(sys, "frozen", False):
+        roots.append(Path(sys.executable).resolve().parent / "ms-playwright")
+
+    patterns = (
+        "chromium-*/chrome-win*/chrome.exe",
+        "chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+        "chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+        "chromium-*/chrome-linux*/chrome",
+    )
+    candidates = []
+    seen = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for pattern in patterns:
+            for path in sorted(root.glob(pattern), reverse=True):
+                value = str(path)
+                if path.is_file() and value not in seen:
+                    seen.add(value)
+                    candidates.append(value)
+    return candidates
+
+
 def find_browser() -> tuple[str, str]:
     """返回 (browser_type, executable_path)，browser_type: 'chrome' | 'msedge'"""
-    for path in get_browser_candidates():
+    for path in [*get_browser_candidates(), *_bundled_browser_candidates()]:
         if os.path.exists(path):
             btype = "msedge" if "edge" in path.lower() else "chrome"
             return btype, path
     raise RuntimeError(
-        "未找到 Chrome 或 Edge，请在 dashboard 页面的浏览器设置中手动添加浏览器路径"
+        "未找到可用浏览器。请安装 Chrome/Edge，或重新安装包含 Chromium 的 GEO-SOP 完整版"
     )
 
 
