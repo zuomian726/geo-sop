@@ -41,6 +41,10 @@ class CloudPipelineTestCase(unittest.TestCase):
     def tearDown(self):
         remote_worker._running_task_ids.clear()
         remote_worker._heartbeat_states.clear()
+        remote_worker._worker_started = False
+        remote_worker._worker_thread = None
+        remote_worker._worker_started_epoch = None
+        remote_worker._worker_restart_count = 0
         db.session.remove()
         db.drop_all()
         db.session.remove()
@@ -79,6 +83,28 @@ class CloudPipelineTestCase(unittest.TestCase):
 
 
 class RemoteWorkerPipelineTests(CloudPipelineTestCase):
+    def test_cloud_account_file_is_private_and_can_be_cleared(self):
+        account_path = Path(self.temp_dir.name) / "cloud_account.json"
+        with (
+            patch.object(cloud_sync, "cloud_account_path", return_value=account_path),
+            patch.dict(
+                cloud_sync.os.environ,
+                {"GEO_CLOUD_SYNC_TOKEN": "secret", "GEO_CLOUD_SYNC_ENABLED": "1"},
+                clear=False,
+            ),
+        ):
+            cloud_sync.save_cloud_account({"token": "secret", "cloud_sync_url": "https://cloud.example/api"})
+            self.assertEqual("secret", cloud_sync.load_cloud_account()["token"])
+            if not sys.platform.startswith("win"):
+                self.assertEqual(0o600, account_path.stat().st_mode & 0o777)
+                account_path.chmod(0o644)
+                cloud_sync.load_cloud_account()
+                self.assertEqual(0o600, account_path.stat().st_mode & 0o777)
+            cloud_sync.clear_cloud_account()
+            self.assertFalse(account_path.exists())
+            self.assertNotIn("GEO_CLOUD_SYNC_TOKEN", cloud_sync.os.environ)
+            self.assertEqual("0", cloud_sync.os.environ["GEO_CLOUD_SYNC_ENABLED"])
+
     def test_workspace_sync_defaults_to_non_destructive_merge(self):
         payload = cloud_sync.build_workspace_payload(self.user.id)
         self.assertEqual("merge", payload["sync_mode"])
@@ -156,6 +182,51 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         with patch.object(remote_worker.time, "time", return_value=1100):
             health = remote_worker.worker_health(self.user.id)
         self.assertFalse(health["online"])
+
+    def test_worker_start_is_idempotent_and_recovers_a_dead_thread(self):
+        alive_thread = Mock()
+        alive_thread.is_alive.return_value = True
+        remote_worker._worker_started = True
+        remote_worker._worker_thread = alive_thread
+
+        with patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}):
+            self.assertFalse(remote_worker.start_remote_task_worker(self.app))
+
+        dead_thread = Mock()
+        dead_thread.is_alive.return_value = False
+        replacement = Mock()
+        replacement.is_alive.return_value = True
+        remote_worker._worker_thread = dead_thread
+
+        with (
+            patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}),
+            patch.object(remote_worker.threading, "Thread", return_value=replacement) as thread_factory,
+            patch.object(remote_worker.time, "time", return_value=1200),
+        ):
+            self.assertTrue(remote_worker.start_remote_task_worker(self.app))
+
+        thread_factory.assert_called_once()
+        replacement.start.assert_called_once()
+        self.assertIs(remote_worker._worker_thread, replacement)
+        self.assertEqual(1, remote_worker._worker_restart_count)
+        health = remote_worker.worker_health(self.user.id)
+        self.assertTrue(health["started"])
+        self.assertTrue(health["thread_alive"])
+        self.assertEqual(1, health["restart_count"])
+
+    def test_worker_start_failure_can_be_retried(self):
+        failed_thread = Mock()
+        failed_thread.start.side_effect = RuntimeError("thread unavailable")
+
+        with (
+            patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}),
+            patch.object(remote_worker.threading, "Thread", return_value=failed_thread),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "thread unavailable"):
+                remote_worker.start_remote_task_worker(self.app)
+
+        self.assertFalse(remote_worker._worker_started)
+        self.assertIsNone(remote_worker._worker_thread)
 
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)

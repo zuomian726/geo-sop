@@ -123,12 +123,14 @@ class AiInsightPersistenceTests(unittest.TestCase):
         }
         with (
             patch.object(web_app, "sync_status", return_value={"enabled": True}) as status,
+            patch("remote_worker.start_remote_task_worker", return_value=False) as ensure_worker,
             patch("remote_worker.worker_health", return_value=worker),
         ):
             response = self.client.get("/api/current-user")
 
         self.assertEqual(200, response.status_code)
         status.assert_called_once_with(self.user.id, include_remote=False)
+        ensure_worker.assert_called_once_with(web_app.app)
         self.assertEqual(worker, response.get_json()["cloud_sync"]["worker"])
 
     def test_cloud_status_refresh_reads_remote_state_and_worker_health(self):
@@ -143,15 +145,41 @@ class AiInsightPersistenceTests(unittest.TestCase):
                 "sync_status",
                 return_value={"enabled": True, "last_synced_at": "2026-07-16 00:00:00"},
             ) as status,
+            patch("remote_worker.start_remote_task_worker", return_value=True) as ensure_worker,
             patch("remote_worker.worker_health", return_value=worker),
         ):
             response = self.client.get("/api/cloud-sync/status")
 
         self.assertEqual(200, response.status_code)
         status.assert_called_once_with(self.user.id, include_remote=True)
+        ensure_worker.assert_called_once_with(web_app.app)
         payload = response.get_json()["cloud_sync"]
         self.assertEqual("2026-07-16 00:00:00", payload["last_synced_at"])
         self.assertEqual(2, payload["worker"]["runtime"]["pending_remote_tasks"])
+
+    def test_worker_watchdog_runs_before_remote_status_failure(self):
+        with (
+            patch.object(web_app, "sync_status", side_effect=RuntimeError("cloud unavailable")),
+            patch("remote_worker.start_remote_task_worker", return_value=True) as ensure_worker,
+            patch("remote_worker.worker_health", return_value={"started": True}),
+            patch.object(web_app.logger, "exception"),
+        ):
+            response = self.client.get("/api/cloud-sync/status")
+
+        self.assertEqual(500, response.status_code)
+        ensure_worker.assert_called_once_with(web_app.app)
+
+    def test_desktop_logout_reports_offline_and_clears_cloud_token(self):
+        with (
+            patch.object(web_app, "report_client_heartbeat") as heartbeat,
+            patch.object(web_app, "clear_cloud_account") as clear_account,
+        ):
+            response = self.client.get("/logout")
+
+        self.assertEqual(302, response.status_code)
+        self.assertTrue(response.headers["Location"].endswith("/login"))
+        heartbeat.assert_called_once_with(self.user.id, "offline", "用户已在本机退出 GEO-SOP")
+        clear_account.assert_called_once_with()
 
 
 if __name__ == "__main__":

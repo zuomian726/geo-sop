@@ -59,6 +59,7 @@ _startup_trace('local paths and version imported')
 
 try:
     from cloud_sync import (
+        clear_cloud_account,
         cloud_sync_enabled,
         pull_remote_tasks,
         report_client_heartbeat,
@@ -707,6 +708,14 @@ def register():
 @login_required
 def logout():
     """用户登出"""
+    if app.config.get('DESKTOP_MODE') and CLOUD_SYNC_AVAILABLE:
+        try:
+            report_client_heartbeat(current_user.id, 'offline', '用户已在本机退出 GEO-SOP')
+        except Exception as heartbeat_error:
+            logger.warning("[CloudSync] 退出离线状态上报失败 user=%s: %s", current_user.id, heartbeat_error)
+        clear_cloud_account()
+        app.config['CLOUD_SYNC_ENABLED'] = False
+        app.config['CLOUD_SYNC_TOKEN'] = ''
     logout_user()
     return redirect(url_for('login'))
 
@@ -719,19 +728,23 @@ def dashboard():
 
 
 def _desktop_cloud_status(user_id, include_remote=False):
-    status = sync_status(user_id, include_remote=include_remote)
+    worker_status = None
     if app.config.get('DESKTOP_MODE'):
         try:
-            from remote_worker import worker_health
-            status['worker'] = worker_health(user_id)
+            from remote_worker import start_remote_task_worker, worker_health
+            start_remote_task_worker(app)
+            worker_status = worker_health(user_id)
         except Exception as e:
             logger.warning("[CloudSync] 客户端工作器状态读取失败: %s", e)
-            status['worker'] = {
+            worker_status = {
                 'started': False,
                 'online': False,
                 'degraded': True,
                 'last_error': str(e)
             }
+    status = sync_status(user_id, include_remote=include_remote)
+    if worker_status is not None:
+        status['worker'] = worker_status
     return status
 
 

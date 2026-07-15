@@ -31,6 +31,9 @@ from models import MonitorTask, User, db
 logger = logging.getLogger("remote_worker")
 
 _worker_started = False
+_worker_thread: threading.Thread | None = None
+_worker_started_epoch: float | None = None
+_worker_restart_count = 0
 _worker_lock = threading.Lock()
 _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
@@ -112,8 +115,15 @@ def worker_health(user_id: int) -> dict:
     stale_after = max(45, _poll_seconds() * 3)
     online = bool(last_success and age_seconds is not None and age_seconds <= stale_after)
     degraded = bool(last_error and last_error_epoch >= (last_success or 0))
+    with _worker_lock:
+        thread_alive = bool(_worker_thread and _worker_thread.is_alive())
+        worker_started_epoch = _worker_started_epoch
+        restart_count = _worker_restart_count
     return {
-        "started": bool(_worker_started),
+        "started": bool(_worker_started and thread_alive),
+        "thread_alive": thread_alive,
+        "worker_started_at": _heartbeat_timestamp(worker_started_epoch),
+        "restart_count": restart_count,
         "online": online,
         "degraded": degraded,
         "stale_after_seconds": stale_after,
@@ -463,26 +473,45 @@ def _tick(app) -> None:
 
 
 def start_remote_task_worker(app) -> bool:
-    global _worker_started
+    global _worker_started, _worker_thread, _worker_started_epoch, _worker_restart_count
     if os.environ.get("GEO_DESKTOP_MODE") != "1":
         return False
     if os.environ.get("GEO_REMOTE_TASK_WORKER", "1").strip().lower() in {"0", "false", "off", "no"}:
         return False
 
-    with _worker_lock:
-        if _worker_started:
-            return False
-        _worker_started = True
-
     def loop() -> None:
+        global _worker_started, _worker_thread
         logger.info("[RemoteWorker] started")
-        while True:
-            try:
-                with app.app_context():
-                    _tick(app)
-            except Exception as exc:
-                logger.warning("[RemoteWorker] tick failed: %s", exc)
-            time.sleep(_poll_seconds())
+        try:
+            while True:
+                try:
+                    with app.app_context():
+                        _tick(app)
+                except Exception as exc:
+                    logger.warning("[RemoteWorker] tick failed: %s", exc)
+                time.sleep(_poll_seconds())
+        finally:
+            with _worker_lock:
+                if _worker_thread is threading.current_thread():
+                    _worker_thread = None
+                    _worker_started = False
 
-    threading.Thread(target=loop, daemon=True, name="geo-remote-worker").start()
+    with _worker_lock:
+        if _worker_thread and _worker_thread.is_alive():
+            _worker_started = True
+            return False
+        replacing_dead_worker = _worker_thread is not None or _worker_started
+        worker_thread = threading.Thread(target=loop, daemon=True, name="geo-remote-worker")
+        _worker_thread = worker_thread
+        _worker_started = True
+        _worker_started_epoch = time.time()
+        if replacing_dead_worker:
+            _worker_restart_count += 1
+        try:
+            worker_thread.start()
+        except Exception:
+            _worker_thread = None
+            _worker_started = False
+            _worker_started_epoch = None
+            raise
     return True

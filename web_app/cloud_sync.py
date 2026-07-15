@@ -46,6 +46,10 @@ def load_cloud_account() -> dict:
     if not path.exists():
         return {}
     try:
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
         data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
     except Exception:
@@ -56,7 +60,28 @@ def save_cloud_account(data: dict) -> None:
     path = cloud_account_path()
     tmp_path = path.with_suffix(".json.tmp")
     tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        tmp_path.chmod(0o600)
+    except OSError:
+        pass
     tmp_path.replace(path)
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+
+
+def clear_cloud_account() -> None:
+    """Remove the desktop cloud token while preserving local workspace data."""
+    try:
+        cloud_account_path().unlink(missing_ok=True)
+    except TypeError:
+        path = cloud_account_path()
+        if path.exists():
+            path.unlink()
+    os.environ.pop("GEO_CLOUD_SYNC_TOKEN", None)
+    os.environ.pop("CLOUD_SYNC_TOKEN", None)
+    os.environ["GEO_CLOUD_SYNC_ENABLED"] = "0"
 
 
 def _load_cloud_pull_state() -> dict:
