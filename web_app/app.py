@@ -1628,14 +1628,15 @@ def export_task_results(task_id):
             # ── 嵌入截图 ──────────────────────────────────────
             img_row_height = 20  # 默认行高（无截图时）
 
-            if r.screenshot_path and os.path.isfile(r.screenshot_path):
+            screenshot_file = _resolve_screenshot_path(r.screenshot_path) if r.screenshot_path else None
+            if screenshot_file:
                 try:
                     # 检查文件大小，避免内存溢出（限制 50MB）
-                    if os.path.getsize(r.screenshot_path) > 50 * 1024 * 1024:
+                    if os.path.getsize(screenshot_file) > 50 * 1024 * 1024:
                         print(f"截图过大跳过 row={row_idx}")
                         ws.cell(row=row_idx, column=IMG_COL, value='截图过大已跳过')
                     else:
-                        with PILImage.open(r.screenshot_path) as pil_img:
+                        with PILImage.open(screenshot_file) as pil_img:
                             orig_w, orig_h = pil_img.size
 
                         # 目标显示高度（pt → px：1pt ≈ 1.333px）
@@ -1646,7 +1647,7 @@ def export_task_results(task_id):
                         display_h = TARGET_H_PX
 
                         # 插入原始图片
-                        xl_img = XLImage(r.screenshot_path)
+                        xl_img = XLImage(screenshot_file)
                         xl_img.width  = display_w
                         xl_img.height = display_h
 
@@ -2114,6 +2115,7 @@ def export_screenshots_zip(task_id):
     
     # 创建ZIP文件
     zip_buffer = io.BytesIO()
+    added_files = 0
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         webapp_dir = os.path.dirname(os.path.abspath(__file__))
         
@@ -2132,9 +2134,13 @@ def export_screenshots_zip(task_id):
                 question = result.question[:20] if result.question else 'unknown'
                 # 清理文件名中的非法字符
                 safe_question = ''.join(c for c in question if c not in '<>:"/\\|?*')
-                filename = f"{platform}_{safe_question}_{timestamp}.png"
+                filename = f"{platform}_{safe_question}_{result.id}_{timestamp}.png"
                 
                 zip_file.write(screenshot_file, filename)
+                added_files += 1
+
+    if added_files == 0:
+        return jsonify({'success': False, 'message': '截图记录存在，但本地截图文件已丢失或不可访问'}), 404
     
     zip_buffer.seek(0)
     
