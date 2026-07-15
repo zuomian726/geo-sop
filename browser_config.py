@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 from local_paths import app_data_dir
+
+logger = logging.getLogger(__name__)
 
 LEGACY_CONFIG_FILE = Path(__file__).resolve().with_name("browser_config.json")
 
@@ -56,7 +59,7 @@ def _read_config(path: Path) -> dict | None:
         data = json.loads(path.read_text(encoding="utf-8"))
         return _normalize_config(data)
     except (OSError, ValueError, TypeError) as exc:
-        print(f"加载浏览器配置失败 ({path}): {exc}")
+        logger.warning("Browser config could not be loaded from %s: %s", path, exc)
         return None
 
 
@@ -96,7 +99,7 @@ def load_browser_config():
             try:
                 _write_config(config_path, legacy_config)
             except OSError as exc:
-                print(f"迁移浏览器配置失败: {exc}")
+                logger.warning("Legacy browser config could not be migrated: %s", exc)
             return legacy_config
 
     return _default_config()
