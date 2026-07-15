@@ -4,6 +4,7 @@ DELETE FROM geo_sync_results WHERE cloud_user_id=16;
 DELETE FROM geo_sync_manuscripts WHERE cloud_user_id=16;
 DELETE FROM geo_sync_assets WHERE cloud_user_id=16;
 DELETE FROM geo_sync_tasks WHERE cloud_user_id=16;
+DELETE FROM geo_sync_sentiment_configs WHERE cloud_user_id=16;
 
 INSERT INTO geo_sync_tasks
     (cloud_user_id,install_id,local_id,local_user_id,user_key,name,status,payload,local_created_at,local_updated_at,synced_at)
@@ -40,6 +41,13 @@ VALUES
     (16,'demo-static',1,16,'demo@geo.allgood.cn','企业智能办公实践指南','https://demo.example.com/guides/smart-office','{"title":"企业智能办公实践指南","url":"https://demo.example.com/guides/smart-office","task_id":1}', '2026-07-08 10:00:00','2026-07-10 09:30:00'),
     (16,'demo-static',2,16,'demo@geo.allgood.cn','企业知识库建设清单','https://demo.example.com/guides/enterprise-kb','{"title":"企业知识库建设清单","url":"https://demo.example.com/guides/enterprise-kb","task_id":1}', '2026-07-09 11:00:00','2026-07-10 09:30:00'),
     (16,'demo-static',3,16,'demo@geo.allgood.cn','团队知识管理案例','https://demo.example.com/cases/team-knowledge','{"title":"团队知识管理案例","url":"https://demo.example.com/cases/team-knowledge","task_id":1}', '2026-07-09 11:00:00','2026-07-10 09:30:00');
+
+INSERT INTO geo_sync_sentiment_configs
+    (cloud_user_id,install_id,local_id,local_user_id,user_key,name,is_default,payload,local_created_at,local_updated_at,synced_at)
+VALUES
+    (16,'demo-static',1,16,'demo@geo.allgood.cn','Demo AI 分析',1,
+     '{"local_id":1,"name":"Demo AI 分析","enable_ai_sentiment":true,"ai_platform":"openai","ai_api_url":"https://api.example.com","ai_api_key":null,"ai_model_name":"demo-model","is_default":true,"latest_insight":{"summary":"星野智能已获得基础曝光，但平台覆盖与稳定引用仍是下一阶段重点。","observations":["6 条样例回答中有 4 条提到品牌，当前曝光率为 66.7%。","豆包表现稳定，Kimi 与 DeepSeek 仍存在未提及品牌的回答。","引用主要集中在少量内容源，来源结构仍需扩展。"],"actions":["优先补充未曝光问题对应的 FAQ 与对比内容。","围绕企业知识库选型发布一篇可引用的深度指南。","下周使用相同问题复测，观察曝光率是否持续提升。"],"risks":["当前样本量较小，不宜把单次结果视为长期趋势。"],"experiments":["测试星野智能与同类产品的差异问题。"]},"latest_insight_generated_at":"2026-07-10T09:30:00+08:00"}',
+     '2026-07-10 09:30:00','2026-07-10 09:30:00','2026-07-10 09:30:00');
 
 INSERT INTO geo_sync_assets
     (cloud_user_id,install_id,user_key,local_result_id,local_task_id,kind,platform,question,original_name,storage_path,public_url,mime_type,file_size,sha256,payload,created_at,updated_at)
