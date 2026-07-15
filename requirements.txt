@@ -12,7 +12,7 @@ sqlalchemy>=2.0.44,<2.1
 werkzeug==3.0.1
 
 # 浏览器自动化（复用现有功能）
-playwright>=1.44.0
+playwright==1.44.0
 pillow>=10.0.0
 numpy==1.26.4
 openpyxl>=3.1.0

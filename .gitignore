@@ -107,6 +107,7 @@ celerybeat.pid
 !.env.example
 .venv
 .venv*/
+.build-runtime/
 env/
 venv/
 ENV/

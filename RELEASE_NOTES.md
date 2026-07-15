@@ -7,6 +7,7 @@
 - 客户端更新检查会读取本机 CPU 架构，Intel Mac 自动下载 Intel DMG，Apple 芯片自动下载 Apple Silicon DMG。
 - 官网下载区明确标注两种 Mac 架构，并保留原 Apple Silicon 长期链接以兼容既有分发地址。
 - Gatekeeper 处理命令统一针对拖入“应用程序”后的 App，避免用户照抄 DMG 挂载路径时出现文件不存在。
+- macOS 构建改用经过校验的 Python 3.12 universal2 运行时，并固定兼容 macOS 12 的 Playwright 与 NumPy；构建会扫描全部 Mach-O 依赖，阻止系统要求被依赖升级悄悄抬高。
 
 ## v0.3.34-dev - 2026-07-16
 

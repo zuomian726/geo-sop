@@ -15,19 +15,50 @@ DIST_DIR="dist"
 PACKAGE_DIR="release"
 ICON_PNG="web_app/static/img/geo-sop-icon.png"
 ICON_ICNS="${BUILD_DIR}/geo-sop-icon.icns"
+PYTHON_VERSION="3.12.10"
+PYTHON_SERIES="3.12"
+PYTHON_PACKAGE="python-${PYTHON_VERSION}-macos11.pkg"
+PYTHON_PACKAGE_SHA256="8373e58da4ea146b3eb1c1f9834f19a319440b6b679b06050b1f9ee3237aa8e4"
+RUNTIME_CACHE="${PWD}/.build-runtime"
+PYTHON_PACKAGE_PATH="${RUNTIME_CACHE}/${PYTHON_PACKAGE}"
+FRAMEWORK_ROOT="${RUNTIME_CACHE}/python-${PYTHON_VERSION}"
+PYTHON_BASE="${FRAMEWORK_ROOT}/Python.framework/Versions/${PYTHON_SERIES}/bin/python${PYTHON_SERIES}"
+RUNTIME_LIBRARY_DIR="${FRAMEWORK_ROOT}/Python.framework/Versions/${PYTHON_SERIES}/lib"
+
+mkdir -p "${RUNTIME_CACHE}"
+if [ ! -f "${PYTHON_PACKAGE_PATH}" ]; then
+  curl -fL --retry 3 \
+    "https://www.python.org/ftp/python/${PYTHON_VERSION}/${PYTHON_PACKAGE}" \
+    -o "${PYTHON_PACKAGE_PATH}"
+fi
+echo "${PYTHON_PACKAGE_SHA256}  ${PYTHON_PACKAGE_PATH}" | shasum -a 256 -c -
+
+if [ ! -x "${PYTHON_BASE}" ]; then
+  EXPANDED_PACKAGE="${RUNTIME_CACHE}/python-${PYTHON_VERSION}-expanded"
+  rm -rf "${EXPANDED_PACKAGE}" "${FRAMEWORK_ROOT}"
+  pkgutil --expand-full "${PYTHON_PACKAGE_PATH}" "${EXPANDED_PACKAGE}"
+  mkdir -p "${FRAMEWORK_ROOT}/Python.framework/Versions"
+  cp -R \
+    "${EXPANDED_PACKAGE}/Python_Framework.pkg/Payload/Versions/${PYTHON_SERIES}" \
+    "${FRAMEWORK_ROOT}/Python.framework/Versions/${PYTHON_SERIES}"
+  ln -s "${PYTHON_SERIES}" "${FRAMEWORK_ROOT}/Python.framework/Versions/Current"
+  ln -s "Versions/Current/Python" "${FRAMEWORK_ROOT}/Python.framework/Python"
+  rm -rf "${EXPANDED_PACKAGE}"
+fi
+python3 tools/relocate_macos_python.py "${FRAMEWORK_ROOT}" "${PYTHON_SERIES}"
 
 case "${TARGET_ARCH}" in
   arm64)
-    BUILD_VENV=".venv-build"
+    BUILD_VENV=".venv-macos-arm64-py312"
     PACKAGE_SUFFIX="macOS-Apple-Silicon"
     VOLUME_ARCH="Apple Silicon"
-    PYTHON_CMD=("${BUILD_VENV}/bin/python")
     if [ ! -d "${BUILD_VENV}" ]; then
-      python3 -m venv "${BUILD_VENV}"
+      env DYLD_FRAMEWORK_PATH="${FRAMEWORK_ROOT}" DYLD_LIBRARY_PATH="${RUNTIME_LIBRARY_DIR}" SSL_CERT_FILE="/etc/ssl/cert.pem" "${PYTHON_BASE}" -m venv "${BUILD_VENV}"
     fi
+    PYTHON_CMD=(env DYLD_FRAMEWORK_PATH="${FRAMEWORK_ROOT}" DYLD_LIBRARY_PATH="${RUNTIME_LIBRARY_DIR}" SSL_CERT_FILE="/etc/ssl/cert.pem" "${BUILD_VENV}/bin/python")
     ;;
   x86_64)
-    BUILD_VENV=".venv-build-x86_64"
+    BUILD_VENV=".venv-macos-x86_64-py312"
     PACKAGE_SUFFIX="macOS-Intel"
     VOLUME_ARCH="Intel"
     if ! arch -x86_64 /usr/bin/true >/dev/null 2>&1; then
@@ -35,9 +66,9 @@ case "${TARGET_ARCH}" in
       exit 1
     fi
     if [ ! -d "${BUILD_VENV}" ]; then
-      arch -x86_64 /usr/bin/python3 -m venv "${BUILD_VENV}"
+      arch -x86_64 env DYLD_FRAMEWORK_PATH="${FRAMEWORK_ROOT}" DYLD_LIBRARY_PATH="${RUNTIME_LIBRARY_DIR}" SSL_CERT_FILE="/etc/ssl/cert.pem" "${PYTHON_BASE}" -m venv "${BUILD_VENV}"
     fi
-    PYTHON_CMD=(arch -x86_64 "${BUILD_VENV}/bin/python")
+    PYTHON_CMD=(arch -x86_64 env DYLD_FRAMEWORK_PATH="${FRAMEWORK_ROOT}" DYLD_LIBRARY_PATH="${RUNTIME_LIBRARY_DIR}" SSL_CERT_FILE="/etc/ssl/cert.pem" "${BUILD_VENV}/bin/python")
     ;;
   *)
     echo "Unsupported macOS build architecture: ${TARGET_ARCH}" >&2
