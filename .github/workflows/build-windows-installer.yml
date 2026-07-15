@@ -12,6 +12,12 @@ on:
       - main
     paths:
       - "desktop_app.py"
+      - "browser_config.py"
+      - "browser_utils.py"
+      - "local_paths.py"
+      - "profile_utils.py"
+      - "config.py"
+      - "utils.py"
       - "web_app/**"
       - "platforms/**"
       - "tools/**"
