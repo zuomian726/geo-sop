@@ -407,35 +407,53 @@ def _set_cached_login_status(user_id, platform, is_logged_in, error=None):
     }
     _write_login_status_cache(cache)
 
-# 导入登录检测模块
-try:
-    from login_checker import check_platform_login, check_all_platforms
-    LOGIN_CHECKER_AVAILABLE = True
-except ImportError:
-    LOGIN_CHECKER_AVAILABLE = False
-    print("警告: login_checker 模块不可用，登录检测功能将被禁用")
+# Playwright is intentionally loaded only when a user asks to check or open a
+# platform login. Importing it during frozen-app startup can delay the first
+# login screen significantly on Windows.
+check_platform_login = None
+check_all_platforms = None
+open_login_browser = None
+LOGIN_CHECKER_AVAILABLE = True
+LOGIN_HELPER_AVAILABLE = True
 
-# 导入登录辅助模块
-try:
-    from login_helper import open_login_browser
-    LOGIN_HELPER_AVAILABLE = True
-    print("OK: login_helper 模块导入成功")
-except ImportError as e:
-    LOGIN_HELPER_AVAILABLE = False
-    print(f"警告: login_helper 模块不可用，浏览器登录功能将被禁用")
-    print(f"      错误详情: {e}")
-except Exception as e:
-    LOGIN_HELPER_AVAILABLE = False
-    print(f"警告: login_helper 模块加载失败，浏览器登录功能将被禁用")
-    print(f"      错误详情: {type(e).__name__}: {e}")
+
+def _ensure_login_checker():
+    global check_platform_login, check_all_platforms, LOGIN_CHECKER_AVAILABLE
+    if callable(check_platform_login) and callable(check_all_platforms):
+        return True
+    try:
+        from login_checker import check_platform_login as checker, check_all_platforms as check_all
+        check_platform_login = checker
+        check_all_platforms = check_all
+        LOGIN_CHECKER_AVAILABLE = True
+    except Exception as exc:
+        LOGIN_CHECKER_AVAILABLE = False
+        logger.exception("登录检测模块加载失败: %s", exc)
+    return LOGIN_CHECKER_AVAILABLE
+
+
+def _ensure_login_helper():
+    global open_login_browser, LOGIN_HELPER_AVAILABLE
+    if callable(open_login_browser):
+        return True
+    try:
+        from login_helper import open_login_browser as opener
+        open_login_browser = opener
+        LOGIN_HELPER_AVAILABLE = True
+    except Exception as exc:
+        LOGIN_HELPER_AVAILABLE = False
+        logger.exception("浏览器登录模块加载失败: %s", exc)
+    return LOGIN_HELPER_AVAILABLE
 
 # 导入调度器模块
 try:
+    if Config.DESKTOP_MODE:
+        raise ImportError('desktop scheduler is disabled')
     from scheduler import init_scheduler, add_task_job, remove_task_job
     SCHEDULER_AVAILABLE = True
 except ImportError:
     SCHEDULER_AVAILABLE = False
-    print("警告: scheduler 模块不可用，定时任务功能将被禁用")
+    init_scheduler = add_task_job = remove_task_job = None
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -2314,7 +2332,7 @@ def recollect_status(job_id):
 @login_required
 def check_platform_login_status(platform):
     """检测指定平台的登录状态"""
-    if not LOGIN_CHECKER_AVAILABLE:
+    if not _ensure_login_checker():
         return jsonify({
             'success': False,
             'message': '登录检测功能不可用'
@@ -2348,12 +2366,6 @@ def check_platform_login_status(platform):
 @login_required
 def check_all_platforms_status():
     """检测所有平台的登录状态"""
-    if not LOGIN_CHECKER_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'message': '登录检测功能不可用'
-        }), 503
-
     if app.config.get('DESKTOP_MODE'):
         cached_status = _get_cached_login_status(current_user.id)
         platforms = Config.SUPPORTED_PLATFORMS
@@ -2371,6 +2383,12 @@ def check_all_platforms_status():
             ],
             'message': '单机版已跳过批量检测'
         })
+
+    if not _ensure_login_checker():
+        return jsonify({
+            'success': False,
+            'message': '登录检测功能不可用'
+        }), 503
     
     try:
         logger.info("[LoginCheck] 开始检测所有平台登录状态")
@@ -2434,7 +2452,7 @@ def open_platform_login(platform):
     print(f"\n[登录API] 收到登录请求: platform={platform}")
     print(f"[登录API] LOGIN_HELPER_AVAILABLE = {LOGIN_HELPER_AVAILABLE}")
     
-    if not LOGIN_HELPER_AVAILABLE:
+    if not _ensure_login_helper():
         print("[登录API] 错误: LOGIN_HELPER_AVAILABLE = False")
         return jsonify({
             'success': False,

@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-#define MyAppVersion "0.3.18-dev"
+#define MyAppVersion "0.3.19-dev"
 #endif
 
 #define MyAppName "GEO-SOP"

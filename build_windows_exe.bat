@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0" || exit /b 1
 
-if "%APP_VERSION%"=="" set APP_VERSION=0.3.18-dev
+if "%APP_VERSION%"=="" set APP_VERSION=0.3.19-dev
 
 where python >nul 2>nul
 if errorlevel 1 (
