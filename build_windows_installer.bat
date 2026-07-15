@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0" || exit /b 1
 
-if "%APP_VERSION%"=="" set APP_VERSION=0.3.24-dev
+if "%APP_VERSION%"=="" set APP_VERSION=0.3.25-dev
 
 if not exist "dist\GEO-SOP\GEO-SOP.exe" (
   echo Native GEO-SOP application was not found. Building it now...

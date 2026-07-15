@@ -31,6 +31,7 @@ import threading
 import logging
 import time
 import platform
+import webbrowser
 from urllib.parse import urlparse
 import requests
 _startup_trace('Flask and core dependencies imported')
@@ -140,17 +141,27 @@ def _ai_api_mode(config):
     return 'anthropic' if mode == 'anthropic' else 'openai'
 
 
-def _version_parts(version):
-    base = str(version or '').lstrip('v').split('-', 1)[0]
-    parts = []
-    for item in base.split('.'):
-        try:
-            parts.append(int(item))
-        except ValueError:
-            parts.append(0)
-    while len(parts) < 3:
-        parts.append(0)
-    return parts[:3]
+def _version_key(version):
+    """Return a comparable key for the release versions used by GEO-SOP."""
+    text = str(version or '').strip().lower().lstrip('v')
+    base, _, prerelease = text.partition('-')
+    numbers = []
+    for item in base.split('.')[:3]:
+        digits = ''.join(char for char in item if char.isdigit())
+        numbers.append(int(digits) if digits else 0)
+    while len(numbers) < 3:
+        numbers.append(0)
+
+    # A stable release is newer than rc, beta, alpha and dev of the same base.
+    rank = 4
+    prerelease_number = 0
+    if prerelease:
+        labels = {'dev': 0, 'alpha': 1, 'a': 1, 'beta': 2, 'b': 2, 'rc': 3}
+        label = ''.join(char for char in prerelease if char.isalpha())
+        rank = labels.get(label, 0)
+        suffix = ''.join(char for char in prerelease if char.isdigit())
+        prerelease_number = int(suffix) if suffix else 0
+    return tuple(numbers + [rank, prerelease_number])
 
 
 def _check_latest_update():
@@ -172,20 +183,44 @@ def _check_latest_update():
         downloads = manifest.get('downloads') if isinstance(manifest.get('downloads'), dict) else {}
         package = downloads.get(platform_key) if isinstance(downloads.get(platform_key), dict) else {}
         latest_version = str(package.get('version') or manifest.get('version') or current_version)
+        minimum_supported = str(manifest.get('minimum_supported_version') or '').strip()
+        has_update = _version_key(latest_version) > _version_key(current_version)
+        below_minimum = bool(minimum_supported) and _version_key(current_version) < _version_key(minimum_supported)
+        required = bool(has_update and (below_minimum or manifest.get('force') is True))
         status.update({
             'latest_version': latest_version,
-            'has_update': _version_parts(latest_version) > _version_parts(current_version),
+            'has_update': has_update,
+            'required': required,
+            'below_minimum': below_minimum,
+            'minimum_supported_version': minimum_supported or None,
             'channel': manifest.get('channel'),
             'released_at': manifest.get('released_at'),
             'notes': manifest.get('notes') or [],
             'download_url': package.get('url'),
             'download_name': package.get('name'),
             'download_size': package.get('size'),
+            'download_sha256': package.get('sha256'),
             'platform': platform_key,
         })
     except Exception as e:
         status['error'] = str(e)
     return status
+
+
+def _open_update_download(update):
+    url = str(update.get('download_url') or '').strip()
+    update_url = str(update.get('update_url') or '').strip()
+    parsed = urlparse(url)
+    manifest_host = urlparse(update_url).hostname
+    if parsed.scheme != 'https' or not parsed.hostname:
+        raise ValueError('更新下载地址不是安全的 HTTPS 地址')
+    if manifest_host and parsed.hostname != manifest_host:
+        raise ValueError('更新下载地址与官方更新服务器不一致')
+    if not update.get('has_update'):
+        raise ValueError('当前已是最新版本')
+    if not webbrowser.open(url, new=2):
+        raise RuntimeError('系统没有成功打开下载页面')
+    return url
 
 
 def _extract_json_text(text):
@@ -724,6 +759,24 @@ def get_app_info():
         'answers_dir': app.config.get('ANSWERS_DIR'),
         'update': _check_latest_update() if desktop_mode else {'has_update': False}
     })
+
+
+@app.route('/api/app-info/open-update', methods=['POST'])
+@login_required
+def open_app_update():
+    if not app.config.get('DESKTOP_MODE', False):
+        return jsonify({'success': False, 'message': '该操作只能在本机客户端使用'}), 400
+    update = _check_latest_update()
+    try:
+        url = _open_update_download(update)
+    except Exception as e:
+        logger.warning('打开更新安装包失败: %s', e)
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'download_url': update.get('download_url'),
+        }), 400
+    return jsonify({'success': True, 'message': '已在系统浏览器中打开安装包下载', 'download_url': url})
 
 
 @app.route('/api/cloud-sync/status', methods=['GET'])

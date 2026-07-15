@@ -549,10 +549,10 @@ body {
             <el-button
                 v-if="updateInfo.has_update"
                 size="small"
-                type="warning"
+                :type="updateInfo.required ? 'danger' : 'warning'"
                 style="margin-left: 10px;"
-                @click="openUpdateDownload">
-                发现新版本 [[ updateInfo.latest_version ]]
+                @click="updateDialogVisible = true">
+                [[ updateInfo.required ? '需要升级' : '发现新版本' ]] [[ updateInfo.latest_version ]]
             </el-button>
         </div>
         <div>
@@ -1980,6 +1980,53 @@ body {
             <el-table-column prop="created_at" label="采集时间" width="150"></el-table-column>
         </el-table>
     </el-dialog>
+
+    <el-dialog
+        v-model="updateDialogVisible"
+        width="520px"
+        :show-close="!updateInfo.required"
+        :close-on-click-modal="!updateInfo.required"
+        :close-on-press-escape="!updateInfo.required"
+        :before-close="beforeUpdateDialogClose">
+        <template #header>
+            <div style="font-size: 19px; font-weight: 700; color: #172033;">
+                [[ updateInfo.required ? '需要升级 GEO-SOP' : 'GEO-SOP 有新版本' ]]
+            </div>
+        </template>
+        <el-alert
+            v-if="updateInfo.required"
+            title="当前版本已低于服务端兼容要求，升级后才能继续稳定同步云端任务。"
+            type="error"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 18px;">
+        </el-alert>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+            <div style="padding: 12px; background: #f5f7fb; border-radius: 6px;">
+                <div style="font-size: 12px; color: #7a879d;">当前版本</div>
+                <strong>v[[ updateInfo.current_version || appInfo.version ]]</strong>
+            </div>
+            <div style="padding: 12px; background: #eef5ff; border-radius: 6px;">
+                <div style="font-size: 12px; color: #5272a8;">最新版本</div>
+                <strong>v[[ updateInfo.latest_version ]]</strong>
+            </div>
+        </div>
+        <div v-if="updateInfo.notes && updateInfo.notes.length" style="margin-bottom: 16px;">
+            <div style="font-weight: 600; margin-bottom: 8px;">本次更新</div>
+            <div v-for="(note, index) in updateInfo.notes" :key="index" style="color: #5c6980; line-height: 1.8;">
+                [[ index + 1 ]]. [[ note ]]
+            </div>
+        </div>
+        <div style="font-size: 13px; color: #7a879d; line-height: 1.7;">
+            安装包：[[ updateInfo.download_name || 'GEO-SOP' ]]
+            <span v-if="updateInfo.download_size"> · [[ updateInfo.download_size ]]</span><br>
+            安装新版不会删除本地任务、登录状态和历史采集数据。
+        </div>
+        <template #footer>
+            <el-button v-if="!updateInfo.required" @click="updateDialogVisible = false">稍后提醒</el-button>
+            <el-button type="primary" @click="openUpdateDownload">下载安装包</el-button>
+        </template>
+    </el-dialog>
 </div>
 {% endblock %}
 
@@ -2003,10 +2050,12 @@ const app = createApp({
             },
             updateInfo: {
                 has_update: false,
+                required: false,
                 latest_version: '',
                 download_url: '',
                 notes: []
             },
+            updateDialogVisible: false,
             dataDir: '',
             activeTab: 'insights',
             tasks: [],
@@ -2379,6 +2428,10 @@ const app = createApp({
                     this.updateInfo = response.data.update || this.updateInfo;
                     this.dataDir = response.data.data_dir || '';
                     if (this.updateInfo.has_update) {
+                        if (this.updateInfo.required) {
+                            this.updateDialogVisible = true;
+                            return;
+                        }
                         const notes = Array.isArray(this.updateInfo.notes) ? this.updateInfo.notes.slice(0, 2).join('；') : '';
                         ElNotification({
                             title: `发现新版本 ${this.updateInfo.latest_version}`,
@@ -2393,10 +2446,27 @@ const app = createApp({
             }
         },
 
-        openUpdateDownload() {
+        beforeUpdateDialogClose(done) {
+            if (this.updateInfo.required) {
+                ElMessage.warning('当前版本需要升级后才能保证云端同步正常');
+                return;
+            }
+            done();
+        },
+
+        async openUpdateDownload() {
             if (!this.updateInfo.download_url) {
                 ElMessage.warning('暂时没有可用的更新下载链接');
                 return;
+            }
+            try {
+                const response = await axios.post('/api/app-info/open-update');
+                if (response.data.success) {
+                    ElMessage.success('已在系统浏览器中打开安装包下载');
+                    return;
+                }
+            } catch (error) {
+                console.warn('系统浏览器打开更新失败，使用页面下载兜底:', error);
             }
             window.open(this.updateInfo.download_url, '_blank');
         },
