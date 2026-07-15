@@ -27,7 +27,7 @@ if (geo_is_demo_user($user)) {
 }
 
 function geo_assets_ensure_schema(PDO $pdo): void {
-    geo_run_schema_migration($pdo, 'sync_assets', 2026071601, function (PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'sync_assets', 2026071602, function (PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS geo_sync_assets (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         cloud_user_id BIGINT UNSIGNED NOT NULL,
@@ -47,7 +47,7 @@ function geo_assets_ensure_schema(PDO $pdo): void {
         payload LONGTEXT NULL,
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
-        UNIQUE KEY uniq_geo_asset_hash (cloud_user_id, install_id, kind, sha256),
+        UNIQUE KEY uniq_geo_asset_hash (cloud_user_id, install_id, local_result_id, kind, sha256),
         KEY idx_geo_asset_result (cloud_user_id, install_id, local_result_id),
         KEY idx_geo_asset_user (cloud_user_id, kind, updated_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -60,7 +60,19 @@ function geo_assets_ensure_schema(PDO $pdo): void {
         created_at DATETIME NOT NULL,
         KEY idx_geo_stats_user (cloud_user_id, install_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $indexStmt = $pdo->prepare('SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=? AND index_name=? GROUP BY index_name');
+    $indexStmt->execute(['geo_sync_assets', 'uniq_geo_asset_hash']);
+    $columns = strtolower((string)($indexStmt->fetchColumn() ?: ''));
+    if ($columns !== 'cloud_user_id,install_id,local_result_id,kind,sha256') {
+        geo_schema_exec($pdo, 'ALTER TABLE geo_sync_assets DROP INDEX uniq_geo_asset_hash', [1091]);
+        geo_add_index($pdo, 'geo_sync_assets', 'uniq_geo_asset_hash', 'UNIQUE KEY uniq_geo_asset_hash (cloud_user_id, install_id, local_result_id, kind, sha256)');
+    }
     });
+}
+
+function geo_assets_mark_result_screenshot(PDO $pdo, int $cloudUserId, string $installId, int $localResultId): void {
+    $stmt = $pdo->prepare('UPDATE geo_sync_results SET has_screenshot=1 WHERE cloud_user_id=? AND install_id=? AND local_id=?');
+    $stmt->execute([$cloudUserId, $installId, $localResultId]);
 }
 
 function geo_asset_safe_part(string $value): string {
@@ -122,10 +134,11 @@ try {
         geo_json(['success' => false, 'message' => 'file size is invalid or larger than 30MB'], 400);
     }
     $sha = hash_file('sha256', $tmp);
-    $stmt = $pdo->prepare('SELECT id,public_url,file_size FROM geo_sync_assets WHERE cloud_user_id=? AND install_id=? AND kind=? AND sha256=? LIMIT 1');
-    $stmt->execute([$cloudUserId, $installId, 'screenshot', $sha]);
+    $stmt = $pdo->prepare('SELECT id,public_url,file_size FROM geo_sync_assets WHERE cloud_user_id=? AND install_id=? AND local_result_id=? AND kind=? AND sha256=? LIMIT 1');
+    $stmt->execute([$cloudUserId, $installId, $localResultId, 'screenshot', $sha]);
     $existing = $stmt->fetch();
     if ($existing) {
+        geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
         geo_json(['success' => true, 'deduped' => true, 'id' => (int)$existing['id'], 'url' => $existing['public_url'], 'size' => (int)$existing['file_size']]);
     }
 
@@ -172,6 +185,7 @@ try {
         $now,
         $now,
     ]);
+    geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
     geo_json(['success' => true, 'deduped' => false, 'id' => (int)$pdo->lastInsertId(), 'url' => $publicUrl, 'size' => $size, 'sha256' => $sha]);
 } catch (Throwable $e) {
     geo_json(['success' => false, 'message' => 'asset upload failed', 'error' => $e->getMessage()], 500);

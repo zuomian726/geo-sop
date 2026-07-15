@@ -108,6 +108,20 @@ class ServerDistributionTests(unittest.TestCase):
             source = (SERVER / relative).read_text(encoding="utf-8")
             self.assertIn(f"geo_run_schema_migration($pdo, '{component}'", source, relative)
 
+    def test_screenshot_upload_updates_result_metrics_and_dedupes_per_result(self):
+        source = (SERVER / "api" / "sync" / "assets" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("cloud_user_id, install_id, local_result_id, kind, sha256", source)
+        self.assertIn("function geo_assets_mark_result_screenshot", source)
+        self.assertIn("UPDATE geo_sync_results SET has_screenshot=1", source)
+
+    def test_nginx_preserves_json_404_responses_for_api_routes(self):
+        source = (SERVER / "deploy" / "nginx" / "geo.allgood.cn.conf").read_text(encoding="utf-8")
+        web_location = source.index("location / {")
+        php_include = source.index("include enable-php-82.conf")
+        self.assertLess(web_location, php_include)
+        self.assertEqual(1, source.count("error_page 404 /404.html;"))
+        self.assertIn("error_page 404 /404.html;", source[web_location:php_include])
+
 
 if __name__ == "__main__":
     unittest.main()

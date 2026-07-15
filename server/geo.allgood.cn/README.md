@@ -51,3 +51,22 @@ python tools/smoke_cloud_site.py https://geo.allgood.cn
 
 The cloud smoke test verifies the public pages, release manifest, one-click Demo login,
 dashboard queries, Excel export, and the Demo read-only task boundary.
+
+For a production desktop/cloud acceptance test, run:
+
+```bash
+.venv-desktop/bin/python tools/smoke_cloud_client_pipeline.py
+```
+
+This creates two disposable accounts and verifies registration, desktop login,
+heartbeat, workspace synchronization and restore, statistics and screenshot
+upload, dashboard queries, cloud task execution, account isolation, and exports.
+It removes its accounts, database rows, and uploaded test assets through the
+configured SSH host when the test finishes. Use `--keep` only while debugging.
+
+## Nginx configuration
+
+The production virtual-host template is tracked at
+`deploy/nginx/geo.allgood.cn.conf`. Validate it with `nginx -t` before reloading.
+The custom HTML 404 handler intentionally lives inside `location /`; do not move
+it to the server scope because API endpoints must preserve JSON 404 responses.
