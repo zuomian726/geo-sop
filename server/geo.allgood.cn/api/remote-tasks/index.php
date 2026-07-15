@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/common.php';
 require dirname(__DIR__) . '/platforms.php';
+require dirname(__DIR__) . '/remote-task-state.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');
@@ -208,6 +209,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
     if (!in_array($status, $allowed, true)) {
         geo_json(['success' => false, 'message' => 'invalid status'], 400);
     }
+    $currentStatus = (string)($remoteTask['status'] ?? '');
+    if (!geo_remote_status_transition_allowed($currentStatus, $status)) {
+        geo_json([
+            'success' => false,
+            'message' => 'invalid remote task status transition',
+            'current_status' => $currentStatus,
+            'requested_status' => $status,
+        ], 409);
+    }
     $now = geo_now();
     $message = (string)($data['message'] ?? '');
     $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -220,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
             started_at=COALESCE(?, started_at),
             finished_at=COALESCE(?, finished_at),
             last_status_message=?, status_payload=?, updated_at=?
-        WHERE id=? AND cloud_user_id=?");
+        WHERE id=? AND cloud_user_id=? AND status=?");
     $stmt->execute([
         $status,
         $installId,
@@ -233,7 +243,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
         $now,
         $remoteTaskId,
         $cloudUserId,
+        $currentStatus,
     ]);
+    if ($stmt->rowCount() === 0) {
+        $latestTask = geo_remote_task_row($pdo, $cloudUserId, $remoteTaskId);
+        $latestStatus = (string)($latestTask['status'] ?? '');
+        if ($latestStatus !== $status) {
+            geo_json([
+                'success' => false,
+                'message' => 'remote task status changed concurrently',
+                'current_status' => $latestStatus,
+                'requested_status' => $status,
+            ], 409);
+        }
+    }
     geo_json(['success' => true, 'id' => $remoteTaskId, 'status' => $status]);
 }
 
