@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.22-dev",
+  "version": "0.3.23-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-15T20:24:00+08:00",
+  "released_at": "2026-07-15T21:12:00+08:00",
   "minimum_supported_version": "0.3.0-dev",
   "force": false,
   "notes": [
-    "AI 分析结果会持久保存，刷新客户端后仍可查看最近一次分析。",
-    "最近一次 AI 分析可跨设备同步并在云端展示，API Key 默认始终只保存在本机。",
-    "云端任务、截图、引用来源和 GEO 健康分已与客户端统一计算口径。"
+    "云端任务区会实时显示客户端心跳、版本、在线状态和任务等待原因。",
+    "客户端心跳、任务拉取和云端恢复独立容错，临时网络失败不再阻塞已导入任务。",
+    "云端连接状态每 15 秒自动刷新，超过 90 秒未上报会准确标记为离线。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.22-dev",
+      "version": "0.3.23-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.22-dev-macOS.dmg",
-      "size": "165 MB",
-      "sha256": "4fb193b96a545c63df3899d6a878eec544029cdac129cc1af892c14b358b4449"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.23-dev-macOS.dmg",
+      "size": "163 MB",
+      "sha256": "d414afa9aef88f9bae109c4d23708f246c728bc175021c411f2578fa2d05586c"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.22-dev",
+      "version": "0.3.23-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.22-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.23-dev.exe",
       "size": "185 MB",
-      "sha256": "c3f0f43a3931831c12721dea9d3f36fad6ddf666f5754fb36da112c95cdeee2b"
+      "sha256": "feec7e978ff9dec4c3cd97316c10b2b4296f664108f4c895a2b182c8211ca0d1"
     }
   }
 }
