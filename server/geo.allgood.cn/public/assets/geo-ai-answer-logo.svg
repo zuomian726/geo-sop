@@ -1,0 +1,6 @@
+<svg width="360" height="112" viewBox="0 0 360 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="24" width="64" height="64" rx="15" fill="#5267F6"/>
+  <path d="M48 39A17 17 0 1 0 51 64" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <path d="M40 56H54V63" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="90" y="68" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif" font-size="34" font-weight="800" fill="#1F2937">AI 答案</text>
+</svg>

@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
-require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
+require dirname(__DIR__) . '/common.php';
+require dirname(__DIR__) . '/platforms.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -107,7 +107,7 @@ function geo_dashboard_percent(int $part, int $total): float {
 }
 
 function geo_dashboard_release_version(): string {
-    $path = '/www/wwwroot/geo.allgood.cn/update.json';
+    $path = dirname(__DIR__, 2) . '/update.json';
     if (!is_file($path)) return '';
     $manifest = json_decode((string)file_get_contents($path), true);
     return is_array($manifest) ? trim((string)($manifest['version'] ?? '')) : '';

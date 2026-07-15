@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require dirname(__DIR__, 2) . '/common.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');

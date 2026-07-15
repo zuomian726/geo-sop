@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
-require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
+require dirname(__DIR__) . '/common.php';
+require dirname(__DIR__) . '/platforms.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');

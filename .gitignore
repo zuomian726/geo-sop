@@ -182,3 +182,11 @@ downloads/
 *secret*
 *token*
 *cookie*
+
+# GEO-SOP server runtime and private deployment files
+server/geo.allgood.cn/storage/*
+!server/geo.allgood.cn/storage/sync_config.example.php
+server/geo.allgood.cn/uploads/
+server/geo.allgood.cn/backups/
+server/geo.allgood.cn/.user.ini
+server/geo.allgood.cn/**/*.bak*

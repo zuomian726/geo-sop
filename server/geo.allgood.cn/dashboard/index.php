@@ -1,6 +1,6 @@
 <?php
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
-require '/www/wwwroot/geo.allgood.cn/api/platforms.php';
+require dirname(__DIR__) . '/api/common.php';
+require dirname(__DIR__) . '/api/platforms.php';
 
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
@@ -12,7 +12,7 @@ if (!$user) {
 }
 $isDemoUser = strtolower(trim((string)($user['username'] ?? ''))) === 'tuke';
 $appVersion = '0.3.13-dev';
-$releaseManifest = '/www/wwwroot/geo.allgood.cn/update.json';
+$releaseManifest = dirname(__DIR__) . '/update.json';
 if (is_file($releaseManifest)) {
     $releaseData = json_decode((string)file_get_contents($releaseManifest), true);
     if (is_array($releaseData) && !empty($releaseData['version'])) {

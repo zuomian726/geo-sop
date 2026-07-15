@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require dirname(__DIR__) . '/api/common.php';
 
 $pdo = geo_pdo();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

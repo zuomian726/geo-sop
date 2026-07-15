@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require '/www/wwwroot/geo.allgood.cn/api/common.php';
+require dirname(__DIR__, 2) . '/common.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -133,7 +133,7 @@ try {
         $ext = 'png';
     }
     $date = date('Ymd');
-    $dir = "/www/wwwroot/geo.allgood.cn/storage/cloud-assets/{$cloudUserId}/{$date}";
+    $dir = geo_storage_path("cloud-assets/{$cloudUserId}/{$date}");
     if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
         geo_json(['success' => false, 'message' => 'failed to create storage directory'], 500);
     }
@@ -143,7 +143,9 @@ try {
         geo_json(['success' => false, 'message' => 'failed to save uploaded file'], 500);
     }
     @chmod($path, 0644);
-    $publicUrl = "https://geo.allgood.cn/storage/cloud-assets/{$cloudUserId}/{$date}/{$name}";
+    $config = geo_config();
+    $publicBaseUrl = rtrim((string)($config['public_base_url'] ?? 'https://geo.allgood.cn'), '/');
+    $publicUrl = "{$publicBaseUrl}/storage/cloud-assets/{$cloudUserId}/{$date}/{$name}";
     $mime = (string)($_FILES['file']['type'] ?? 'image/png');
     $payload = $body;
     unset($payload['kind']);

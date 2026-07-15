@@ -26,7 +26,7 @@ function bearer_token(): string {
 }
 
 function require_config(): array {
-    $path = '/www/wwwroot/geo.allgood.cn/storage/sync_config.php';
+    $path = (string)(getenv('GEO_SYNC_CONFIG') ?: dirname(__DIR__, 2) . '/storage/sync_config.php');
     if (!is_file($path)) {
         json_response(['success' => false, 'message' => 'sync config missing'], 500);
     }
