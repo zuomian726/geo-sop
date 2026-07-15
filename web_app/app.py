@@ -656,9 +656,10 @@ def login():
                 login_user(user)
                 restore_result = _queue_cloud_workspace_merge(user.id)
                 try:
-                    report_client_heartbeat(user.id, 'online', '客户端登录成功，已连接云端')
+                    from remote_worker import wake_remote_task_worker
+                    wake_remote_task_worker(app)
                 except Exception as heartbeat_error:
-                    logger.warning("[CloudSync] 登录心跳失败 user=%s: %s", user.id, heartbeat_error)
+                    logger.warning("[CloudSync] 后台连接启动失败 user=%s: %s", user.id, heartbeat_error)
                 _queue_cloud_sync(user.id, 'cloud_login_adopted' if adopted_count else 'cloud_login')
                 message = '云端账号登录成功'
                 if restore_result.get('restored'):

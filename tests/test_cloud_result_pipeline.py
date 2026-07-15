@@ -43,9 +43,12 @@ class CloudPipelineTestCase(unittest.TestCase):
         remote_worker._heartbeat_states.clear()
         remote_worker._worker_started = False
         remote_worker._worker_thread = None
+        remote_worker._heartbeat_thread = None
         remote_worker._worker_started_epoch = None
+        remote_worker._heartbeat_started_epoch = None
         remote_worker._worker_restart_count = 0
         remote_worker._worker_wakeup.clear()
+        remote_worker._heartbeat_wakeup.clear()
         db.session.remove()
         db.drop_all()
         db.session.remove()
@@ -187,8 +190,11 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
     def test_worker_start_is_idempotent_and_recovers_a_dead_thread(self):
         alive_thread = Mock()
         alive_thread.is_alive.return_value = True
+        alive_heartbeat = Mock()
+        alive_heartbeat.is_alive.return_value = True
         remote_worker._worker_started = True
         remote_worker._worker_thread = alive_thread
+        remote_worker._heartbeat_thread = alive_heartbeat
 
         with patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}):
             self.assertFalse(remote_worker.start_remote_task_worker(self.app))
@@ -213,11 +219,38 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         health = remote_worker.worker_health(self.user.id)
         self.assertTrue(health["started"])
         self.assertTrue(health["thread_alive"])
+        self.assertTrue(health["heartbeat_thread_alive"])
         self.assertEqual(1, health["restart_count"])
+
+    def test_worker_starts_separate_task_and_heartbeat_loops(self):
+        task_thread = Mock()
+        task_thread.is_alive.return_value = True
+        heartbeat_thread = Mock()
+        heartbeat_thread.is_alive.return_value = True
+
+        with (
+            patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}),
+            patch.object(remote_worker.threading, "Thread", side_effect=[task_thread, heartbeat_thread]) as factory,
+        ):
+            self.assertTrue(remote_worker.start_remote_task_worker(self.app))
+            self.assertFalse(remote_worker.start_remote_task_worker(self.app))
+
+        self.assertEqual(2, factory.call_count)
+        self.assertIs(factory.call_args_list[0].kwargs["target"], remote_worker._task_loop)
+        self.assertIs(factory.call_args_list[1].kwargs["target"], remote_worker._heartbeat_loop)
+        task_thread.start.assert_called_once_with()
+        heartbeat_thread.start.assert_called_once_with()
+        health = remote_worker.worker_health(self.user.id)
+        self.assertTrue(health["started"])
+        self.assertTrue(health["heartbeat_thread_alive"])
 
     def test_worker_start_failure_can_be_retried(self):
         failed_thread = Mock()
         failed_thread.start.side_effect = RuntimeError("thread unavailable")
+        failed_thread.is_alive.return_value = False
+        alive_heartbeat = Mock()
+        alive_heartbeat.is_alive.return_value = True
+        remote_worker._heartbeat_thread = alive_heartbeat
 
         with (
             patch.dict(remote_worker.os.environ, {"GEO_DESKTOP_MODE": "1"}),
@@ -235,6 +268,31 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
 
         start.assert_called_once_with(self.app)
         self.assertTrue(remote_worker._worker_wakeup.is_set())
+        self.assertTrue(remote_worker._heartbeat_wakeup.is_set())
+
+    def test_heartbeat_is_independent_from_slow_task_polling(self):
+        runtime = {
+            "worker_state": "ready",
+            "running_tasks": 0,
+            "pending_remote_tasks": 0,
+            "sync_backlog": 0,
+            "poll_seconds": 10,
+        }
+        with (
+            patch.object(remote_worker, "cloud_sync_enabled", return_value=True),
+            patch.object(remote_worker, "_find_cloud_user", return_value=self.user),
+            patch.object(remote_worker, "_runtime_telemetry", return_value=runtime),
+            patch.object(remote_worker, "report_client_heartbeat", return_value={"success": True}) as heartbeat,
+        ):
+            remote_worker._heartbeat_tick()
+
+        heartbeat.assert_called_once_with(
+            self.user.id,
+            "online",
+            "客户端在线，等待云端任务",
+            runtime=runtime,
+        )
+        self.assertTrue(remote_worker.worker_health(self.user.id)["online"])
 
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)
@@ -244,7 +302,6 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         with (
             patch.object(remote_worker, "cloud_sync_enabled", return_value=True),
             patch.object(remote_worker, "_find_cloud_user", return_value=self.user),
-            patch.object(remote_worker, "report_client_heartbeat", side_effect=RuntimeError("heartbeat unavailable")),
             patch.object(remote_worker, "pull_remote_tasks", side_effect=RuntimeError("pull unavailable")),
             patch.object(remote_worker, "restore_workspace_from_cloud", side_effect=RuntimeError("restore unavailable")),
             patch.object(remote_worker, "_reconcile_terminal_remote_statuses"),
@@ -259,7 +316,7 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         self.assertIs(call.kwargs["target"], remote_worker._execute_remote_task)
         self.assertEqual((self.app, self.user.id, task.id, 109), call.kwargs["args"])
         thread.start.assert_called_once()
-        self.assertGreaterEqual(warning.call_count, 3)
+        self.assertGreaterEqual(warning.call_count, 2)
 
     def test_completed_remote_task_syncs_results_assets_and_status(self):
         task = self.create_remote_task(remote_id=101)

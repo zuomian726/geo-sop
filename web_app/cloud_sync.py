@@ -1051,7 +1051,7 @@ def report_client_heartbeat(
         f"{cloud_sync_url()}/remote-tasks/heartbeat/",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers=_headers(),
-        timeout=20,
+        timeout=(5, 8),
     )
     if response.status_code >= 400:
         raise RuntimeError(f"remote heartbeat failed: HTTP {response.status_code} {response.text[:500]}")

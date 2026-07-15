@@ -32,10 +32,13 @@ logger = logging.getLogger("remote_worker")
 
 _worker_started = False
 _worker_thread: threading.Thread | None = None
+_heartbeat_thread: threading.Thread | None = None
 _worker_started_epoch: float | None = None
+_heartbeat_started_epoch: float | None = None
 _worker_restart_count = 0
 _worker_lock = threading.Lock()
 _worker_wakeup = threading.Event()
+_heartbeat_wakeup = threading.Event()
 _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
 _heartbeat_state_lock = threading.Lock()
@@ -71,6 +74,14 @@ def _merge_interval_seconds() -> int:
     except Exception:
         value = 300
     return max(60, min(value, 3600))
+
+
+def _heartbeat_seconds() -> int:
+    try:
+        value = int(os.environ.get("GEO_CLOUD_HEARTBEAT_SECONDS", "20"))
+    except Exception:
+        value = 20
+    return max(10, min(value, 60))
 
 
 def _heartbeat_timestamp(epoch: float | None) -> str | None:
@@ -119,12 +130,16 @@ def worker_health(user_id: int) -> dict:
     degraded = bool(last_error and last_error_epoch >= (last_success or 0))
     with _worker_lock:
         thread_alive = bool(_worker_thread and _worker_thread.is_alive())
+        heartbeat_thread_alive = bool(_heartbeat_thread and _heartbeat_thread.is_alive())
         worker_started_epoch = _worker_started_epoch
+        heartbeat_started_epoch = _heartbeat_started_epoch
         restart_count = _worker_restart_count
     return {
-        "started": bool(_worker_started and thread_alive),
+        "started": bool(_worker_started and thread_alive and heartbeat_thread_alive),
         "thread_alive": thread_alive,
+        "heartbeat_thread_alive": heartbeat_thread_alive,
         "worker_started_at": _heartbeat_timestamp(worker_started_epoch),
+        "heartbeat_started_at": _heartbeat_timestamp(heartbeat_started_epoch),
         "restart_count": restart_count,
         "online": online,
         "stale": stale,
@@ -426,20 +441,6 @@ def _tick(app) -> None:
         return
 
     user_id = int(user.id)
-    runtime = {}
-    try:
-        runtime = _runtime_telemetry(user_id)
-        _record_heartbeat_attempt(user_id, runtime)
-        heartbeat_message = {
-            "collecting": "客户端在线，正在执行云端采集任务",
-            "syncing": "客户端在线，正在补传采集结果",
-            "queued": "客户端在线，云端任务已进入本地队列",
-        }.get(runtime["worker_state"], "客户端在线，等待云端任务")
-        report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
-        _record_heartbeat_success(user_id)
-    except Exception as exc:
-        _record_heartbeat_failure(user_id, exc)
-        logger.warning("[RemoteWorker] heartbeat deferred: %s", exc)
 
     try:
         pulled = pull_remote_tasks(user_id)
@@ -475,54 +476,123 @@ def _tick(app) -> None:
         break
 
 
+def _heartbeat_tick() -> None:
+    """Send liveness independently from slower task and workspace operations."""
+    _ensure_local_schema()
+    if not cloud_sync_enabled():
+        return
+    user = _find_cloud_user()
+    if not user:
+        return
+
+    user_id = int(user.id)
+    runtime = _runtime_telemetry(user_id)
+    _record_heartbeat_attempt(user_id, runtime)
+    heartbeat_message = {
+        "collecting": "客户端在线，正在执行云端采集任务",
+        "syncing": "客户端在线，正在补传采集结果",
+        "queued": "客户端在线，云端任务已进入本地队列",
+    }.get(runtime["worker_state"], "客户端在线，等待云端任务")
+    try:
+        report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
+        _record_heartbeat_success(user_id)
+    except Exception as exc:
+        _record_heartbeat_failure(user_id, exc)
+        raise
+
+
+def _task_loop(app) -> None:
+    global _worker_started, _worker_thread
+    logger.info("[RemoteWorker] task loop started")
+    try:
+        while True:
+            try:
+                with app.app_context():
+                    _tick(app)
+            except Exception as exc:
+                logger.warning("[RemoteWorker] task tick failed: %s", exc)
+            _worker_wakeup.wait(_poll_seconds())
+            _worker_wakeup.clear()
+    finally:
+        with _worker_lock:
+            if _worker_thread is threading.current_thread():
+                _worker_thread = None
+                _worker_started = False
+
+
+def _heartbeat_loop(app) -> None:
+    global _heartbeat_thread
+    logger.info("[RemoteWorker] heartbeat loop started")
+    try:
+        while True:
+            try:
+                with app.app_context():
+                    _heartbeat_tick()
+            except Exception as exc:
+                logger.warning("[RemoteWorker] heartbeat deferred: %s", exc)
+            _heartbeat_wakeup.wait(_heartbeat_seconds())
+            _heartbeat_wakeup.clear()
+    finally:
+        with _worker_lock:
+            if _heartbeat_thread is threading.current_thread():
+                _heartbeat_thread = None
+
+
 def start_remote_task_worker(app) -> bool:
-    global _worker_started, _worker_thread, _worker_started_epoch, _worker_restart_count
+    global _worker_started, _worker_thread, _heartbeat_thread
+    global _worker_started_epoch, _heartbeat_started_epoch, _worker_restart_count
     if os.environ.get("GEO_DESKTOP_MODE") != "1":
         return False
     if os.environ.get("GEO_REMOTE_TASK_WORKER", "1").strip().lower() in {"0", "false", "off", "no"}:
         return False
 
-    def loop() -> None:
-        global _worker_started, _worker_thread
-        logger.info("[RemoteWorker] started")
-        try:
-            while True:
-                try:
-                    with app.app_context():
-                        _tick(app)
-                except Exception as exc:
-                    logger.warning("[RemoteWorker] tick failed: %s", exc)
-                _worker_wakeup.wait(_poll_seconds())
-                _worker_wakeup.clear()
-        finally:
-            with _worker_lock:
-                if _worker_thread is threading.current_thread():
-                    _worker_thread = None
-                    _worker_started = False
-
     with _worker_lock:
-        if _worker_thread and _worker_thread.is_alive():
+        task_alive = bool(_worker_thread and _worker_thread.is_alive())
+        heartbeat_alive = bool(_heartbeat_thread and _heartbeat_thread.is_alive())
+        if task_alive and heartbeat_alive:
             _worker_started = True
             return False
-        replacing_dead_worker = _worker_thread is not None or _worker_started
-        worker_thread = threading.Thread(target=loop, daemon=True, name="geo-remote-worker")
-        _worker_thread = worker_thread
+
+        replacing_dead_worker = bool(
+            (_worker_thread is not None and not task_alive)
+            or (_heartbeat_thread is not None and not heartbeat_alive)
+            or (_worker_started and not task_alive)
+        )
+        threads_to_start = []
+        if not task_alive:
+            _worker_thread = threading.Thread(target=_task_loop, args=(app,), daemon=True, name="geo-remote-worker")
+            threads_to_start.append(("task", _worker_thread))
+            _worker_started_epoch = time.time()
+        if not heartbeat_alive:
+            _heartbeat_thread = threading.Thread(
+                target=_heartbeat_loop,
+                args=(app,),
+                daemon=True,
+                name="geo-heartbeat-worker",
+            )
+            threads_to_start.append(("heartbeat", _heartbeat_thread))
+            _heartbeat_started_epoch = time.time()
         _worker_started = True
-        _worker_started_epoch = time.time()
         if replacing_dead_worker:
             _worker_restart_count += 1
         try:
-            worker_thread.start()
+            for _kind, thread in threads_to_start:
+                thread.start()
         except Exception:
-            _worker_thread = None
-            _worker_started = False
-            _worker_started_epoch = None
+            if _worker_thread and not _worker_thread.is_alive():
+                _worker_thread = None
+                _worker_started_epoch = None
+            if _heartbeat_thread and not _heartbeat_thread.is_alive():
+                _heartbeat_thread = None
+                _heartbeat_started_epoch = None
+            _worker_started = bool(_worker_thread and _worker_thread.is_alive())
             raise
-    return True
+    return bool(threads_to_start)
 
 
 def wake_remote_task_worker(app) -> bool:
     """Ensure the worker is alive and request an immediate cloud retry."""
     started = start_remote_task_worker(app)
     _worker_wakeup.set()
+    _heartbeat_wakeup.set()
     return started
