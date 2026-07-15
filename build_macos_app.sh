@@ -143,6 +143,7 @@ if [ "${BUILT_ARCH}" != "${TARGET_ARCH}" ]; then
   echo "Built application architecture ${BUILT_ARCH} does not match requested ${TARGET_ARCH}." >&2
   exit 1
 fi
+python3 tools/verify_macos_bundle.py "${DIST_DIR}/${APP_NAME}.app" "${TARGET_ARCH}" "12.0"
 
 DMG_PATH="${PACKAGE_DIR}/${APP_NAME}-v${VERSION}-${PACKAGE_SUFFIX}.dmg"
 DMG_STAGE="${BUILD_DIR}/dmg-stage"
