@@ -1,6 +1,6 @@
 # GEO-SOP Windows Package
 
-Version: 0.3.20-dev
+Version: 0.3.21-dev
 
 The public Windows download is a native setup EXE. It includes the GEO-SOP
 desktop runtime and Playwright Chromium, so customers do not need Python,

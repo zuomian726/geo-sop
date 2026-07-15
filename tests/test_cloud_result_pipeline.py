@@ -100,7 +100,11 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         sync.assert_called_once_with(self.user.id)
         upload.assert_called_once_with(self.user.id, task_ids=[task.id])
         db.session.expire_all()
-        self.assertEqual("completed", db.session.get(MonitorTask, task.id).status)
+        stored = db.session.get(MonitorTask, task.id)
+        self.assertEqual("completed", stored.status)
+        config = json.loads(stored.schedule_config)
+        self.assertTrue(config["remote_results_synced"])
+        self.assertTrue(config["remote_assets_uploaded"])
         self.assertNotIn(task.id, remote_worker._running_task_ids)
 
     def test_collection_failure_is_persisted_synced_and_reported(self):
@@ -124,6 +128,115 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         db.session.expire_all()
         self.assertEqual("failed", db.session.get(MonitorTask, task.id).status)
         self.assertNotIn(task.id, remote_worker._running_task_ids)
+
+    def test_sync_failure_does_not_turn_completed_collection_into_failure(self):
+        task = self.create_remote_task(remote_id=105)
+
+        def finish_collection(task_id, **_kwargs):
+            local_task = db.session.get(MonitorTask, task_id)
+            local_task.status = "completed"
+            db.session.commit()
+
+        collector = types.SimpleNamespace(run_collection=finish_collection)
+        with (
+            patch.dict(sys.modules, {"collector": collector}),
+            patch.object(remote_worker.logger, "warning"),
+            patch.object(remote_worker, "report_remote_task_status", return_value={"success": True}) as report,
+            patch.object(remote_worker, "sync_user_workspace", side_effect=RuntimeError("temporary network failure")),
+            patch.object(remote_worker, "upload_workspace_assets") as upload,
+        ):
+            remote_worker._execute_remote_task(self.app, self.user.id, task.id, 105)
+
+        statuses = [call.args[3] for call in report.call_args_list]
+        self.assertEqual(["running", "completed"], statuses)
+        upload.assert_not_called()
+        db.session.expire_all()
+        stored = db.session.get(MonitorTask, task.id)
+        self.assertEqual("completed", stored.status)
+        config = json.loads(stored.schedule_config)
+        self.assertEqual("completed", config["remote_status_reported"])
+        self.assertNotIn("remote_results_synced", config)
+
+        with (
+            patch.object(remote_worker, "sync_user_workspace", return_value={"success": True}) as sync,
+            patch.object(remote_worker, "upload_workspace_assets", return_value={"enabled": True}) as upload,
+            patch.object(remote_worker, "report_remote_task_status") as report,
+        ):
+            remote_worker._reconcile_terminal_remote_statuses(self.user.id)
+
+        sync.assert_called_once_with(self.user.id)
+        upload.assert_called_once_with(self.user.id, task_ids=[task.id])
+        report.assert_not_called()
+        db.session.expire_all()
+        config = json.loads(db.session.get(MonitorTask, task.id).schedule_config)
+        self.assertTrue(config["remote_results_synced"])
+        self.assertTrue(config["remote_assets_uploaded"])
+
+    def test_failed_terminal_status_report_is_retried_on_next_tick(self):
+        task = self.create_remote_task(remote_id=106)
+
+        def finish_collection(task_id, **_kwargs):
+            local_task = db.session.get(MonitorTask, task_id)
+            local_task.status = "completed"
+            db.session.commit()
+
+        collector = types.SimpleNamespace(run_collection=finish_collection)
+        with (
+            patch.dict(sys.modules, {"collector": collector}),
+            patch.object(remote_worker.logger, "warning"),
+            patch.object(
+                remote_worker,
+                "report_remote_task_status",
+                side_effect=[{"success": True}, RuntimeError("status endpoint unavailable")],
+            ),
+            patch.object(remote_worker, "sync_user_workspace", return_value={"success": True}),
+            patch.object(remote_worker, "upload_workspace_assets", return_value={"enabled": True}),
+        ):
+            remote_worker._execute_remote_task(self.app, self.user.id, task.id, 106)
+
+        db.session.expire_all()
+        stored = db.session.get(MonitorTask, task.id)
+        self.assertEqual("completed", stored.status)
+        self.assertNotIn("remote_status_reported", json.loads(stored.schedule_config))
+
+        with (
+            patch.object(remote_worker, "sync_user_workspace") as sync,
+            patch.object(remote_worker, "upload_workspace_assets") as upload,
+            patch.object(remote_worker, "report_remote_task_status", return_value={"success": True}) as report,
+        ):
+            remote_worker._reconcile_terminal_remote_statuses(self.user.id)
+
+        sync.assert_not_called()
+        upload.assert_not_called()
+        report.assert_called_once()
+        self.assertEqual("completed", report.call_args.args[3])
+        db.session.expire_all()
+        stored = db.session.get(MonitorTask, task.id)
+        self.assertEqual("completed", json.loads(stored.schedule_config)["remote_status_reported"])
+
+    def test_reconcile_batches_workspace_sync_for_multiple_completed_tasks(self):
+        first = self.create_remote_task(remote_id=107)
+        second = self.create_remote_task(remote_id=108)
+        first.status = "completed"
+        second.status = "completed"
+        db.session.commit()
+
+        with (
+            patch.object(remote_worker, "sync_user_workspace", return_value={"success": True}) as sync,
+            patch.object(remote_worker, "upload_workspace_assets", return_value={"enabled": True}) as upload,
+            patch.object(remote_worker, "report_remote_task_status", return_value={"success": True}) as report,
+        ):
+            remote_worker._reconcile_terminal_remote_statuses(self.user.id)
+
+        sync.assert_called_once_with(self.user.id)
+        self.assertEqual(2, upload.call_count)
+        self.assertEqual(2, report.call_count)
+        db.session.expire_all()
+        for task_id in (first.id, second.id):
+            config = json.loads(db.session.get(MonitorTask, task_id).schedule_config)
+            self.assertTrue(config["remote_results_synced"])
+            self.assertTrue(config["remote_assets_uploaded"])
+            self.assertEqual("completed", config["remote_status_reported"])
 
 
 class AssetUploadPipelineTests(CloudPipelineTestCase):

@@ -7,6 +7,7 @@ then report status and sync results back.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -33,6 +34,7 @@ _worker_started = False
 _worker_lock = threading.Lock()
 _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
+_TERMINAL_REMOTE_STATUSES = {"completed", "failed", "stopped"}
 
 
 def _ensure_local_schema() -> None:
@@ -96,6 +98,156 @@ def _remote_pending_tasks(user_id: int) -> list[MonitorTask]:
     return [task for task in tasks if remote_task_id_for_task(task)]
 
 
+def _schedule_config(task: MonitorTask) -> dict:
+    try:
+        config = json.loads(task.schedule_config or "{}")
+    except Exception:
+        config = {}
+    return config if isinstance(config, dict) else {}
+
+
+def _update_task_schedule_config(task_id: int, **values) -> None:
+    task = db.session.get(MonitorTask, task_id)
+    if not task:
+        return
+    config = _schedule_config(task)
+    config.update(values)
+    task.schedule_config = json.dumps(config, ensure_ascii=False)
+    db.session.commit()
+
+
+def _mark_remote_status_reported(task_id: int, status: str) -> None:
+    _update_task_schedule_config(
+        task_id,
+        remote_status_reported=status,
+        remote_status_reported_at=int(time.time()),
+    )
+
+
+def _report_remote_status_safely(
+    user_id: int,
+    remote_task_id: int,
+    local_task_id: int,
+    status: str,
+    message: str,
+) -> bool:
+    try:
+        report_remote_task_status(user_id, remote_task_id, local_task_id, status, message)
+        if status in _TERMINAL_REMOTE_STATUSES:
+            _mark_remote_status_reported(local_task_id, status)
+        return True
+    except Exception as exc:
+        logger.warning(
+            "[RemoteWorker] status report deferred remote=%s local=%s status=%s: %s",
+            remote_task_id,
+            local_task_id,
+            status,
+            exc,
+        )
+        return False
+
+
+def _deliver_remote_outputs_safely(user_id: int, task_id: int, status: str) -> bool:
+    task = db.session.get(MonitorTask, task_id)
+    if not task:
+        return False
+    config = _schedule_config(task)
+    if not config.get("remote_results_synced"):
+        try:
+            sync_user_workspace(user_id)
+            _update_task_schedule_config(
+                task_id,
+                remote_results_synced=True,
+                remote_results_synced_at=int(time.time()),
+            )
+        except Exception as sync_error:
+            logger.warning("[RemoteWorker] result sync deferred task=%s: %s", task_id, sync_error)
+            return False
+
+    if status != "completed":
+        return True
+
+    task = db.session.get(MonitorTask, task_id)
+    config = _schedule_config(task) if task else {}
+    if config.get("remote_assets_uploaded"):
+        return True
+    try:
+        upload_workspace_assets(user_id, task_ids=[task_id])
+        _update_task_schedule_config(
+            task_id,
+            remote_assets_uploaded=True,
+            remote_assets_uploaded_at=int(time.time()),
+        )
+        return True
+    except Exception as asset_error:
+        logger.warning("[RemoteWorker] screenshot upload deferred task=%s: %s", task_id, asset_error)
+        return False
+
+
+def _reconcile_terminal_remote_statuses(user_id: int) -> None:
+    tasks = (
+        MonitorTask.query.filter(
+            MonitorTask.user_id == user_id,
+            MonitorTask.status.in_(_TERMINAL_REMOTE_STATUSES),
+        )
+        .order_by(MonitorTask.id.asc())
+        .all()
+    )
+    pending = []
+    for task in tasks:
+        remote_id = remote_task_id_for_task(task)
+        if not remote_id:
+            continue
+        config = _schedule_config(task)
+        if config.get("cloud_source_install_id"):
+            continue
+        needs_results = not config.get("remote_results_synced")
+        needs_assets = task.status == "completed" and not config.get("remote_assets_uploaded")
+        needs_status = config.get("remote_status_reported") != task.status
+        if needs_results or needs_assets or needs_status:
+            pending.append((task, int(remote_id)))
+        if len(pending) >= 20:
+            break
+
+    pending_results = [task for task, _remote_id in pending if not _schedule_config(task).get("remote_results_synced")]
+    if pending_results:
+        try:
+            sync_user_workspace(user_id)
+            synced_at = int(time.time())
+            for task in pending_results:
+                config = _schedule_config(task)
+                config.update(remote_results_synced=True, remote_results_synced_at=synced_at)
+                task.schedule_config = json.dumps(config, ensure_ascii=False)
+            db.session.commit()
+        except Exception as sync_error:
+            db.session.rollback()
+            logger.warning("[RemoteWorker] batched result sync deferred: %s", sync_error)
+
+    for task, remote_id in pending:
+        config = _schedule_config(task)
+        if task.status == "completed" and config.get("remote_results_synced") and not config.get("remote_assets_uploaded"):
+            try:
+                upload_workspace_assets(user_id, task_ids=[int(task.id)])
+                _update_task_schedule_config(
+                    int(task.id),
+                    remote_assets_uploaded=True,
+                    remote_assets_uploaded_at=int(time.time()),
+                )
+            except Exception as asset_error:
+                logger.warning("[RemoteWorker] screenshot upload deferred task=%s: %s", task.id, asset_error)
+
+        config = _schedule_config(db.session.get(MonitorTask, task.id) or task)
+        if config.get("remote_status_reported") == task.status:
+            continue
+        _report_remote_status_safely(
+            user_id,
+            remote_id,
+            int(task.id),
+            task.status,
+            f"本机客户端补报任务状态：{task.status}",
+        )
+
+
 def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -> None:
     with _worker_lock:
         if task_id in _running_task_ids:
@@ -106,10 +258,22 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
         with app.app_context():
             task = db.session.get(MonitorTask, task_id)
             if not task:
-                report_remote_task_status(user_id, remote_task_id, task_id, "failed", "本地任务不存在")
+                _report_remote_status_safely(
+                    user_id,
+                    remote_task_id,
+                    task_id,
+                    "failed",
+                    "本地任务不存在",
+                )
                 return
 
-            report_remote_task_status(user_id, remote_task_id, task_id, "running", "本机客户端已开始采集")
+            _report_remote_status_safely(
+                user_id,
+                remote_task_id,
+                task_id,
+                "running",
+                "本机客户端已开始采集",
+            )
             from collector import run_collection
 
             try:
@@ -120,12 +284,8 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
                 final_status = finished_task.status if finished_task else "completed"
                 if final_status not in {"completed", "stopped", "failed"}:
                     final_status = "completed"
-                sync_user_workspace(user_id)
-                try:
-                    upload_workspace_assets(user_id, task_ids=[task_id])
-                except Exception as asset_error:
-                    logger.warning("[RemoteWorker] screenshot upload failed task=%s: %s", task_id, asset_error)
-                report_remote_task_status(
+                _deliver_remote_outputs_safely(user_id, task_id, final_status)
+                _report_remote_status_safely(
                     user_id,
                     remote_task_id,
                     task_id,
@@ -138,11 +298,8 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
                 if failed_task:
                     failed_task.status = "failed"
                     db.session.commit()
-                try:
-                    sync_user_workspace(user_id)
-                except Exception:
-                    logger.exception("[RemoteWorker] 失败状态同步失败")
-                report_remote_task_status(user_id, remote_task_id, task_id, "failed", str(exc))
+                _deliver_remote_outputs_safely(user_id, task_id, "failed")
+                _report_remote_status_safely(user_id, remote_task_id, task_id, "failed", str(exc))
     finally:
         with _worker_lock:
             _running_task_ids.discard(task_id)
@@ -169,6 +326,8 @@ def _tick(app) -> None:
         merged = restore_workspace_from_cloud(user_id, only_if_empty=False)
         if merged.get("restored"):
             logger.info("[RemoteWorker] merged cloud workspace: %s", merged)
+
+    _reconcile_terminal_remote_statuses(user_id)
 
     if _running_task_ids:
         return
