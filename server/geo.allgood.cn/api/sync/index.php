@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require dirname(__DIR__) . '/common.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Authorization, Content-Type');
@@ -77,6 +79,7 @@ function result_summary(array $result): array {
 }
 
 function ensure_schema(PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'sync_workspace', 2026071601, function (PDO $pdo): void {
     $sqls = [
         "CREATE TABLE IF NOT EXISTS geo_sync_users (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -187,14 +190,14 @@ function ensure_schema(PDO $pdo): void {
         $pdo->exec($sql);
     }
     foreach (['geo_sync_users', 'geo_sync_tasks', 'geo_sync_results', 'geo_sync_manuscripts', 'geo_sync_sentiment_configs', 'geo_sync_runs'] as $table) {
-        try { $pdo->exec("ALTER TABLE {$table} ADD COLUMN cloud_user_id BIGINT UNSIGNED NULL AFTER id"); } catch (Throwable $e) {}
-        try { $pdo->exec("ALTER TABLE {$table} ADD KEY idx_cloud_user (cloud_user_id)"); } catch (Throwable $e) {}
+        geo_add_column($pdo, $table, 'cloud_user_id', 'BIGINT UNSIGNED NULL AFTER id');
+        geo_add_index($pdo, $table, 'idx_cloud_user', 'KEY idx_cloud_user (cloud_user_id)');
     }
-    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN result_at DATETIME GENERATED ALWAYS AS (COALESCE(local_created_at, synced_at)) STORED"); } catch (Throwable $e) {}
-    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN has_screenshot TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure"); } catch (Throwable $e) {}
-    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot"); } catch (Throwable $e) {}
-    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_domains TEXT NULL AFTER reference_count"); } catch (Throwable $e) {}
-    try { $pdo->exec("ALTER TABLE geo_sync_results ADD COLUMN reference_items TEXT NULL AFTER reference_domains"); } catch (Throwable $e) {}
+    geo_add_column($pdo, 'geo_sync_results', 'result_at', 'DATETIME GENERATED ALWAYS AS (COALESCE(local_created_at, synced_at)) STORED');
+    geo_add_column($pdo, 'geo_sync_results', 'has_screenshot', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure');
+    geo_add_column($pdo, 'geo_sync_results', 'reference_count', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot');
+    geo_add_column($pdo, 'geo_sync_results', 'reference_domains', 'TEXT NULL AFTER reference_count');
+    geo_add_column($pdo, 'geo_sync_results', 'reference_items', 'TEXT NULL AFTER reference_domains');
     $resultIndexes = [
         'idx_results_user_time' => 'cloud_user_id, result_at DESC, id DESC',
         'idx_results_user_task_time' => 'cloud_user_id, local_task_id, result_at DESC, id DESC',
@@ -204,7 +207,7 @@ function ensure_schema(PDO $pdo): void {
         'idx_results_user_daily' => 'cloud_user_id, result_at, has_brand_exposure',
     ];
     foreach ($resultIndexes as $name => $columns) {
-        try { $pdo->exec("ALTER TABLE geo_sync_results ADD KEY {$name} ({$columns})"); } catch (Throwable $e) {}
+        geo_add_index($pdo, 'geo_sync_results', $name, "KEY {$name} ({$columns})");
     }
 
     $uniqueKeys = [
@@ -221,9 +224,10 @@ function ensure_schema(PDO $pdo): void {
         if ($columns === 'cloud_user_id,install_id,local_id') {
             continue;
         }
-        try { $pdo->exec("ALTER TABLE {$table} DROP INDEX {$index}"); } catch (Throwable $e) {}
-        try { $pdo->exec("ALTER TABLE {$table} ADD UNIQUE KEY {$index} (cloud_user_id, install_id, local_id)"); } catch (Throwable $e) {}
+        geo_schema_exec($pdo, "ALTER TABLE {$table} DROP INDEX {$index}", [1091]);
+        geo_add_index($pdo, $table, $index, "UNIQUE KEY {$index} (cloud_user_id, install_id, local_id)");
     }
+    });
 }
 
 function cloud_user_id_for_token(PDO $pdo, array $config, string $token): int {

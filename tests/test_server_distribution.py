@@ -91,6 +91,23 @@ class ServerDistributionTests(unittest.TestCase):
             source = (SERVER / relative).read_text(encoding="utf-8")
             self.assertIn("geo_is_demo_user(", source, relative)
 
+    def test_hot_api_schema_changes_are_versioned_and_locked(self):
+        common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
+        self.assertIn("function geo_run_schema_migration", common)
+        self.assertIn("geo_schema_versions", common)
+        self.assertIn("GET_LOCK(?, 15)", common)
+        self.assertIn("RELEASE_LOCK(?)", common)
+        self.assertIn("geo_run_schema_migration($pdo, 'core'", common)
+
+        components = {
+            "api/sync/index.php": "sync_workspace",
+            "api/sync/assets/index.php": "sync_assets",
+            "api/remote-tasks/index.php": "remote_tasks",
+        }
+        for relative, component in components.items():
+            source = (SERVER / relative).read_text(encoding="utf-8")
+            self.assertIn(f"geo_run_schema_migration($pdo, '{component}'", source, relative)
+
 
 if __name__ == "__main__":
     unittest.main()

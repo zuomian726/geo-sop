@@ -27,6 +27,7 @@ if (geo_is_demo_user($user)) {
 }
 
 function geo_assets_ensure_schema(PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'sync_assets', 2026071601, function (PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS geo_sync_assets (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         cloud_user_id BIGINT UNSIGNED NOT NULL,
@@ -59,6 +60,7 @@ function geo_assets_ensure_schema(PDO $pdo): void {
         created_at DATETIME NOT NULL,
         KEY idx_geo_stats_user (cloud_user_id, install_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    });
 }
 
 function geo_asset_safe_part(string $value): string {

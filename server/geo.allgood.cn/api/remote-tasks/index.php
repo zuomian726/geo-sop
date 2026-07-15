@@ -22,6 +22,7 @@ if (!$user) {
 }
 
 function geo_remote_ensure_schema(PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'remote_tasks', 2026071601, function (PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS geo_desktop_clients (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         cloud_user_id BIGINT UNSIGNED NOT NULL,
@@ -42,6 +43,7 @@ function geo_remote_ensure_schema(PDO $pdo): void {
     geo_add_column($pdo, 'geo_remote_tasks', 'status_payload', "LONGTEXT NULL");
     // Older deployments used `pulled` for the same state now called `imported`.
     $pdo->exec("UPDATE geo_remote_tasks SET status='imported' WHERE status='pulled'");
+    });
 }
 
 function geo_remote_body(): array {
