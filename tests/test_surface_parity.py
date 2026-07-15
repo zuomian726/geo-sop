@@ -129,6 +129,15 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("white-space:nowrap", dashboard)
         self.assertIn(".side-stack{grid-template-columns:repeat(2,minmax(0,1fr))}", dashboard)
 
+    def test_cloud_default_date_filters_use_browser_local_date(self):
+        dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("function localDateValue(date)", dashboard)
+        self.assertIn("date.getFullYear()", dashboard)
+        self.assertIn("date.getMonth() + 1", dashboard)
+        self.assertIn("date.getDate()", dashboard)
+        self.assertIn("return localDateValue(date);", dashboard)
+        self.assertNotIn("return date.toISOString().slice(0, 10);", dashboard)
+
 
 if __name__ == "__main__":
     unittest.main()

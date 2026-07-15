@@ -849,10 +849,17 @@ function exportCloudScreenshots(){
 
 var referenceState = { loaded: false, loading: false };
 
+function localDateValue(date){
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, '0');
+    var day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+}
+
 function referenceDateValue(daysAgo){
     var date = new Date();
     date.setDate(date.getDate() - daysAgo);
-    return date.toISOString().slice(0, 10);
+    return localDateValue(date);
 }
 
 function buildReferenceParams(action){
