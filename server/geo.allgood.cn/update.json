@@ -1,31 +1,31 @@
 {
   "app": "GEO-SOP",
-  "version": "0.3.28-dev",
+  "version": "0.3.29-dev",
   "channel": "desktop-dev",
-  "released_at": "2026-07-16T00:16:00+08:00",
+  "released_at": "2026-07-16T00:43:00+08:00",
   "minimum_supported_version": "0.3.17-dev",
   "force": false,
   "notes": [
-    "桌面看板首屏不再等待云端状态请求，网络缓慢或云端暂时不可用时也能立即进入本地工作区。",
-    "顶部实时连接状态会显示心跳、任务排队、采集执行、结果回传和连接错误，并每 15 秒自动刷新。",
-    "桌面头部已统一使用正式 GEO-SOP 字标，并补充 41 项自动化测试与真实浏览器渲染验证。"
+    "顶部工具栏会随窗口宽度自动收起次要文字，同时保留图标、悬停说明和无障碍名称。",
+    "首次平台登录窗口改为清晰的四列布局，登录流程精简为登录、检测和本机状态管理三步。",
+    "修复首屏核心概览与评分接口重复请求的问题，并通过 42 项自动测试和真实浏览器布局验证。"
   ],
   "downloads": {
     "macos": {
       "name": "GEO-SOP-macOS-dev.dmg",
-      "version": "0.3.28-dev",
+      "version": "0.3.29-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-macOS-dev.dmg",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.28-dev-macOS.dmg",
-      "size": "165 MB",
-      "sha256": "fc9dcc67f2fcaf4746bf0f055c718eedca6619a00c50ca4567d7ec7d911e9671"
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-v0.3.29-dev-macOS.dmg",
+      "size": "168 MB",
+      "sha256": "e5b9583998b4997cc7b48e44f751fdf0bcc49e85984c54a5b1b9c20b8d633d43"
     },
     "windows": {
       "name": "GEO-SOP-Setup-dev.exe",
-      "version": "0.3.28-dev",
+      "version": "0.3.29-dev",
       "url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
-      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.28-dev.exe",
+      "versioned_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-v0.3.29-dev.exe",
       "size": "185 MB",
-      "sha256": "6676976557a78c7204856f4734c90097776094a5635450f2e48a975c47fa115c"
+      "sha256": "0e78d0bcaa7ccc7b29deddcbbe1c7ae0e3b78f0f248f4f18f086d0167f2b1452"
     }
   }
 }
