@@ -78,6 +78,48 @@ class CloudPipelineTestCase(unittest.TestCase):
 
 
 class RemoteWorkerPipelineTests(CloudPipelineTestCase):
+    def test_runtime_telemetry_reports_queue_collection_and_sync_backlog(self):
+        task = self.create_remote_task(remote_id=110)
+
+        telemetry = remote_worker._runtime_telemetry(self.user.id)
+        self.assertEqual("queued", telemetry["worker_state"])
+        self.assertEqual(1, telemetry["pending_remote_tasks"])
+
+        remote_worker._running_task_ids.add(task.id)
+        telemetry = remote_worker._runtime_telemetry(self.user.id)
+        self.assertEqual("collecting", telemetry["worker_state"])
+        self.assertEqual(1, telemetry["running_tasks"])
+
+        remote_worker._running_task_ids.discard(task.id)
+        task.status = "completed"
+        db.session.commit()
+        telemetry = remote_worker._runtime_telemetry(self.user.id)
+        self.assertEqual("syncing", telemetry["worker_state"])
+        self.assertEqual(1, telemetry["sync_backlog"])
+
+    def test_heartbeat_sends_non_sensitive_worker_telemetry(self):
+        response = self.response({"success": True})
+        runtime = {
+            "worker_state": "queued",
+            "running_tasks": 0,
+            "pending_remote_tasks": 2,
+            "sync_backlog": 0,
+            "poll_seconds": 10,
+        }
+        with (
+            patch.object(cloud_sync, "cloud_sync_enabled", return_value=True),
+            patch.object(cloud_sync, "cloud_sync_url", return_value="https://cloud.example/api"),
+            patch.object(cloud_sync, "get_install_id", return_value="device-a"),
+            patch.object(cloud_sync, "_headers", return_value={"Authorization": "Bearer test"}),
+            patch.object(cloud_sync.requests, "post", return_value=response) as post,
+        ):
+            cloud_sync.report_client_heartbeat(self.user.id, runtime=runtime)
+
+        payload = json.loads(post.call_args.kwargs["data"].decode("utf-8"))
+        self.assertEqual(runtime, payload["runtime"])
+        self.assertNotIn("questions", payload["runtime"])
+        self.assertNotIn("api_key", payload["runtime"])
+
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)
         thread = Mock()

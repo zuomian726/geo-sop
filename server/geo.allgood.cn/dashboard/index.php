@@ -123,6 +123,11 @@ foreach ($clientRows as &$clientRow) {
     $clientPayload = json_decode((string)($clientRow['payload'] ?? ''), true);
     $clientRow['platform'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['platform'] ?? '') : '';
     $clientRow['version'] = is_array($clientPayload) ? (string)($clientPayload['desktop']['app_version'] ?? '') : '';
+    $clientRuntime = is_array($clientPayload['runtime'] ?? null) ? $clientPayload['runtime'] : [];
+    $clientRow['worker_state'] = (string)($clientRuntime['worker_state'] ?? 'unknown');
+    $clientRow['running_tasks'] = max(0, (int)($clientRuntime['running_tasks'] ?? 0));
+    $clientRow['pending_remote_tasks'] = max(0, (int)($clientRuntime['pending_remote_tasks'] ?? 0));
+    $clientRow['sync_backlog'] = max(0, (int)($clientRuntime['sync_backlog'] ?? 0));
     $lastSeen = strtotime((string)($clientRow['last_seen_at'] ?? '')) ?: 0;
     $clientRow['live'] = $lastSeen > 0 && (time() - $lastSeen) <= 90 && (string)$clientRow['status'] === 'online';
 }
@@ -595,9 +600,9 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         </tbody></table></div>
         <h3 style="margin:22px 0 8px">客户端连接状态</h3>
         <p class="muted">只有同一账号下的桌面客户端保持在线，云端任务才会被自动拉取。超过 90 秒未收到心跳会显示为离线，本区域每 15 秒自动刷新。</p>
-        <div class="table-wrap"><table><thead><tr><th>状态</th><th>客户端</th><th>版本</th><th>平台</th><th>最近心跳</th><th>提示</th></tr></thead><tbody id="desktopClientRows">
-        <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['version'] ?: '-')?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
-        <?php if(!$clientRows): ?><tr><td colspan="6"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
+        <div class="table-wrap"><table><thead><tr><th>状态</th><th>客户端</th><th>版本</th><th>平台</th><th>后台任务</th><th>最近心跳</th><th>提示</th></tr></thead><tbody id="desktopClientRows">
+        <?php foreach($clientRows as $client): ?><tr><td><span class="status" style="color:<?= $client['live'] ? '#16803c' : '#8a5a00' ?>"><?= $client['live'] ? '在线' : '离线' ?></span></td><td><?=geo_h($client['install_id'])?></td><td><?=geo_h($client['version'] ?: '-')?></td><td><?=geo_h($client['platform'] ?: '-')?></td><td><?=geo_h($client['worker_state'] === 'collecting' ? '采集中 ' . $client['running_tasks'] : ($client['worker_state'] === 'syncing' ? '待回传 ' . $client['sync_backlog'] : ($client['worker_state'] === 'queued' ? '排队 ' . $client['pending_remote_tasks'] : ($client['worker_state'] === 'ready' ? '等待任务' : '旧版本未上报'))))?></td><td><?=geo_h($client['last_seen_at'])?></td><td><?=geo_h($client['message'] ?: '-')?></td></tr><?php endforeach; ?>
+        <?php if(!$clientRows): ?><tr><td colspan="7"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr><?php endif; ?>
         </tbody></table></div>
         <h3 style="margin:22px 0 8px">本地同步任务</h3>
         <div class="table-wrap"><table><tr><th>本地ID</th><th>任务</th><th>状态</th><th>客户端</th><th>同步时间</th></tr>
@@ -647,6 +652,14 @@ function heartbeatAge(seconds){
     return Math.floor(seconds / 86400) + ' 天前';
 }
 
+function workerStateLabel(client){
+    if (client.worker_state === 'collecting') return '采集中 ' + Number(client.running_tasks || 0);
+    if (client.worker_state === 'syncing') return '待回传 ' + Number(client.sync_backlog || 0);
+    if (client.worker_state === 'queued') return '排队 ' + Number(client.pending_remote_tasks || 0);
+    if (client.worker_state === 'ready') return '等待任务';
+    return '旧版本未上报';
+}
+
 function renderRemoteStatus(data){
     var diagnosis = data.diagnosis || {};
     var diagnosisBox = document.getElementById('connectionDiagnosis');
@@ -688,10 +701,11 @@ function renderRemoteStatus(data){
                 '<td>' + h(client.install_id || '-') + '</td>' +
                 '<td>' + version + '</td>' +
                 '<td>' + h(client.platform || '-') + '</td>' +
+                '<td>' + h(workerStateLabel(client)) + '</td>' +
                 '<td>' + heartbeat + '</td>' +
                 '<td>' + h(client.message || '-') + '</td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="6"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr>';
+        }).join('') : '<tr><td colspan="7"><div class="empty">暂无客户端心跳。请在桌面端登录同一账号并保持 App 运行。</div></td></tr>';
     }
 }
 

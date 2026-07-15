@@ -58,6 +58,14 @@ class SurfaceParityTests(unittest.TestCase):
         missing = {marker for marker in expected_markers if marker not in source}
         self.assertFalse(missing, missing)
 
+    def test_cloud_connection_status_exposes_worker_progress(self):
+        dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        api = (ROOT / "server" / "geo.allgood.cn" / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        for marker in ("workerStateLabel", "后台任务", "sync_backlog", "pending_remote_tasks"):
+            self.assertIn(marker, dashboard)
+        for marker in ("worker_state", "running_tasks", "local_pending_tasks", "sync_backlog"):
+            self.assertIn(marker, api)
+
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")

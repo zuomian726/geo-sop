@@ -98,6 +98,45 @@ def _remote_pending_tasks(user_id: int) -> list[MonitorTask]:
     return [task for task in tasks if remote_task_id_for_task(task)]
 
 
+def _runtime_telemetry(user_id: int) -> dict:
+    remote_tasks = (
+        MonitorTask.query.filter(
+            MonitorTask.user_id == user_id,
+            MonitorTask.schedule_config.like('%"remote_task_id"%'),
+        )
+        .order_by(MonitorTask.id.desc())
+        .all()
+    )
+    running = sum(1 for task in remote_tasks if int(task.id) in _running_task_ids)
+    pending = sum(1 for task in remote_tasks if task.status == "pending")
+    sync_backlog = 0
+    for task in remote_tasks:
+        if task.status not in _TERMINAL_REMOTE_STATUSES:
+            continue
+        config = _schedule_config(task)
+        needs_results = not config.get("remote_results_synced")
+        needs_assets = task.status == "completed" and not config.get("remote_assets_uploaded")
+        needs_status = config.get("remote_status_reported") != task.status
+        if needs_results or needs_assets or needs_status:
+            sync_backlog += 1
+
+    if running:
+        state = "collecting"
+    elif sync_backlog:
+        state = "syncing"
+    elif pending:
+        state = "queued"
+    else:
+        state = "ready"
+    return {
+        "worker_state": state,
+        "running_tasks": running,
+        "pending_remote_tasks": pending,
+        "sync_backlog": sync_backlog,
+        "poll_seconds": _poll_seconds(),
+    }
+
+
 def _schedule_config(task: MonitorTask) -> dict:
     try:
         config = json.loads(task.schedule_config or "{}")
@@ -316,7 +355,13 @@ def _tick(app) -> None:
 
     user_id = int(user.id)
     try:
-        report_client_heartbeat(user_id, "online", "客户端在线，等待云端任务")
+        runtime = _runtime_telemetry(user_id)
+        heartbeat_message = {
+            "collecting": "客户端在线，正在执行云端采集任务",
+            "syncing": "客户端在线，正在补传采集结果",
+            "queued": "客户端在线，云端任务已进入本地队列",
+        }.get(runtime["worker_state"], "客户端在线，等待云端任务")
+        report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
     except Exception as exc:
         logger.warning("[RemoteWorker] heartbeat deferred: %s", exc)
 

@@ -995,7 +995,12 @@ def pull_remote_tasks(user_id: int) -> dict:
     }
 
 
-def report_client_heartbeat(user_id: int, status: str = "online", message: str = "") -> dict:
+def report_client_heartbeat(
+    user_id: int,
+    status: str = "online",
+    message: str = "",
+    runtime: dict | None = None,
+) -> dict:
     if not cloud_sync_enabled():
         return {"enabled": False, "message": "cloud api sync is disabled"}
 
@@ -1013,6 +1018,7 @@ def report_client_heartbeat(user_id: int, status: str = "online", message: str =
             "platform": platform.platform(),
             "python": platform.python_version(),
         },
+        "runtime": runtime if isinstance(runtime, dict) else {},
     }
     response = requests.post(
         f"{cloud_sync_url()}/remote-tasks/heartbeat/",
