@@ -209,6 +209,21 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn('<article><strong>144</strong><span data-en="Synthetic answers"', landing)
         self.assertIn('<article><strong>4</strong><span data-en="GEO files"', landing)
 
+    def test_demo_actions_explain_read_only_mode_without_opening_local_app(self):
+        dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        for marker in (
+            "var isDemoMode =",
+            "function showDemoRestriction(action)",
+            "function requestLocalApp(target, action)",
+            "if (isDemoMode)",
+            "在线 Demo 不会连接你的本机账户、浏览器或桌面 App",
+            "onclick=\"showDemoRestriction('创建任务')\"",
+            'aria-disabled="true"',
+        ):
+            self.assertIn(marker, dashboard)
+        self.assertNotIn('onclick="openLocalApp(', dashboard)
+        self.assertNotIn('disabled title="Demo 为只读模式"', dashboard)
+
     def test_cloud_header_has_a_compact_desktop_breakpoint(self):
         dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
         self.assertIn("@media(max-width:1200px)", dashboard)

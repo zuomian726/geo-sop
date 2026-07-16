@@ -287,6 +287,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 	*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{text-decoration:none;color:inherit}.app-header{height:58px;background:#fff;border-bottom:1px solid #e8eef6;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}.title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;white-space:nowrap;flex:0 0 auto}.logo{width:32px;height:32px;border-radius:7px}.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;background:#f0f2f5;color:#606266;font-size:12px;font-weight:700;white-space:nowrap}.tag.green{background:#eaf8df;color:#529b2e}.header-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;min-width:0}.header-actions .btn,.header-actions button{white-space:nowrap}.header-compact-label{display:none}.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border:1px solid #dcdfe6;border-radius:4px;background:#fff;color:#344054;font-weight:700;cursor:pointer}.btn.primary,button.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.small{height:26px;padding:0 10px;font-size:12px}.wrap{width:min(1560px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0}.workspace-hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.72fr) minmax(250px,.72fr);gap:18px}.hero-panel{min-height:242px;background:var(--dark);border-radius:6px;padding:34px 38px;color:#fff;box-shadow:0 18px 50px rgba(14,30,54,.08)}.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);font-weight:900}.hero-panel h1{font-size:34px;margin:14px 0 12px}.hero-panel p{color:#aab7c9;line-height:1.8;margin:0 0 22px}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.side-stack{display:contents}.side-card,.metric-card,.panel,.tabs{background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(16,32,55,.06)}.panel,.tabs{position:relative;scroll-margin-top:76px}.chart-panel[id]{scroll-margin-top:76px}.panel{padding:28px 32px}.panel h2{margin:14px 0 16px;padding-right:120px}.panel>.muted{margin:0 0 24px}.panel form{display:grid;gap:18px}.panel form p{margin:0}.panel .table-wrap{margin-top:18px}.collapse-toggle{position:absolute;top:18px;right:20px;height:30px;padding:0 11px;border-radius:4px;font-size:12px;background:#f8fafc}.panel.is-collapsed{padding-bottom:22px}.panel.is-collapsed>:not(.kicker):not(h2):not(.collapse-toggle){display:none}.tabs.is-collapsed .tab-body{display:none}.tabs.is-collapsed .tab-nav{border-bottom:0}.side-card{padding:22px}.side-card strong{display:block;font-size:19px;margin:10px 0 8px}.muted{color:var(--muted);line-height:1.7}.msg{margin:18px 0 0;padding:12px 14px;background:#ecfdf3;color:#027a48;border-radius:6px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.metric-card{padding:20px}.metric-card span,.mini-label{display:block;color:#7b8aa0;font-size:13px;font-weight:700}.metric-card strong{display:block;font-size:30px;margin:8px 0 4px}.tabs{overflow:hidden}.tab-nav{height:38px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff;padding-right:110px}.tab-nav a{height:38px;padding:0 20px;display:flex;align-items:center;color:#7b8aa0;font-weight:800;font-size:14px;border-right:1px solid #eef2f7}.tab-nav a.active{color:var(--blue);background:#f8fbff}.tab-body{padding:20px}.analysis-summary{display:grid;grid-template-columns:220px 1fr;gap:16px}.score-hero,.action-hero{border:1px solid var(--line);border-radius:6px;background:#fff;padding:22px}.score-hero{text-align:center}.score-ring{width:126px;height:126px;margin:0 auto 18px;border-radius:999px;background:conic-gradient(var(--blue2) calc(var(--score)*1%),#e8edf5 0);display:grid;place-items:center}.score-ring strong{width:90px;height:90px;border-radius:999px;background:#fff;display:grid;place-items:center;font-size:34px}.action-hero{display:flex;flex-direction:column;justify-content:center}.action-hero strong{font-size:26px;margin:8px 0}.analysis-card-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}.analysis-card{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.analysis-card strong{display:block;font-size:27px;margin:8px 0}.chart-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:14px;margin-top:16px}.chart-panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:18px}.chart-panel h3{font-size:21px;margin:8px 0}.trend{display:flex;align-items:end;gap:8px;height:210px;padding-top:16px}.trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:8px}.trend-stack{width:100%;height:150px;display:flex;align-items:end;justify-content:center;border-bottom:1px solid #e4e7ec}.trend-bar{width:18px;border-radius:5px 5px 0 0;background:#cbd5e1;position:relative}.trend-dot{position:absolute;left:50%;width:9px;height:9px;margin-left:-4px;border-radius:999px;background:var(--blue2);box-shadow:0 0 0 4px #1769ff1a}.trend-label{font-size:12px;color:var(--muted)}.bar-list{display:grid;gap:12px;margin-top:16px}.bar-row{display:grid;grid-template-columns:92px 1fr 54px;gap:10px;align-items:center}.bar-track{height:11px;background:#edf2f7;border-radius:999px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--blue2));border-radius:999px}.source-row{display:grid;grid-template-columns:1fr 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #edf1f7}.question-row{padding:12px 0;border-bottom:1px solid #edf1f7}.question-row strong{display:block;line-height:1.5}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}input,textarea{width:100%;padding:13px 14px;border:1px solid #ccd6e4;border-radius:6px;font-size:14px;background:#fff}textarea{min-height:96px;resize:vertical;line-height:1.6}.checks{display:flex;flex-wrap:wrap;gap:12px;margin-top:2px}.checks label{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:999px;padding:8px 12px}.checks input{width:auto}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}th,td{text-align:left;padding:11px;border-bottom:1px solid #edf1f7}th{color:#7b8aa0;font-size:12px}.status{display:inline-flex;padding:3px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px;font-weight:800}.empty{padding:24px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed #d0d5dd;border-radius:6px}.local-note{margin-top:10px;font-size:13px;color:#7b8aa0}.local-note strong{color:#344054}.connection-diagnosis{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:16px 0;padding:16px 18px;border:1px solid #d0d5dd;border-left:4px solid #98a2b3;border-radius:6px;background:#f8fafc}.connection-diagnosis.healthy,.connection-diagnosis.demo{border-left-color:#12b76a;background:#f0fdf4}.connection-diagnosis.warning{border-left-color:#f79009;background:#fffaeb}.connection-diagnosis.offline{border-left-color:#f04438;background:#fff5f5}.connection-diagnosis strong{display:block;font-size:17px;margin-bottom:5px}.diagnosis-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.diagnosis-stats{display:flex;gap:8px;flex-wrap:wrap}.app-launch-notice{position:fixed;right:20px;bottom:20px;z-index:50;width:min(430px,calc(100vw - 32px));display:none;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid #b8c7dc;border-left:4px solid var(--blue2);border-radius:6px;background:#fff;box-shadow:0 18px 48px rgba(16,32,55,.2)}.app-launch-notice.show{display:flex}.app-launch-notice.success{border-left-color:#12b76a}.app-launch-notice.warning{border-left-color:#f79009}.app-launch-copy{min-width:0;flex:1}.app-launch-copy strong{display:block;margin-bottom:4px}.app-launch-copy span{display:block;color:var(--muted);font-size:13px;line-height:1.55}.app-launch-actions{display:none;gap:8px;flex-wrap:wrap;margin-top:10px}.app-launch-notice.warning .app-launch-actions{display:flex}.app-launch-actions .btn,.app-launch-actions button{height:30px;padding:0 10px;font-size:12px}.hidden-section{display:none}@media(max-width:1200px){.app-header{padding:0 12px;gap:12px}.title{gap:8px;font-size:18px}.current-account{display:none}.header-actions{gap:6px}.header-actions .btn,.header-actions button{height:34px;padding:0 10px;font-size:13px}.header-full-label{display:none}.header-compact-label{display:inline}}@media(max-width:980px){.workspace-hero,.analysis-summary,.chart-grid,.form-grid,.metric-grid,.analysis-card-grid{grid-template-columns:1fr}.panel{padding:22px 18px}.panel h2{padding-right:96px}.collapse-toggle{top:16px;right:14px}.app-header{height:auto;align-items:flex-start;gap:12px;padding:12px;flex-direction:column}.header-actions{width:100%;justify-content:flex-start;flex-wrap:wrap}.wrap{width:calc(100% - 28px);padding:16px 0}.hero-panel h1{font-size:28px}.hero-panel{padding:26px}.tab-nav{overflow:auto}.tab-nav a{white-space:nowrap}.connection-diagnosis{align-items:flex-start;flex-direction:column}}
 	select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.geo-summary-item{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px}.geo-summary-item span{display:block;color:var(--muted);font-size:12px;font-weight:800}.geo-summary-item strong{display:block;font-size:24px;margin-top:6px}.geo-title-row{cursor:pointer}.geo-title-main{display:flex;align-items:center;gap:10px;font-weight:800}.geo-caret{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#667085;font-size:12px}.geo-child-row{background:#fbfdff}.geo-url-list{padding:8px 0}.geo-url-card{display:grid;grid-template-columns:minmax(260px,1fr) 150px 150px 170px;gap:14px;align-items:start;padding:12px 14px;border-bottom:1px solid #edf1f7}.geo-url-card:last-child{border-bottom:0}.geo-url{color:#175cd3;word-break:break-all;line-height:1.5}.geo-detail-list{margin-top:8px;display:grid;gap:7px}.geo-detail-item{padding:8px 10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:6px;color:#475467;line-height:1.5}.geo-muted{color:#7b8aa0;font-size:12px}@media(max-width:1100px){.workspace-hero{grid-template-columns:1fr}.side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hero-panel{min-height:0}.query-grid{grid-template-columns:1fr 1fr}.geo-summary{grid-template-columns:1fr 1fr}.geo-url-card{grid-template-columns:1fr}}@media(max-width:720px){.side-stack{grid-template-columns:1fr}.query-grid{grid-template-columns:1fr}.geo-summary{grid-template-columns:1fr}}
 	.reference-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.reference-ranking{display:grid;gap:12px;margin-top:16px}.reference-rank-row{display:grid;grid-template-columns:minmax(120px,220px) 1fr 58px;gap:12px;align-items:center}.reference-rank-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reference-trend{min-height:260px;display:grid;place-items:center;margin-top:12px}.reference-trend svg{width:100%;height:auto;min-height:220px}.reference-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.reference-legend span{display:inline-flex;align-items:center;gap:6px;color:#667085;font-size:12px}.reference-legend i{width:10px;height:10px;border-radius:999px}@media(max-width:720px){.reference-summary{grid-template-columns:1fr}.reference-rank-row{grid-template-columns:110px 1fr 46px}}
+	.app-launch-notice.demo{border-left-color:var(--cyan);background:#f0fdff}
 </style>
 </head>
 <body>
@@ -300,7 +301,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
     </div>
     <div class="header-actions">
         <a class="btn" href="#create-task"><span class="header-full-label">采集设置: 50条 30~120秒</span><span class="header-compact-label">采集设置</span></a>
-        <button class="btn" onclick="openLocalApp('login')">检测平台登录</button>
+        <button class="btn" onclick="requestLocalApp('login', '平台登录检测')">检测平台登录</button>
         <a class="btn" href="#ai-settings">智慧舆情设置</a>
         <a class="btn primary" href="#create-task">创建任务</a>
         <a class="btn" href="/logout/">退出登录</a>
@@ -328,7 +329,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
             <p>从账号登录、问题采集、引用来源到 AI 分析建议，集中管理品牌在 AI 回答里的曝光、风险和下一步动作。</p>
             <div class="hero-actions">
                 <a class="btn primary" href="#insights">查看数据看板</a>
-                <button class="btn" onclick="openLocalApp('login')">检测平台登录</button>
+                <button class="btn" onclick="requestLocalApp('login', '平台登录检测')">检测平台登录</button>
                 <a class="btn" href="#create-task">新建监测任务</a>
             </div>
         </div>
@@ -338,7 +339,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <strong><?=geo_h($nextAction['title'])?></strong>
                 <p class="muted"><?=geo_h($nextAction['detail'])?></p>
                 <p class="local-note"><strong>平台登录、浏览器采集和账号绑定需要在本机 App 完成。</strong>点击按钮会尝试唤起本机 App。</p>
-                <button class="btn small primary" onclick="openLocalApp('login')">打开本机 App</button>
+                <button class="btn small primary" onclick="requestLocalApp('login', '平台登录检测')">打开本机 App</button>
             </div>
             <div class="side-card" id="ai-settings">
                 <span class="kicker">AI Analysis</span>
@@ -349,7 +350,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <p class="local-note"><strong><?=geo_h((string)$config['name'])?></strong> · <?=geo_h($config['platform'] ?: 'OpenAI 兼容')?> / <?=geo_h($config['model'] ?: '未设置模型')?> · <?= $config['metadata_ready'] ? '配置已同步' : '等待完整配置' ?><br>API Key 仅保存在本机</p>
                 <?php endforeach; ?>
                 <?php else: ?><p class="local-note">当前账号还没有同步的舆情配置。</p><?php endif; ?>
-                <button class="btn small primary" onclick="openLocalApp('ai-settings')">在本机配置 AI</button>
+                <button class="btn small primary" onclick="requestLocalApp('ai-settings', '智慧舆情配置')">在本机配置 AI</button>
             </div>
         </div>
     </section>
@@ -588,8 +589,12 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <label><input type="checkbox" name="platforms[]" value="<?=geo_h($platformId)?>" <?= $platformId === 'doubao' ? 'checked' : '' ?>><?=geo_h($platformMeta['name'])?></label>
                 <?php endforeach; ?>
             </p>
-            <button class="primary" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>创建任务</button>
-            <button type="button" onclick="openLocalApp('dashboard')" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>打开本机 App 执行</button>
+            <?php if($isDemoUser): ?>
+            <button type="button" class="primary" aria-disabled="true" title="点击查看 Demo 限制" onclick="showDemoRestriction('创建任务')">创建任务</button>
+            <?php else: ?>
+            <button class="primary">创建任务</button>
+            <?php endif; ?>
+            <button type="button" onclick="requestLocalApp('dashboard', '本机采集执行')">打开本机 App 执行</button>
         </form>
     </section>
 
@@ -601,7 +606,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
             <div><strong id="diagnosisTitle">正在检查客户端连接...</strong><span class="muted" id="diagnosisDetail">正在读取最近心跳、客户端版本和任务队列。</span></div>
             <div class="diagnosis-actions">
                 <div class="diagnosis-stats"><span class="pill" id="onlineClientCount">在线 0</span><span class="pill" id="pendingTaskCount">等待 0</span></div>
-                <button type="button" onclick="openLocalApp('dashboard')" <?= $isDemoUser ? 'disabled title="Demo 为只读模式"' : '' ?>>打开本机 App</button>
+                <button type="button" onclick="requestLocalApp('dashboard', '本机任务执行')">打开本机 App</button>
                 <a class="btn" href="/#download">下载最新版</a>
             </div>
         </div>
@@ -634,6 +639,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 </main>
 
 <script>
+var isDemoMode = <?= $isDemoUser ? 'true' : 'false' ?>;
+
 function h(text){
     return String(text == null ? '' : text).replace(/[&<>"']/g, function(c){
         return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -1138,7 +1145,24 @@ function hideAppLaunchNotice(){
 }
 
 function retryLocalApp(){
-    openLocalApp(appLaunchTarget);
+    requestLocalApp(appLaunchTarget, '本机功能');
+}
+
+function showDemoRestriction(action){
+    var label = action || '此功能';
+    setAppLaunchNotice(
+        'demo',
+        label + '在 Demo 中仅供展示',
+        '在线 Demo 不会连接你的本机账户、浏览器或桌面 App。下载桌面版并登录自己的账号后即可使用。'
+    );
+}
+
+function requestLocalApp(target, action){
+    if (isDemoMode) {
+        showDemoRestriction(action);
+        return;
+    }
+    openLocalApp(target);
 }
 
 function openLocalApp(target){
