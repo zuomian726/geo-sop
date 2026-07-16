@@ -218,7 +218,8 @@ class SurfaceParityTests(unittest.TestCase):
             "if (isDemoMode)",
             "在线 Demo 不会连接你的本机账户、浏览器或桌面 App",
             "onclick=\"showDemoRestriction('创建任务')\"",
-            'aria-disabled="true"',
+            'data-demo-restricted="true"',
+            'aria-label="创建任务，Demo 中仅展示，点击查看说明"',
         ):
             self.assertIn(marker, dashboard)
         self.assertNotIn('onclick="openLocalApp(', dashboard)

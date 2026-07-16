@@ -590,7 +590,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
                 <?php endforeach; ?>
             </p>
             <?php if($isDemoUser): ?>
-            <button type="button" class="primary" aria-disabled="true" title="点击查看 Demo 限制" onclick="showDemoRestriction('创建任务')">创建任务</button>
+            <button type="button" class="primary" data-demo-restricted="true" aria-label="创建任务，Demo 中仅展示，点击查看说明" title="点击查看 Demo 限制" onclick="showDemoRestriction('创建任务')">创建任务</button>
             <?php else: ?>
             <button class="primary">创建任务</button>
             <?php endif; ?>
