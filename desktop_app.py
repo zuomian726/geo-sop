@@ -146,10 +146,12 @@ def _startup_path_from_args() -> str:
             continue
         parsed = urlparse(arg)
         target = (parse_qs(parsed.query).get("target") or ["dashboard"])[0]
-        if target in {"dashboard", "login"}:
+        if target == "login":
+            return "/dashboard?open=platform-login"
+        if target == "dashboard":
             return "/dashboard"
         if target == "ai-settings":
-            return "/dashboard#sentiment_settings"
+            return "/dashboard?open=ai-settings#sentiment_settings"
         return "/dashboard"
     return "/"
 

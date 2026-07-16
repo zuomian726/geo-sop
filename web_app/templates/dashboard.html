@@ -2671,7 +2671,9 @@ const app = createApp({
         this.loadTodayCollectionCount();
         await this.loadPlatforms();     // 从 API 获取平台列表
         await this.loadCachedLoginStatus();   // 加载当前用户缓存的登录状态
-        this.showWelcomeGuideIfNeeded();
+        if (!this.applyStartupAction()) {
+            this.showWelcomeGuideIfNeeded();
+        }
         this.loadBrowserConfig();      // 加载浏览器配置
         this.initAnalysisFilter();     // 初始化引用参考源分析筛选（默认最近一月）
         this.initTrendFilter();        // 初始化走势图筛选（默认最近一月）
@@ -2706,6 +2708,19 @@ const app = createApp({
             if (tabMap[hash]) {
                 this.activeTab = tabMap[hash];
             }
+        },
+
+        applyStartupAction() {
+            const action = new URLSearchParams(window.location.search).get('open');
+            if (action === 'platform-login') {
+                setTimeout(() => this.quickCheckAndShowLogin(), 250);
+                return true;
+            }
+            if (action === 'ai-settings') {
+                this.activeTab = 'sentiment_settings';
+                return true;
+            }
+            return false;
         },
 
         async loadCurrentUser() {

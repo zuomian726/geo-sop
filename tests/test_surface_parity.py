@@ -70,6 +70,32 @@ class SurfaceParityTests(unittest.TestCase):
         for marker in ("worker_state", "running_tasks", "local_pending_tasks", "sync_backlog"):
             self.assertIn(marker, api)
 
+    def test_cloud_app_launch_feedback_is_non_blocking_and_actionable(self):
+        dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        for marker in (
+            'id="appLaunchNotice"',
+            "visibilitychange",
+            "window.addEventListener('blur', onBlur",
+            "geo-sop://open?target=",
+            "没有检测到桌面应用",
+            "retryLocalApp",
+            "/#download",
+        ):
+            self.assertIn(marker, dashboard)
+        self.assertNotIn("alert('如果本机 App 没有自动打开", dashboard)
+
+    def test_desktop_protocol_targets_open_the_requested_workflow(self):
+        launcher = (ROOT / "desktop_app.py").read_text(encoding="utf-8")
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        mac_build = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
+        windows_installer = (ROOT / "installer" / "windows" / "GEO-SOP.iss").read_text(encoding="utf-8")
+        self.assertIn('/dashboard?open=platform-login', launcher)
+        self.assertIn('/dashboard?open=ai-settings#sentiment_settings', launcher)
+        self.assertIn("applyStartupAction()", dashboard)
+        self.assertIn("action === 'platform-login'", dashboard)
+        self.assertIn('"CFBundleURLSchemes": ["geo-sop"]', mac_build)
+        self.assertIn('Software\\Classes\\geo-sop', windows_installer)
+
     def test_cloud_sync_is_non_destructive_unless_explicitly_requested(self):
         client = (ROOT / "web_app" / "cloud_sync.py").read_text(encoding="utf-8")
         server = (ROOT / "server" / "geo.allgood.cn" / "api" / "sync" / "index.php").read_text(encoding="utf-8")
