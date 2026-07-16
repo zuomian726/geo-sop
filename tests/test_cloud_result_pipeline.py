@@ -4,6 +4,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import Mock, patch
 
 from flask import Flask
@@ -87,6 +88,79 @@ class CloudPipelineTestCase(unittest.TestCase):
 
 
 class RemoteWorkerPipelineTests(CloudPipelineTestCase):
+    def test_empty_workspace_ignores_stale_pull_cursor_after_reinstall(self):
+        pull_state_path = Path(self.temp_dir.name) / "cloud_pull_state.json"
+        pull_state_path.write_text(
+            json.dumps({
+                "pipeline@example.com": {
+                    "result_cursor": 9876,
+                    "result_cursor_time": "2026-07-15 12:00:00",
+                }
+            }),
+            encoding="utf-8",
+        )
+        response = self.response({
+            "success": True,
+            "workspace": {"tasks": [], "results": [], "manuscripts": [], "sentiment_configs": []},
+            "counts": {},
+            "paging": {
+                "next_cursor": 0,
+                "next_cursor_time": "",
+                "has_more": False,
+            },
+        })
+        with (
+            patch.object(cloud_sync, "cloud_sync_enabled", return_value=True),
+            patch.object(cloud_sync, "cloud_sync_url", return_value="https://cloud.example/api"),
+            patch.object(cloud_sync, "cloud_pull_state_path", return_value=pull_state_path),
+            patch.object(cloud_sync, "_headers", return_value={"Authorization": "Bearer test"}),
+            patch.object(cloud_sync.requests, "get", return_value=response) as get,
+        ):
+            result = cloud_sync.restore_workspace_from_cloud(self.user.id, only_if_empty=False)
+
+        query = parse_qs(urlparse(get.call_args.args[0]).query)
+        self.assertEqual(["0"], query["cursor"])
+        self.assertNotIn("cursor_time", query)
+        self.assertEqual(["1"], query["include_metadata"])
+        self.assertFalse(result["restored"])
+
+    def test_restore_requests_metadata_only_on_first_result_page(self):
+        pull_state_path = Path(self.temp_dir.name) / "cloud_pull_state.json"
+        responses = [
+            self.response({
+                "success": True,
+                "workspace": {"tasks": [], "results": [], "manuscripts": [], "sentiment_configs": []},
+                "counts": {},
+                "paging": {
+                    "next_cursor": 100,
+                    "next_cursor_time": "2026-07-16 10:00:00",
+                    "has_more": True,
+                },
+            }),
+            self.response({
+                "success": True,
+                "workspace": {"tasks": [], "results": [], "manuscripts": [], "sentiment_configs": []},
+                "counts": {},
+                "paging": {
+                    "next_cursor": 101,
+                    "next_cursor_time": "2026-07-16 10:00:01",
+                    "has_more": False,
+                },
+            }),
+        ]
+        with (
+            patch.object(cloud_sync, "cloud_sync_enabled", return_value=True),
+            patch.object(cloud_sync, "cloud_sync_url", return_value="https://cloud.example/api"),
+            patch.object(cloud_sync, "cloud_pull_state_path", return_value=pull_state_path),
+            patch.object(cloud_sync, "_headers", return_value={"Authorization": "Bearer test"}),
+            patch.object(cloud_sync.requests, "get", side_effect=responses) as get,
+        ):
+            result = cloud_sync.restore_workspace_from_cloud(self.user.id, only_if_empty=False)
+
+        queries = [parse_qs(urlparse(call.args[0]).query) for call in get.call_args_list]
+        self.assertEqual([["1"], ["0"]], [query["include_metadata"] for query in queries])
+        self.assertEqual(2, result["pages"])
+
     def test_cloud_account_file_is_private_and_can_be_cleared(self):
         account_path = Path(self.temp_dir.name) / "cloud_account.json"
         with (

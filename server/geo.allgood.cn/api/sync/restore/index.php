@@ -90,24 +90,32 @@ try {
     $resultCursor = max(0, (int)($_GET['cursor'] ?? 0));
     $resultCursorTime = trim((string)($_GET['cursor_time'] ?? ''));
     $resultLimit = max(1, min(250, (int)($_GET['limit'] ?? 100)));
+    // Newer clients request workspace metadata only on the first page. Keep the
+    // default enabled so older clients retain their existing response contract.
+    $includeMetadata = !isset($_GET['include_metadata'])
+        || !in_array(strtolower(trim((string)$_GET['include_metadata'])), ['0', 'false', 'no'], true);
 
     $taskRows = [];
     $taskSources = [];
     $taskFingerprints = [];
+    // Result-to-task mapping is still required on every page, but payload-heavy
+    // task rows only need to be returned once per restore session.
     foreach (geo_restore_rows($pdo, 'geo_sync_tasks', $cloudUserId) as $row) {
         $payload = geo_restore_payload($row['payload'] ?? '');
         $sourceKey = geo_restore_source_key($payload, (string)$row['install_id'], (int)$row['local_id']);
         $fingerprint = geo_restore_task_fingerprint($payload);
         $canonicalSource = $taskFingerprints[$fingerprint] ?? $sourceKey;
         $taskFingerprints[$fingerprint] = $canonicalSource;
-        $taskRows[$canonicalSource] = [
-            'install_id' => (string)$row['install_id'],
-            'local_id' => (int)$row['local_id'],
-            'source_install_id' => explode(':', $canonicalSource, 2)[0],
-            'source_local_id' => (int)explode(':', $canonicalSource, 2)[1],
-            'payload' => $payload,
-            'synced_at' => $row['synced_at'],
-        ];
+        if ($includeMetadata) {
+            $taskRows[$canonicalSource] = [
+                'install_id' => (string)$row['install_id'],
+                'local_id' => (int)$row['local_id'],
+                'source_install_id' => explode(':', $canonicalSource, 2)[0],
+                'source_local_id' => (int)explode(':', $canonicalSource, 2)[1],
+                'payload' => $payload,
+                'synced_at' => $row['synced_at'],
+            ];
+        }
         $taskSources[(string)$row['install_id'] . ':' . (int)$row['local_id']] = $canonicalSource;
     }
 
@@ -139,7 +147,7 @@ try {
     }
 
     $manuscriptRows = [];
-    foreach (geo_restore_rows($pdo, 'geo_sync_manuscripts', $cloudUserId) as $row) {
+    foreach ($includeMetadata ? geo_restore_rows($pdo, 'geo_sync_manuscripts', $cloudUserId) : [] as $row) {
         $payload = geo_restore_payload($row['payload'] ?? '');
         $installId = (string)$row['install_id'];
         $taskIds = [];
@@ -164,7 +172,7 @@ try {
     }
 
     $configRows = [];
-    foreach (geo_restore_rows($pdo, 'geo_sync_sentiment_configs', $cloudUserId) as $row) {
+    foreach ($includeMetadata ? geo_restore_rows($pdo, 'geo_sync_sentiment_configs', $cloudUserId) : [] as $row) {
         $payload = geo_restore_config_payload(geo_restore_payload($row['payload'] ?? ''));
         $key = (string)$row['install_id'] . ':' . (int)$row['local_id'];
         $configRows[$key] = [
@@ -199,6 +207,7 @@ try {
             'next_cursor_time' => $nextCursorTime,
             'limit' => $resultLimit,
             'has_more' => count($rawResultRows) >= $resultLimit,
+            'included_metadata' => $includeMetadata,
         ],
     ]);
 } catch (Throwable $e) {

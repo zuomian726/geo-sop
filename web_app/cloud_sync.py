@@ -495,6 +495,9 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
 
     local_counts = {
         "tasks": MonitorTask.query.filter_by(user_id=user.id).count(),
+        "results": CollectionResult.query.join(
+            MonitorTask, CollectionResult.task_id == MonitorTask.id
+        ).filter(MonitorTask.user_id == user.id).count(),
         "manuscripts": GeoManuscript.query.filter_by(user_id=user.id).count(),
         "sentiment_configs": SentimentConfig.query.filter_by(user_id=user.id).count(),
     }
@@ -503,6 +506,11 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
 
     user_key = _user_key(user)
     cursor, cursor_time = _cloud_pull_cursor(user_key)
+    # A pull cursor can outlive the SQLite database across a reinstall or local
+    # reset. An empty workspace must always bootstrap from the beginning so the
+    # user's historical results are not silently skipped.
+    if not any(local_counts.values()):
+        cursor, cursor_time = 0, ""
     final_cursor = cursor
     final_cursor_time = cursor_time
     pages = 0
@@ -518,6 +526,7 @@ def _restore_workspace_from_cloud(user_id: int, only_if_empty: bool = True) -> d
             "cursor": final_cursor,
             "cursor_time": final_cursor_time,
             "limit": 100,
+            "include_metadata": 1 if pages == 0 else 0,
         })
         response = requests.get(
             f"{cloud_sync_url()}/sync/restore/?{query}",
