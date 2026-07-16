@@ -52,12 +52,20 @@ class SurfaceParityTests(unittest.TestCase):
         source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
         expected_markers = {
             'id="reference-analysis"',
+            'href="#reference-ranking"',
+            'href="#reference-trends"',
+            'id="reference-ranking"',
+            'id="reference-trends"',
             'id="referenceRanking"',
             'id="referenceTrend"',
             "function loadReferenceAnalysis()",
             "function renderReferenceRanking(data)",
             "function renderReferenceTrend(data)",
             "IntersectionObserver",
+            "function openDashboardTarget(id, updateHistory)",
+            "target.closest('[data-collapsible]')",
+            "target.scrollIntoView({block: 'start', behavior: 'smooth'})",
+            "function setActiveDashboardNav(id)",
         }
         missing = {marker for marker in expected_markers if marker not in source}
         self.assertFalse(missing, missing)
