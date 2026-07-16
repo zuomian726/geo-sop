@@ -194,6 +194,7 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         telemetry = remote_worker._runtime_telemetry(self.user.id)
         self.assertEqual("queued", telemetry["worker_state"])
         self.assertEqual(1, telemetry["pending_remote_tasks"])
+        self.assertEqual(10, telemetry["poll_seconds"])
 
         remote_worker._running_task_ids.add(task.id)
         telemetry = remote_worker._runtime_telemetry(self.user.id)
@@ -206,6 +207,19 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         telemetry = remote_worker._runtime_telemetry(self.user.id)
         self.assertEqual("syncing", telemetry["worker_state"])
         self.assertEqual(1, telemetry["sync_backlog"])
+
+    def test_idle_task_polling_backs_off_without_delaying_active_work(self):
+        with patch.dict(remote_worker.os.environ, {}, clear=False):
+            self.assertEqual(60, remote_worker._task_wait_seconds({"worker_state": "ready"}))
+            self.assertEqual(10, remote_worker._task_wait_seconds({"worker_state": "queued"}))
+            self.assertEqual(10, remote_worker._task_wait_seconds({"worker_state": "collecting"}))
+
+        with patch.dict(
+            remote_worker.os.environ,
+            {"GEO_REMOTE_TASK_IDLE_POLL_SECONDS": "45", "GEO_REMOTE_TASK_POLL_SECONDS": "7"},
+        ):
+            self.assertEqual(45, remote_worker._task_wait_seconds({"worker_state": "ready"}))
+            self.assertEqual(7, remote_worker._task_wait_seconds({"worker_state": "syncing"}))
 
     def test_heartbeat_sends_non_sensitive_worker_telemetry(self):
         response = self.response({"success": True})
@@ -367,6 +381,29 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
             runtime=runtime,
         )
         self.assertTrue(remote_worker.worker_health(self.user.id)["online"])
+
+    def test_heartbeat_wakes_task_worker_when_cloud_has_pending_work(self):
+        runtime = {
+            "worker_state": "ready",
+            "running_tasks": 0,
+            "pending_remote_tasks": 0,
+            "sync_backlog": 0,
+            "poll_seconds": 60,
+        }
+        remote_worker._worker_wakeup.clear()
+        with (
+            patch.object(remote_worker, "cloud_sync_enabled", return_value=True),
+            patch.object(remote_worker, "_find_cloud_user", return_value=self.user),
+            patch.object(remote_worker, "_runtime_telemetry", return_value=runtime),
+            patch.object(
+                remote_worker,
+                "report_client_heartbeat",
+                return_value={"success": True, "pending_remote_tasks": 1},
+            ),
+        ):
+            remote_worker._heartbeat_tick()
+
+        self.assertTrue(remote_worker._worker_wakeup.is_set())
 
     def test_tick_starts_imported_task_when_cloud_status_calls_temporarily_fail(self):
         task = self.create_remote_task(remote_id=109)

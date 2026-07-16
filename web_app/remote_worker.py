@@ -68,6 +68,21 @@ def _poll_seconds() -> int:
     return max(5, min(value, 120))
 
 
+def _idle_poll_seconds() -> int:
+    try:
+        value = int(os.environ.get("GEO_REMOTE_TASK_IDLE_POLL_SECONDS", "60"))
+    except Exception:
+        value = 60
+    return max(15, min(value, 300))
+
+
+def _task_wait_seconds(runtime: dict | None) -> int:
+    state = str((runtime or {}).get("worker_state") or "")
+    if state in {"collecting", "syncing", "queued"}:
+        return _poll_seconds()
+    return _idle_poll_seconds()
+
+
 def _merge_interval_seconds() -> int:
     try:
         value = int(os.environ.get("GEO_CLOUD_PULL_SECONDS", "300"))
@@ -220,7 +235,7 @@ def _runtime_telemetry(user_id: int) -> dict:
         "running_tasks": running,
         "pending_remote_tasks": pending,
         "sync_backlog": sync_backlog,
-        "poll_seconds": _poll_seconds(),
+        "poll_seconds": _task_wait_seconds({"worker_state": state}),
     }
 
 
@@ -431,14 +446,14 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
             _running_task_ids.discard(task_id)
 
 
-def _tick(app) -> None:
+def _tick(app) -> dict | None:
     _ensure_local_schema()
     if not cloud_sync_enabled():
-        return
+        return None
 
     user = _find_cloud_user()
     if not user:
-        return
+        return None
 
     user_id = int(user.id)
 
@@ -462,7 +477,7 @@ def _tick(app) -> None:
     _reconcile_terminal_remote_statuses(user_id)
 
     if _running_task_ids:
-        return
+        return _runtime_telemetry(user_id)
 
     for task in _remote_pending_tasks(user_id):
         remote_id = remote_task_id_for_task(task)
@@ -474,6 +489,7 @@ def _tick(app) -> None:
             daemon=True,
         ).start()
         break
+    return _runtime_telemetry(user_id)
 
 
 def _heartbeat_tick() -> None:
@@ -494,8 +510,10 @@ def _heartbeat_tick() -> None:
         "queued": "客户端在线，云端任务已进入本地队列",
     }.get(runtime["worker_state"], "客户端在线，等待云端任务")
     try:
-        report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
+        response = report_client_heartbeat(user_id, "online", heartbeat_message, runtime=runtime)
         _record_heartbeat_success(user_id)
+        if int((response or {}).get("pending_remote_tasks") or 0) > 0:
+            _worker_wakeup.set()
     except Exception as exc:
         _record_heartbeat_failure(user_id, exc)
         raise
@@ -506,12 +524,13 @@ def _task_loop(app) -> None:
     logger.info("[RemoteWorker] task loop started")
     try:
         while True:
+            runtime = None
             try:
                 with app.app_context():
-                    _tick(app)
+                    runtime = _tick(app)
             except Exception as exc:
                 logger.warning("[RemoteWorker] task tick failed: %s", exc)
-            _worker_wakeup.wait(_poll_seconds())
+            _worker_wakeup.wait(_task_wait_seconds(runtime))
             _worker_wakeup.clear()
     finally:
         with _worker_lock:

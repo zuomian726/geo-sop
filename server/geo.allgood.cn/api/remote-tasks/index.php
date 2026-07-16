@@ -151,7 +151,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'heartbeat') {
         VALUES (?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE status=VALUES(status), message=VALUES(message), payload=VALUES(payload), last_seen_at=VALUES(last_seen_at), updated_at=VALUES(updated_at)");
     $stmt->execute([$cloudUserId, $installId, $userKey, $status, $message, $payload, $now, $now, $now]);
-    geo_json(['success' => true, 'message' => 'heartbeat ok']);
+    $pendingStmt = $pdo->prepare("SELECT COUNT(*) FROM geo_remote_tasks
+        WHERE cloud_user_id=? AND status='pending'
+          AND (assigned_install_id IS NULL OR assigned_install_id='' OR assigned_install_id=?)");
+    $pendingStmt->execute([$cloudUserId, $installId]);
+    $pendingCount = max(0, (int)$pendingStmt->fetchColumn());
+    geo_json([
+        'success' => true,
+        'message' => 'heartbeat ok',
+        'pending_remote_tasks' => $pendingCount,
+        'recommended_task_poll_seconds' => $pendingCount > 0 ? 5 : 60,
+    ]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'ack') {

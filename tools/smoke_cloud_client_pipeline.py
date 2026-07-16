@@ -173,7 +173,11 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
                 timeout=(5, 10),
             )
         )
-        if not heartbeat.get("success"):
+        if (
+            not heartbeat.get("success")
+            or int(heartbeat.get("pending_remote_tasks") or 0) != 0
+            or int(heartbeat.get("recommended_task_poll_seconds") or 0) < 30
+        ):
             raise AcceptanceError(f"heartbeat failed: {heartbeat}")
         print("[2/8] authenticated client heartbeat passed")
 
@@ -332,6 +336,26 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
             requests.post(endpoint(base_url, "/api/remote-tasks/"), headers=headers, json={"payload": remote_payload}, timeout=(5, 15))
         )
         remote_id = int(created_task.get("id") or 0)
+        pending_heartbeat = expect_json(
+            requests.post(
+                endpoint(base_url, "/api/remote-tasks/heartbeat/"),
+                headers=headers,
+                json={
+                    "install_id": install_id,
+                    "user_key": user_key,
+                    "status": "online",
+                    "message": "acceptance client waiting for work",
+                    "desktop": {"app_version": "0.3.44-dev", "platform": "acceptance"},
+                    "runtime": {"worker_state": "ready", "poll_seconds": 60},
+                },
+                timeout=(5, 10),
+            )
+        )
+        if (
+            int(pending_heartbeat.get("pending_remote_tasks") or 0) != 1
+            or int(pending_heartbeat.get("recommended_task_poll_seconds") or 0) > 10
+        ):
+            raise AcceptanceError(f"heartbeat did not announce pending cloud work: {pending_heartbeat}")
         claimed = expect_json(
             requests.get(
                 endpoint(base_url, "/api/remote-tasks/"),
