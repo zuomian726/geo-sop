@@ -46,6 +46,17 @@ _heartbeat_states: dict[int, dict] = {}
 _TERMINAL_REMOTE_STATUSES = {"completed", "partial", "failed", "stopped"}
 
 
+def _public_collection_failure(error: Exception) -> str:
+    """Keep machine paths and browser internals in local logs only."""
+    error_name = type(error).__name__.lower()
+    error_text = str(error).lower()
+    if "timeout" in error_name or "timeout" in error_text or "timed out" in error_text:
+        return "采集超时，请在本机检查平台登录状态和网络后重试"
+    if "login" in error_text or "登录" in error_text:
+        return "平台登录状态已失效，请在本机重新登录后重试"
+    return "采集执行失败，请在本机任务详情中查看原因后重试"
+
+
 def _ensure_local_schema() -> None:
     inspector = inspect(db.engine)
     existing_tables = set(inspector.get_table_names())
@@ -440,7 +451,13 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
                     failed_task.status = "failed"
                     db.session.commit()
                 _deliver_remote_outputs_safely(user_id, task_id, "failed")
-                _report_remote_status_safely(user_id, remote_task_id, task_id, "failed", str(exc))
+                _report_remote_status_safely(
+                    user_id,
+                    remote_task_id,
+                    task_id,
+                    "failed",
+                    _public_collection_failure(exc),
+                )
     finally:
         with _worker_lock:
             _running_task_ids.discard(task_id)

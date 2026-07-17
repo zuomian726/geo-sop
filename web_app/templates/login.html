@@ -199,6 +199,7 @@
                         v-model="loginForm.username" 
                         placeholder="用户名 / 邮箱"
                         size="large"
+                        autocomplete="username"
                         prefix-icon="User">
                     </el-input>
                 </el-form-item>
@@ -209,6 +210,7 @@
                         type="password"
                         placeholder="密码"
                         size="large"
+                        autocomplete="current-password"
                         prefix-icon="Lock"
                         @keyup.enter="handleLogin">
                     </el-input>
@@ -254,7 +256,7 @@ const app = createApp({
     data() {
         return {
             loginForm: {
-                username: '',
+                username: localStorage.getItem('geo-sop-last-account') || '',
                 password: '',
                 cloud_login: {{ 'true' if (config.DESKTOP_MODE and config.REQUIRE_LOGIN) else 'true' }}
             },
@@ -277,6 +279,7 @@ const app = createApp({
             this.loading = true;
             
             try {
+                localStorage.setItem('geo-sop-last-account', this.loginForm.username.trim());
                 const response = await axios.post('/login', this.loginForm);
                 
                 if (response.data.success) {
@@ -286,7 +289,9 @@ const app = createApp({
                     }, 500);
                 }
             } catch (error) {
-                ElMessage.error(error.response?.data?.message || '登录失败');
+                const message = error.response?.data?.message
+                    || (error.code === 'ERR_NETWORK' ? '无法连接本机登录服务，请重新打开 GEO-SOP' : '登录失败，请稍后重试');
+                ElMessage.error({ message, duration: 5000, showClose: true });
             } finally {
                 this.loading = false;
             }

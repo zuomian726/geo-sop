@@ -503,12 +503,20 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
 
         statuses = [call.args[3] for call in report.call_args_list]
         self.assertEqual(["running", "failed"], statuses)
-        self.assertIn("collector failed", report.call_args_list[-1].args[4])
+        public_message = report.call_args_list[-1].args[4]
+        self.assertIn("本机任务详情", public_message)
+        self.assertNotIn("collector failed", public_message)
         sync.assert_called_once_with(self.user.id)
         upload.assert_not_called()
         db.session.expire_all()
         self.assertEqual("failed", db.session.get(MonitorTask, task.id).status)
         self.assertNotIn(task.id, remote_worker._running_task_ids)
+
+    def test_remote_task_timeout_returns_an_actionable_public_message(self):
+        self.assertEqual(
+            "采集超时，请在本机检查平台登录状态和网络后重试",
+            remote_worker._public_collection_failure(TimeoutError("browser timed out at /private/profile")),
+        )
 
     def test_sync_failure_does_not_turn_completed_collection_into_failure(self):
         task = self.create_remote_task(remote_id=105)

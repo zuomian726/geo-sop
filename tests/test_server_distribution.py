@@ -34,6 +34,14 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn("checkdate($month, $day, $year)", source)
         self.assertNotIn("$offset = max(0, (int)($_GET['offset']", source)
 
+    def test_remote_task_status_payload_is_bounded_and_excludes_client_extras(self):
+        source = (SERVER / "api" / "remote-tasks" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("mb_substr(trim((string)($data['message']", source)
+        self.assertIn("$statusPayload = [", source)
+        self.assertNotIn("$payload = json_encode($data", source)
+        self.assertIn("$heartbeatPayload = [", source)
+        self.assertIn("'sync_backlog' => max(0, min(10000", source)
+
     def test_php_sources_do_not_hardcode_the_production_document_root(self):
         offenders = []
         for path in SERVER.rglob("*.php"):

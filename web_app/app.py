@@ -28,6 +28,7 @@ from flask_cors import CORS
 from datetime import datetime, timezone, timedelta
 import json
 import click
+import secrets
 import threading
 import logging
 import time
@@ -611,10 +612,14 @@ def login():
         return redirect(url_for('dashboard', welcome=1))
 
     if request.method == 'POST':
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
-        cloud_login = bool(data.get('cloud_login'))
+        data = request.get_json(silent=True) or {}
+        username = str(data.get('username') or '').strip()
+        password = str(data.get('password') or '')
+        requires_cloud_account = bool(app.config.get('DESKTOP_MODE') and app.config.get('REQUIRE_LOGIN'))
+        cloud_login = requires_cloud_account or bool(data.get('cloud_login'))
+
+        if not username or not password:
+            return jsonify({'success': False, 'message': '请输入用户名和密码'}), 400
 
         if cloud_login:
             try:
@@ -622,25 +627,36 @@ def login():
                 response = requests.post(
                     f'{cloud_url}/auth/login/',
                     json={'account': username, 'password': password},
-                    timeout=20
+                    timeout=(5, 20)
                 )
-                payload = response.json()
+                try:
+                    payload = response.json()
+                except ValueError:
+                    logger.warning("云端登录接口返回非 JSON 响应 status=%s", response.status_code)
+                    return jsonify({'success': False, 'message': '云端登录服务响应异常，请稍后重试'}), 502
                 if response.status_code >= 400 or not payload.get('success'):
-                    return jsonify({'success': False, 'message': payload.get('message', '云端账号登录失败')}), 401
+                    status = 401 if response.status_code in {401, 403} else 429 if response.status_code == 429 else 503 if response.status_code >= 500 else 400
+                    message = payload.get('message') if isinstance(payload, dict) else ''
+                    return jsonify({'success': False, 'message': message or '云端账号登录失败'}), status
 
                 cloud_user = payload.get('user') or {}
                 cloud_username = cloud_user.get('username') or username
                 cloud_email = cloud_user.get('email') or f'{cloud_username}@geo.allgood.cn'
+                cloud_sync_token_value = str(payload.get('token') or '')
+                if not cloud_sync_token_value:
+                    logger.warning("云端登录成功响应缺少 token user=%s", cloud_username)
+                    return jsonify({'success': False, 'message': '云端登录服务响应不完整，请稍后重试'}), 502
                 user = User.query.filter((User.username == cloud_username) | (User.email == cloud_email)).first()
                 if not user:
                     user = User(username=cloud_username, email=cloud_email)
                     db.session.add(user)
-                user.set_password(password)
+                # Flask-Login requires a local password hash, but the cloud password
+                # must never become a reusable local credential.
+                user.set_password(secrets.token_urlsafe(32))
                 db.session.commit()
                 adopted_count = _adopt_local_workspace_for_cloud_user(user)
 
                 cloud_sync_url_value = payload.get('cloud_sync_url') or cloud_url
-                cloud_sync_token_value = payload.get('token') or ''
                 save_cloud_account({
                     'cloud_sync_url': cloud_sync_url_value,
                     'token': cloud_sync_token_value,
@@ -669,9 +685,16 @@ def login():
                 elif restore_result.get('queued'):
                     message = '云端账号登录成功，历史记录正在后台同步'
                 return jsonify({'success': True, 'message': message, 'restore': restore_result})
+            except requests.exceptions.Timeout:
+                return jsonify({'success': False, 'message': '连接云端超时，请检查网络后重试'}), 504
+            except requests.exceptions.ConnectionError:
+                return jsonify({'success': False, 'message': '暂时无法连接 GEO-SOP 云端，请检查网络后重试'}), 503
+            except requests.exceptions.RequestException as e:
+                logger.warning("云端账号登录请求失败: %s", type(e).__name__)
+                return jsonify({'success': False, 'message': '云端登录服务暂时不可用，请稍后重试'}), 503
             except Exception as e:
                 logger.exception("云端账号登录失败: %s", e)
-                return jsonify({'success': False, 'message': f'云端账号登录失败: {str(e)}'}), 500
+                return jsonify({'success': False, 'message': '登录处理失败，请稍后重试'}), 500
         
         user = User.query.filter_by(username=username).first()
         
@@ -687,6 +710,15 @@ def login():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """用户注册"""
+    if app.config.get('DESKTOP_MODE') and app.config.get('REQUIRE_LOGIN'):
+        if request.method == 'POST':
+            return jsonify({
+                'success': False,
+                'message': '请在 GEO-SOP 云端完成注册',
+                'register_url': 'https://geo.allgood.cn/register/',
+            }), 409
+        return redirect('https://geo.allgood.cn/register/')
+
     if request.method == 'POST':
         data = request.get_json()
         username = data.get('username')

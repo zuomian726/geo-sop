@@ -144,8 +144,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'heartbeat') {
     }
     $now = geo_now();
     $status = substr((string)($data['status'] ?? 'online'), 0, 40);
-    $message = (string)($data['message'] ?? '');
-    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $message = mb_substr(trim((string)($data['message'] ?? '')), 0, 500, 'UTF-8');
+    $desktop = is_array($data['desktop'] ?? null) ? $data['desktop'] : [];
+    $runtime = is_array($data['runtime'] ?? null) ? $data['runtime'] : [];
+    $heartbeatPayload = [
+        'install_id' => mb_substr($installId, 0, 64, 'UTF-8'),
+        'status' => $status,
+        'message' => $message,
+        'desktop' => [
+            'app_version' => mb_substr((string)($desktop['app_version'] ?? ''), 0, 40, 'UTF-8'),
+            'platform' => mb_substr((string)($desktop['platform'] ?? ''), 0, 120, 'UTF-8'),
+            'python' => mb_substr((string)($desktop['python'] ?? ''), 0, 40, 'UTF-8'),
+        ],
+        'runtime' => [
+            'worker_state' => mb_substr((string)($runtime['worker_state'] ?? ''), 0, 40, 'UTF-8'),
+            'running_tasks' => max(0, min(100, (int)($runtime['running_tasks'] ?? 0))),
+            'pending_remote_tasks' => max(0, min(10000, (int)($runtime['pending_remote_tasks'] ?? 0))),
+            'sync_backlog' => max(0, min(10000, (int)($runtime['sync_backlog'] ?? 0))),
+            'poll_seconds' => max(0, min(3600, (int)($runtime['poll_seconds'] ?? 0))),
+        ],
+    ];
+    $payload = json_encode($heartbeatPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $stmt = $pdo->prepare("INSERT INTO geo_desktop_clients
         (cloud_user_id, install_id, user_key, status, message, payload, last_seen_at, created_at, updated_at)
         VALUES (?,?,?,?,?,?,?,?,?)
@@ -231,8 +250,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
         ], 409);
     }
     $now = geo_now();
-    $message = (string)($data['message'] ?? '');
-    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $message = mb_substr(trim((string)($data['message'] ?? '')), 0, 500, 'UTF-8');
+    $statusPayload = [
+        'remote_task_id' => $remoteTaskId,
+        'local_task_id' => $localTaskId ?: null,
+        'install_id' => mb_substr($installId, 0, 64, 'UTF-8'),
+        'status' => $status,
+        'message' => $message,
+    ];
+    $payload = json_encode($statusPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $startedAt = $status === 'running' ? $now : null;
     $finishedAt = in_array($status, ['completed', 'partial', 'failed', 'stopped', 'skipped'], true) ? $now : null;
     $stmt = $pdo->prepare("UPDATE geo_remote_tasks

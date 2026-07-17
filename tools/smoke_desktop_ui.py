@@ -81,6 +81,7 @@ def run() -> None:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     url = f"http://127.0.0.1:{server.server_port}/dashboard"
+    login_url = f"http://127.0.0.1:{server.server_port}/login"
     chrome = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
     screenshots = []
     try:
@@ -90,6 +91,25 @@ def run() -> None:
                 launch["executable_path"] = str(chrome)
             browser = playwright.chromium.launch(**launch)
             try:
+                app.config["REQUIRE_LOGIN"] = True
+                for width, height in ((1000, 700), (1440, 900)):
+                    page = browser.new_page(viewport={"width": width, "height": height})
+                    page.set_default_timeout(15_000)
+                    errors = []
+                    page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
+                    page.goto(login_url, wait_until="domcontentloaded", timeout=30_000)
+                    page.locator(".login-title", has_text="登录 GEO-SOP").wait_for(state="visible")
+                    page.locator('input[autocomplete="username"]').wait_for(state="visible")
+                    page.locator('input[autocomplete="current-password"]').wait_for(state="visible")
+                    overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+                    assert overflow <= 1, f"login horizontal overflow at {width}x{height}: {overflow}px"
+                    screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-login-{width}x{height}.png"
+                    page.screenshot(path=str(screenshot), full_page=True)
+                    screenshots.append(str(screenshot))
+                    assert not errors, f"login console errors at {width}x{height}: {errors}"
+                    page.close()
+
+                app.config["REQUIRE_LOGIN"] = False
                 for width, height in ((1000, 700), (1440, 900)):
                     page = browser.new_page(viewport={"width": width, "height": height})
                     page.set_default_timeout(15_000)

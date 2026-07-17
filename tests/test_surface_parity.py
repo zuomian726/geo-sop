@@ -160,6 +160,16 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("hasCollectedResults()", dashboard)
         self.assertIn("disposeInsightCharts()", dashboard)
 
+    def test_desktop_login_uses_shared_cloud_account_and_password_manager_fields(self):
+        app_source = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        login = (ROOT / "web_app" / "templates" / "login.html").read_text(encoding="utf-8")
+        self.assertIn("requires_cloud_account", app_source)
+        self.assertIn("cloud_login = requires_cloud_account or", app_source)
+        self.assertIn('autocomplete="username"', login)
+        self.assertIn('autocomplete="current-password"', login)
+        self.assertIn("geo-sop-last-account", login)
+        self.assertNotIn("云端账号登录失败: {str(e)}", app_source)
+
     def test_desktop_minimum_window_uses_compact_toolbar_and_single_dashboard_load(self):
         dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
         mounted = dashboard.split("async mounted() {", 1)[1].split("beforeUnmount() {", 1)[0]

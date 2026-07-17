@@ -313,6 +313,77 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertEqual(0, created.exit_code, created.output)
         self.assertIsNotNone(User.query.filter_by(username="cli-user").first())
 
+    def test_required_desktop_login_forces_cloud_and_does_not_store_cloud_password(self):
+        cloud_response = Mock(status_code=200)
+        cloud_response.json.return_value = {
+            "success": True,
+            "token": "cloud-token",
+            "cloud_sync_url": "https://geo.allgood.cn/api",
+            "user": {"username": "cloud-user", "email": "cloud-user@geo.allgood.cn"},
+        }
+        with (
+            patch.dict(
+                web_app.app.config,
+                {
+                    "DESKTOP_MODE": True,
+                    "REQUIRE_LOGIN": True,
+                    "CLOUD_SYNC_ENABLED": False,
+                    "CLOUD_SYNC_TOKEN": "",
+                },
+            ),
+            patch.dict(
+                os.environ,
+                {"GEO_CLOUD_SYNC_ENABLED": "0", "GEO_CLOUD_SYNC_TOKEN": ""},
+            ),
+            patch.object(web_app.requests, "post", return_value=cloud_response) as cloud_login,
+            patch.object(web_app, "save_cloud_account"),
+            patch.object(web_app, "_queue_cloud_workspace_merge", return_value={"queued": True}),
+            patch.object(web_app, "_queue_cloud_sync"),
+            patch("remote_worker.wake_remote_task_worker"),
+        ):
+            response = self.client.post(
+                "/login",
+                json={"username": "cloud-user", "password": "cloud-password", "cloud_login": False},
+            )
+
+        self.assertEqual(200, response.status_code)
+        cloud_login.assert_called_once()
+        stored = User.query.filter_by(username="cloud-user").one()
+        self.assertFalse(stored.check_password("cloud-password"))
+
+    def test_cloud_login_network_errors_are_actionable_and_do_not_leak_details(self):
+        with (
+            patch.dict(web_app.app.config, {"DESKTOP_MODE": True, "REQUIRE_LOGIN": True}),
+            patch.object(
+                web_app.requests,
+                "post",
+                side_effect=requests.exceptions.ConnectionError("private-host.example refused secret-path"),
+            ),
+        ):
+            response = self.client.post(
+                "/login",
+                json={"username": "cloud-user", "password": "cloud-password"},
+            )
+
+        self.assertEqual(503, response.status_code)
+        body = response.get_data(as_text=True)
+        self.assertIn("检查网络", response.get_json()["message"])
+        self.assertNotIn("private-host", body)
+        self.assertNotIn("secret-path", body)
+
+    def test_required_desktop_registration_uses_the_shared_cloud_account(self):
+        with patch.dict(web_app.app.config, {"DESKTOP_MODE": True, "REQUIRE_LOGIN": True}):
+            get_response = self.client.get("/register")
+            post_response = self.client.post(
+                "/register",
+                json={"username": "local-only", "password": "password123"},
+            )
+
+        self.assertEqual(302, get_response.status_code)
+        self.assertEqual("https://geo.allgood.cn/register/", get_response.headers["Location"])
+        self.assertEqual(409, post_response.status_code)
+        self.assertEqual("https://geo.allgood.cn/register/", post_response.get_json()["register_url"])
+
 
 if __name__ == "__main__":
     unittest.main()
