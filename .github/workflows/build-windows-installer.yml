@@ -7,32 +7,6 @@ on:
         description: "Optional GEO-SOP version override (defaults to version.py)"
         required: false
         default: ""
-  push:
-    branches:
-      - main
-    paths:
-      - "desktop_app.py"
-      - "browser_config.py"
-      - "browser_utils.py"
-      - "local_paths.py"
-      - "profile_utils.py"
-      - "config.py"
-      - "utils.py"
-      - "web_app/**"
-      - "platforms/**"
-      - "tools/**"
-      - "requirements-desktop.txt"
-      - "build_windows_exe.bat"
-      - "Install GEO-SOP.bat"
-      - "Install GEO-SOP.ps1"
-      - "Start GEO-SOP.bat"
-      - "install.bat"
-      - "run_windows_desktop.bat"
-      - "build_windows_installer.bat"
-      - "installer/windows/**"
-      - "tests/**"
-      - "version.py"
-      - ".github/workflows/build-windows-installer.yml"
 
 jobs:
   build:

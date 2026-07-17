@@ -23,6 +23,7 @@ import requests
 from local_paths import answers_dir, app_data_dir
 from models import CollectionResult, GeoManuscript, MonitorTask, SentimentConfig, User, db, ensure_local_sync_schema
 from platform_catalog import SUPPORTED_PLATFORM_IDS
+from credential_store import decrypt_secret, encrypt_secret, is_encrypted
 from version import APP_VERSION
 
 
@@ -51,7 +52,13 @@ def load_cloud_account() -> dict:
         except OSError:
             pass
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+        raw_token = data.get("token")
+        data["token"] = decrypt_secret(raw_token)
+        if raw_token and not is_encrypted(raw_token) and data["token"]:
+            save_cloud_account(data)
+        return data
     except Exception:
         return {}
 
@@ -59,7 +66,9 @@ def load_cloud_account() -> dict:
 def save_cloud_account(data: dict) -> None:
     path = cloud_account_path()
     tmp_path = path.with_suffix(".json.tmp")
-    tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    stored = dict(data)
+    stored["token"] = encrypt_secret(stored.get("token"))
+    tmp_path.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
         tmp_path.chmod(0o600)
     except OSError:
@@ -241,7 +250,7 @@ def _with_local_id(payload: dict) -> dict:
 
 
 def _config_payload(config: SentimentConfig) -> dict:
-    payload = _with_local_id(config.to_dict())
+    payload = _with_local_id(config.to_dict(include_secret=True))
     source = _model_cloud_source(config)
     if source:
         payload["_sync_install_id"] = source[0]

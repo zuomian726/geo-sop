@@ -190,7 +190,7 @@ def _get_references(page: Page) -> list:
                     document.querySelectorAll('*').forEach(el => {
                         const t = (el.innerText || '').trim();
                         const r = el.getBoundingClientRect();
-                        if (/^\d+\s*篇来源$/.test(t) && r.width > 0 && r.height > 0) {
+                        if (/^\\d+\\s*篇来源$/.test(t) && r.width > 0 && r.height > 0) {
                             results.push({x: r.x, y: r.y, text: t});
                         }
                     });
@@ -349,7 +349,7 @@ def _extract_references_qianwen(page: Page) -> list:
         document.querySelectorAll('[data-exposure-arg1="refer_panel_card_display"]').forEach(el => {
             try {
                 const extra = el.getAttribute('data-click-extra') || '';
-                const m = extra.match(/"ref_url"\s*:\s*"([^"]+)"/);
+                const m = extra.match(/"ref_url"\\s*:\\s*"([^"]+)"/);
                 if (!m || !m[1].startsWith('http')) return;
                 const url = m[1];
                 if (seen.has(url)) return;

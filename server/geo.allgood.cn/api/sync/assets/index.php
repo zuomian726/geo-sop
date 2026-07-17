@@ -188,5 +188,5 @@ try {
     geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
     geo_json(['success' => true, 'deduped' => false, 'id' => (int)$pdo->lastInsertId(), 'url' => $publicUrl, 'size' => $size, 'sha256' => $sha]);
 } catch (Throwable $e) {
-    geo_json(['success' => false, 'message' => 'asset upload failed', 'error' => $e->getMessage()], 500);
+    geo_internal_error('asset_upload', $e, '截图上传失败，客户端将自动重试');
 }

@@ -43,7 +43,7 @@ _running_task_ids: set[int] = set()
 _last_cloud_merge_at: dict[int, float] = {}
 _heartbeat_state_lock = threading.Lock()
 _heartbeat_states: dict[int, dict] = {}
-_TERMINAL_REMOTE_STATUSES = {"completed", "failed", "stopped"}
+_TERMINAL_REMOTE_STATUSES = {"completed", "partial", "failed", "stopped"}
 
 
 def _ensure_local_schema() -> None:
@@ -217,7 +217,7 @@ def _runtime_telemetry(user_id: int) -> dict:
             continue
         config = _schedule_config(task)
         needs_results = not config.get("remote_results_synced")
-        needs_assets = task.status == "completed" and not config.get("remote_assets_uploaded")
+        needs_assets = task.status in {"completed", "partial"} and not config.get("remote_assets_uploaded")
         needs_status = config.get("remote_status_reported") != task.status
         if needs_results or needs_assets or needs_status:
             sync_backlog += 1
@@ -305,7 +305,7 @@ def _deliver_remote_outputs_safely(user_id: int, task_id: int, status: str) -> b
             logger.warning("[RemoteWorker] result sync deferred task=%s: %s", task_id, sync_error)
             return False
 
-    if status != "completed":
+    if status not in {"completed", "partial"}:
         return True
 
     task = db.session.get(MonitorTask, task_id)
@@ -343,7 +343,7 @@ def _reconcile_terminal_remote_statuses(user_id: int) -> None:
         if config.get("cloud_source_install_id"):
             continue
         needs_results = not config.get("remote_results_synced")
-        needs_assets = task.status == "completed" and not config.get("remote_assets_uploaded")
+        needs_assets = task.status in {"completed", "partial"} and not config.get("remote_assets_uploaded")
         needs_status = config.get("remote_status_reported") != task.status
         if needs_results or needs_assets or needs_status:
             pending.append((task, int(remote_id)))
@@ -366,7 +366,7 @@ def _reconcile_terminal_remote_statuses(user_id: int) -> None:
 
     for task, remote_id in pending:
         config = _schedule_config(task)
-        if task.status == "completed" and config.get("remote_results_synced") and not config.get("remote_assets_uploaded"):
+        if task.status in {"completed", "partial"} and config.get("remote_results_synced") and not config.get("remote_assets_uploaded"):
             try:
                 upload_workspace_assets(user_id, task_ids=[int(task.id)])
                 _update_task_schedule_config(
@@ -423,7 +423,7 @@ def _execute_remote_task(app, user_id: int, task_id: int, remote_task_id: int) -
                 db.session.expire_all()
                 finished_task = db.session.get(MonitorTask, task_id)
                 final_status = finished_task.status if finished_task else "completed"
-                if final_status not in {"completed", "stopped", "failed"}:
+                if final_status not in {"completed", "partial", "stopped", "failed"}:
                     final_status = "completed"
                 _deliver_remote_outputs_safely(user_id, task_id, final_status)
                 _report_remote_status_safely(

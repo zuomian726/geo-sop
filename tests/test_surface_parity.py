@@ -8,6 +8,30 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SurfaceParityTests(unittest.TestCase):
+    def test_installer_build_is_manual_while_pushes_only_run_tests(self):
+        installer_workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(
+            encoding="utf-8"
+        )
+        test_workflow = (ROOT / ".github" / "workflows" / "test.yml").read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch:", installer_workflow)
+        self.assertNotIn("  push:", installer_workflow)
+        self.assertIn("  push:", test_workflow)
+        self.assertIn("python -m unittest discover -s tests -v", test_workflow)
+
+    def test_desktop_packages_use_runtime_asset_allowlists(self):
+        windows = (ROOT / "build_windows_exe.bat").read_text(encoding="utf-8")
+        macos = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
+        spec = (ROOT / "GEO-SOP.spec").read_text(encoding="utf-8")
+
+        for source in (windows, macos, spec):
+            self.assertNotIn("reference_sentiment", source)
+            self.assertNotIn("'tools'", source)
+        self.assertNotIn('--add-data "web_app;web_app"', windows)
+        self.assertNotIn('--add-data "web_app:web_app"', macos)
+        self.assertIn('web_app\\templates;web_app\\templates', windows)
+        self.assertIn('web_app/templates:web_app/templates', macos)
+
     def test_cloud_dashboard_keeps_desktop_core_modules(self):
         desktop = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
         cloud = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
@@ -262,6 +286,16 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertGreaterEqual(api.count("geo_dashboard_stream_rows($pdo);"), 3)
         self.assertNotIn("SELECT payload,result_at FROM geo_sync_results", api)
         self.assertIn("SELECT install_id,local_id,platform,question,local_created_at,synced_at FROM geo_sync_results", api)
+
+    def test_ai_analysis_can_be_cancelled_and_has_bounded_timeouts(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        app = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("aiAnalysisController: null", dashboard)
+        self.assertIn("cancelAiInsightAnalysis()", dashboard)
+        self.assertIn("signal: controller.signal", dashboard)
+        self.assertIn("timeout: 65000", dashboard)
+        self.assertIn("timeout=(10, 50)", app)
+        self.assertIn("except requests.exceptions.Timeout", app)
 
 
 if __name__ == "__main__":

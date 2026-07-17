@@ -1,31 +1,45 @@
-# macOS 单机开发版
+# GEO-SOP Desktop Development
 
-## 启动
+The production desktop client requires the same cloud account used at
+`geo.allgood.cn`. Browser login, collection, screenshots, SQLite, and AI API
+Keys remain local; task metadata and results synchronize through authenticated
+HTTPS APIs.
+
+## Development launch
 
 ```bash
-cd /path/to/geo-sop
-chmod +x run_macos_desktop.sh
+GEO_DESKTOP_MODE=1 \
+GEO_REQUIRE_LOGIN=1 \
+GEO_CLOUD_SYNC_URL=https://geo.allgood.cn/api \
 ./run_macos_desktop.sh
 ```
 
-首次启动会创建 `.venv-desktop` 并安装依赖。
+For an isolated UI test that must not contact the cloud, set
+`GEO_REQUIRE_LOGIN=0`, `GEO_CLOUD_SYNC_ENABLED=0`, and a temporary
+`GEO_DATA_DIR`.
 
-## 本地数据目录
+## Runtime data
 
-单机版不会写入服务器数据库，数据保存在：
+macOS stores runtime data under:
 
 ```text
 ~/Library/Application Support/GEO-SOP/
 ```
 
-主要目录：
+Windows stores runtime data under:
 
 ```text
-instance/ai_monitor.db      本地 SQLite 数据库
-browser_profile/            AI 平台 Cookie 和登录态
-answers/                    采集结果和截图
+%LOCALAPPDATA%\GEO-SOP\
 ```
 
-## 登录体验
+Key paths include:
 
-单机版会自动使用本地用户进入后台，不需要注册系统账号。点击平台的「去登录」后，会直接打开本机浏览器窗口完成扫码、验证码和登录。
+```text
+instance/ai_monitor.db   local SQLite database
+browser_profiles/       per-user AI platform login state
+answers/                answers and screenshot evidence
+cloud_account.json      revocable cloud token, current-user permissions only
+```
+
+Do not run release builds against a customer data directory. Packaging uses an
+explicit asset allowlist and must pass the bundle scan before publication.

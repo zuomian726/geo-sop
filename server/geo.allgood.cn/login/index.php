@@ -10,22 +10,31 @@ $error = '';
 $account = '';
 $demoRequested = !empty($_GET['demo']) || !empty($_POST['demo_login']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    geo_require_csrf($_POST['csrf_token'] ?? null);
     $demoLogin = (string)($_POST['demo_login'] ?? '') === '1';
     $account = $demoLogin ? geo_demo_username() : trim($_POST['username'] ?? '');
     $password = (string)($_POST['password'] ?? '');
-    $stmt = $pdo->prepare($demoLogin
-        ? 'SELECT * FROM geo_cloud_users WHERE LOWER(username) = ? LIMIT 1'
-        : 'SELECT * FROM geo_cloud_users WHERE username = ? OR email = ? LIMIT 1');
-    $stmt->execute($demoLogin ? [geo_demo_username()] : [$account, $account]);
-    $user = $stmt->fetch();
-    if ($user && ($demoLogin ? geo_is_demo_user($user) : password_verify($password, $user['password_hash']))) {
-        $pdo->prepare('UPDATE geo_cloud_users SET last_login_at=? WHERE id=?')->execute([geo_now(), (int)$user['id']]);
-        geo_login_user($user);
-        if (wants_json()) geo_json(['success' => true, 'message' => '登录成功', 'redirect' => '/dashboard/']);
-        header('Location: /dashboard/'); exit;
+    if (!$demoLogin && geo_login_rate_limited($pdo, $account)) {
+        if (wants_json()) geo_json(['success' => false, 'message' => '登录尝试过于频繁，请 15 分钟后再试'], 429);
+        $error = '登录尝试过于频繁，请 15 分钟后再试';
     }
-    $error = $demoLogin ? '在线 Demo 暂时不可用，请稍后重试' : '账号或密码错误';
-    if (wants_json()) geo_json(['success' => false, 'message' => $error], $demoLogin ? 503 : 401);
+    if ($error === '') {
+        $stmt = $pdo->prepare($demoLogin
+            ? 'SELECT * FROM geo_cloud_users WHERE LOWER(username) = ? LIMIT 1'
+            : 'SELECT * FROM geo_cloud_users WHERE username = ? OR email = ? LIMIT 1');
+        $stmt->execute($demoLogin ? [geo_demo_username()] : [$account, $account]);
+        $user = $stmt->fetch();
+        if ($user && ($demoLogin ? geo_is_demo_user($user) : password_verify($password, $user['password_hash']))) {
+            if (!$demoLogin) geo_record_login_attempt($pdo, $account, true);
+            $pdo->prepare('UPDATE geo_cloud_users SET last_login_at=? WHERE id=?')->execute([geo_now(), (int)$user['id']]);
+            geo_login_user($user);
+            if (wants_json()) geo_json(['success' => true, 'message' => '登录成功', 'redirect' => '/dashboard/']);
+            header('Location: /dashboard/'); exit;
+        }
+        if (!$demoLogin) geo_record_login_attempt($pdo, $account, false);
+        $error = $demoLogin ? '在线 Demo 暂时不可用，请稍后重试' : '账号或密码错误';
+    }
+    if (wants_json()) geo_json(['success' => false, 'message' => $error], $demoLogin ? 503 : ($error === '账号或密码错误' ? 401 : 429));
 }
 ?><!doctype html>
 <html lang="zh-CN">
@@ -57,10 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <p class="muted">使用 GEO-SOP 云端账号登录工作台，也可用于桌面端同步。</p>
 <div id="notice" class="<?= $error ? 'err' : '' ?>"><?= $error ? geo_h($error) : '' ?></div>
 <?php if ($demoRequested): ?>
-<div class="demo-entry"><strong>在线 Demo · 只读安全模式</strong><p>无需输入账号密码即可浏览合成样例数据；创建、修改、采集和平台登录均被禁用。</p><form method="post" action="/login/?demo=1"><input type="hidden" name="demo_login" value="1"><button type="submit">一键进入 Demo 工作台</button></form></div>
+<div class="demo-entry"><strong>在线 Demo · 只读安全模式</strong><p>无需输入账号密码即可浏览合成样例数据；创建、修改、采集和平台登录均被禁用。</p><form method="post" action="/login/?demo=1"><input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>"><input type="hidden" name="demo_login" value="1"><button type="submit">一键进入 Demo 工作台</button></form></div>
 <div class="separator">或登录自己的账号</div>
 <?php endif; ?>
 <form id="loginForm" method="post">
+<input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>">
 <div class="field"><input name="username" placeholder="用户名 / 邮箱" value="<?=geo_h($account)?>" required></div>
 <div class="field"><input name="password" type="password" placeholder="密码" required></div>
 <button id="submitBtn">登录并同步</button>

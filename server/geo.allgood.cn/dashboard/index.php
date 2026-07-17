@@ -76,6 +76,7 @@ function geo_remote_status_label(string $status): string {
     ][$status] ?? ($status !== '' ? $status : '未知');
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    geo_require_csrf($_POST['csrf_token'] ?? null);
     if ($isDemoUser) {
         $message = '在线 Demo 为只读安全模式，不能创建或修改任务。';
     } else {
@@ -577,6 +578,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <h2>创建监测任务</h2>
         <p class="muted">云端可创建任务；真正的平台登录、浏览器采集、截图留证会由同账号本机 App 完成。</p>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>">
             <div class="form-grid">
                 <p><input name="name" placeholder="任务名称" value="云端下发任务"></p>
                 <p><input name="brand_name" placeholder="品牌名称"></p>
@@ -659,6 +661,7 @@ var remoteStatusLoading = false;
 
 function remoteStatusPill(status){
     if (status === 'completed') return 'pill good';
+    if (status === 'partial') return 'pill warning';
     if (status === 'failed' || status === 'stopped' || status === 'skipped') return 'pill bad';
     return 'pill';
 }

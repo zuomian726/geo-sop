@@ -5,8 +5,10 @@ import shutil
 import sys
 import tempfile
 import unittest
+import requests
 from pathlib import Path
 from unittest.mock import Mock, call, patch
+from sqlalchemy import text
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +24,7 @@ for path in (str(ROOT), str(WEB_APP)):
 
 import app as web_app  # noqa: E402
 import cloud_sync  # noqa: E402
-from models import SentimentConfig, User, db  # noqa: E402
+from models import SentimentConfig, User, db, ensure_local_sync_schema  # noqa: E402
 
 
 class AiInsightPersistenceTests(unittest.TestCase):
@@ -88,6 +90,17 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertEqual(insight, overview["latest_insight"])
         self.assertTrue(overview["latest_insight_generated_at"])
 
+    def test_ai_analysis_timeout_returns_promptly_with_fallback(self):
+        with patch("requests.post", side_effect=requests.exceptions.Timeout("provider stalled")):
+            response = self.client.post("/api/insights/ai-analysis")
+
+        self.assertEqual(504, response.status_code)
+        payload = response.get_json()
+        self.assertFalse(payload["success"])
+        self.assertIn("响应超时", payload["message"])
+        self.assertIn("fallback", payload)
+        self.assertNotIn("provider stalled", response.get_data(as_text=True))
+
     def test_cloud_payload_syncs_insight_but_never_api_key_by_default(self):
         insight = {"summary": "可同步分析", "actions": ["执行动作"]}
         self.config.latest_insight = json.dumps(insight, ensure_ascii=False)
@@ -100,6 +113,60 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertIsNone(payload["ai_api_key"])
         self.assertEqual(insight, payload["latest_insight"])
         self.assertTrue(payload["latest_insight_generated_at"])
+
+    def test_sentiment_config_api_never_returns_saved_api_key(self):
+        response = self.client.get("/api/sentiment/configs")
+
+        self.assertEqual(200, response.status_code)
+        config = response.get_json()["configs"][0]
+        self.assertIsNone(config["ai_api_key"])
+        self.assertTrue(config["api_key_configured"])
+        self.assertNotIn("local-secret-key", response.get_data(as_text=True))
+
+    def test_sentiment_api_key_is_encrypted_in_local_database(self):
+        raw_value = db.session.execute(
+            text("SELECT ai_api_key FROM sentiment_configs WHERE id=:id"),
+            {"id": self.config.id},
+        ).scalar_one()
+
+        self.assertTrue(raw_value.startswith("enc:v1:"))
+        self.assertNotIn("local-secret-key", raw_value)
+        self.assertEqual("local-secret-key", self.config.ai_api_key)
+
+    def test_legacy_plaintext_api_key_is_migrated_on_startup(self):
+        db.session.execute(
+            text("UPDATE sentiment_configs SET ai_api_key=:value WHERE id=:id"),
+            {"value": "legacy-plaintext-key", "id": self.config.id},
+        )
+        db.session.commit()
+
+        ensure_local_sync_schema()
+        db.session.expire_all()
+        raw_value = db.session.execute(
+            text("SELECT ai_api_key FROM sentiment_configs WHERE id=:id"),
+            {"id": self.config.id},
+        ).scalar_one()
+
+        self.assertTrue(raw_value.startswith("enc:v1:"))
+        self.assertNotIn("legacy-plaintext-key", raw_value)
+        self.assertEqual("legacy-plaintext-key", db.session.get(SentimentConfig, self.config.id).ai_api_key)
+
+    def test_sentiment_config_update_keeps_saved_key_when_input_is_blank(self):
+        response = self.client.put(
+            f"/api/sentiment/configs/{self.config.id}",
+            json={
+                "name": "Updated AI",
+                "enable_ai_sentiment": True,
+                "ai_api_key": "",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        db.session.expire_all()
+        stored = db.session.get(SentimentConfig, self.config.id)
+        self.assertEqual("local-secret-key", stored.ai_api_key)
+        self.assertEqual("Updated AI", stored.name)
+        self.assertNotIn("local-secret-key", response.get_data(as_text=True))
 
     def test_restored_config_keeps_cloud_identity_when_resynced(self):
         self.config.cloud_source_install_id = "original-device"

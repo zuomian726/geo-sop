@@ -80,6 +80,15 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
     每个平台使用独立的输出目录，避免并行执行时的文件冲突
     """
     from app import app
+
+    summary = {
+        'platform': platform_id,
+        'expected': len(questions),
+        'succeeded': 0,
+        'failed': 0,
+        'errors': [],
+        'stopped': False,
+    }
     
     print(f"\n[平台 {platform_id}] 开始采集...")
     
@@ -110,7 +119,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                     should_stop, _ = check_control_command(task_id)
                     if should_stop:
                         print(f"[平台 {platform_id}] 收到停止命令，退出采集")
-                        return
+                        summary['stopped'] = True
+                        return summary
                         
                     print(f"\n[平台 {platform_id}] 问题 [{question_index + 1}/{len(questions)}]: {question}")
                     
@@ -188,6 +198,7 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                             )
                             db.session.add(result)
                             db.session.commit()
+                        summary['succeeded'] += 1
                         
                         print(f"[平台 {platform_id}] ✓ 采集成功")
                         print(f"[平台 {platform_id}] 品牌曝光: {'是' if has_exposure else '否'}")
@@ -206,7 +217,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                                 should_stop, _ = check_control_command(task_id)
                                 if should_stop:
                                     print(f"\n[平台 {platform_id}] 收到停止命令，退出采集")
-                                    return
+                                    summary['stopped'] = True
+                                    return summary
                                 time.sleep(1)
                                 print(f"\r[平台 {platform_id}] 等待 {remaining} 秒后继续下一个问题...", end="", flush=True)
                             print()  # 换行
@@ -214,6 +226,9 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                     except Exception as e:
                         print(f"[平台 {platform_id}] ✗ 采集失败: {e}")
                         traceback.print_exc()
+                        summary['failed'] += 1
+                        if len(summary['errors']) < 5:
+                            summary['errors'].append({'question': question, 'message': str(e)[:300]})
                         
                         # 即使失败也要等待一下再继续
                         if question_index < len(questions) - 1:
@@ -222,7 +237,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                                 should_stop, _ = check_control_command(task_id)
                                 if should_stop:
                                     print(f"\n[平台 {platform_id}] 收到停止命令，退出采集")
-                                    return
+                                    summary['stopped'] = True
+                                    return summary
                                 time.sleep(1)
                                 print(f"\r[平台 {platform_id}] 等待 {remaining} 秒后继续...", end="", flush=True)
                             print()  # 换行
@@ -253,7 +269,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                         should_stop, _ = check_control_command(task_id)
                         if should_stop:
                             print(f"[平台 {platform_id}] 收到停止命令，退出采集")
-                            return
+                            summary['stopped'] = True
+                            return summary
                             
                         print(f"\n[平台 {platform_id}] 问题 [{question_index + 1}/{len(questions)}]: {question}")
                         
@@ -331,6 +348,7 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                                 )
                                 db.session.add(result)
                                 db.session.commit()
+                            summary['succeeded'] += 1
                             
                             print(f"[平台 {platform_id}] ✓ 采集成功")
                             print(f"[平台 {platform_id}] 品牌曝光: {'是' if has_exposure else '否'}")
@@ -349,7 +367,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                                     should_stop, _ = check_control_command(task_id)
                                     if should_stop:
                                         print(f"\n[平台 {platform_id}] 收到停止命令，退出采集")
-                                        return
+                                        summary['stopped'] = True
+                                        return summary
                                     time.sleep(1)
                                     print(f"\r[平台 {platform_id}] 等待 {remaining} 秒后继续下一个问题...", end="", flush=True)
                                 print()  # 换行
@@ -357,6 +376,9 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                         except Exception as e:
                             print(f"[平台 {platform_id}] ✗ 采集失败: {e}")
                             traceback.print_exc()
+                            summary['failed'] += 1
+                            if len(summary['errors']) < 5:
+                                summary['errors'].append({'question': question, 'message': str(e)[:300]})
                             
                             # 即使失败也要等待一下再继续
                             if question_index < len(questions) - 1:
@@ -365,7 +387,8 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
                                     should_stop, _ = check_control_command(task_id)
                                     if should_stop:
                                         print(f"\n[平台 {platform_id}] 收到停止命令，退出采集")
-                                        return
+                                        summary['stopped'] = True
+                                        return summary
                                     time.sleep(1)
                                     print(f"\r[平台 {platform_id}] 等待 {remaining} 秒后继续...", end="", flush=True)
                                 print()  # 换行
@@ -381,8 +404,13 @@ def collect_platform(task_id, user_id, platform_id, questions, brand_keywords,
     except Exception as e:
         print(f"[平台 {platform_id}] 采集失败: {e}")
         traceback.print_exc()
+        remaining = max(1, summary['expected'] - summary['succeeded'] - summary['failed'])
+        summary['failed'] += remaining
+        if len(summary['errors']) < 5:
+            summary['errors'].append({'question': '', 'message': str(e)[:300]})
     
     print(f"[平台 {platform_id}] 采集完成")
+    return summary
 
 
 def run_collection(task_id, min_interval=None, max_interval=None, interval=None):
@@ -420,6 +448,7 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
             brand_keywords = json.loads(task.brand_keywords)
             screenshot_config = json.loads(task.screenshot_config) if task.screenshot_config else {}
             user_id = task.user_id
+            platform_summaries = []
             
             print(f"开始采集任务: {task.name}")
             print(f"  问题数: {len(questions)}")
@@ -461,7 +490,7 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
                     print(f"\n串行执行模式，逐个执行 {len(platforms)} 个平台...")
                     for index, platform_id in enumerate(platforms):
                         print(f"\n[{index + 1}/{len(platforms)}] 开始执行平台: {platform_id}")
-                        collect_platform(
+                        platform_summaries.append(collect_platform(
                             task_id, 
                             user_id,
                             platform_id, 
@@ -471,7 +500,7 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
                             min_interval, 
                             max_interval,
                             task.collection_interval
-                        )
+                        ))
                         print(f"[{index + 1}/{len(platforms)}] 平台 {platform_id} 执行完成")
                 else:
                     # 多平台并行执行（带最大并发限制）
@@ -506,10 +535,18 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
                             completed_count += 1
                             platform_id = futures[future]
                             try:
-                                future.result()
+                                platform_summaries.append(future.result())
                                 print(f"  [{completed_count}/{len(platforms)}] 平台 {platform_id} 采集完成")
                             except Exception as e:
                                 print(f"  [{completed_count}/{len(platforms)}] 平台 {platform_id} 采集异常: {e}")
+                                platform_summaries.append({
+                                    'platform': platform_id,
+                                    'expected': len(questions),
+                                    'succeeded': 0,
+                                    'failed': max(1, len(questions)),
+                                    'errors': [{'question': '', 'message': str(e)[:300]}],
+                                    'stopped': False,
+                                })
                 
                 print(f"\n所有平台采集任务已完成")
                 
@@ -517,11 +554,32 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
                 # 恢复原始 OUTPUT_DIR
                 _config.OUTPUT_DIR = _original_output_dir
             
-            # 更新任务状态为完成（检查是否被停止）
+            succeeded = sum(int(item.get('succeeded') or 0) for item in platform_summaries if item)
+            failed = sum(int(item.get('failed') or 0) for item in platform_summaries if item)
+            run_summary = {
+                'expected': len(questions) * len(platforms),
+                'succeeded': succeeded,
+                'failed': failed,
+                'platforms': platform_summaries,
+                'finished_at': now_cst().strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+            }
+
+            # 更新任务状态，并保留可供界面和云端诊断的运行摘要。
             with app.app_context():
                 current_task = db.session.get(MonitorTask, task_id)
                 if current_task and current_task.status == 'running':
-                    current_task.status = 'completed'
+                    if succeeded > 0 and failed == 0:
+                        current_task.status = 'completed'
+                    elif succeeded > 0:
+                        current_task.status = 'partial'
+                    else:
+                        current_task.status = 'failed'
+                    try:
+                        saved_schedule = json.loads(current_task.schedule_config or '{}')
+                    except Exception:
+                        saved_schedule = {}
+                    saved_schedule['last_run_summary'] = run_summary
+                    current_task.schedule_config = json.dumps(saved_schedule, ensure_ascii=False)
                     current_task.last_run_at = now_cst()
                     db.session.commit()
             
@@ -536,6 +594,19 @@ def run_collection(task_id, min_interval=None, max_interval=None, interval=None)
                 current_task = db.session.get(MonitorTask, task_id)
                 if current_task:
                     current_task.status = 'failed'
+                    try:
+                        saved_schedule = json.loads(current_task.schedule_config or '{}')
+                    except Exception:
+                        saved_schedule = {}
+                    saved_schedule['last_run_summary'] = {
+                        'expected': 0,
+                        'succeeded': 0,
+                        'failed': 1,
+                        'platforms': [],
+                        'finished_at': now_cst().strftime('%Y-%m-%dT%H:%M:%S+08:00'),
+                        'error': str(e)[:500],
+                    }
+                    current_task.schedule_config = json.dumps(saved_schedule, ensure_ascii=False)
                     current_task.last_run_at = now_cst()
                     db.session.commit()
             raise

@@ -40,6 +40,21 @@ class ServerDistributionTests(unittest.TestCase):
         literal_secret = re.compile(r"['\"](?:db_pass|aliyun_sms_secret|wechat_appsecret)['\"]\s*=>\s*['\"][^'\"]{8,}['\"]")
         self.assertIsNone(literal_secret.search(sources))
 
+    def test_server_errors_use_request_ids_without_exposing_exception_details(self):
+        common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
+        self.assertIn("function geo_internal_error", common)
+        self.assertIn("'request_id' => $requestId", common)
+        for relative in (
+            "api/dashboard/index.php",
+            "api/sync/index.php",
+            "api/sync/restore/index.php",
+            "api/sync/assets/index.php",
+            "api/remote-tasks/index.php",
+        ):
+            source = (SERVER / relative).read_text(encoding="utf-8")
+            self.assertIn("geo_internal_error(", source, relative)
+            self.assertNotIn("'error' => $e->getMessage()", source, relative)
+
     def test_private_config_is_environment_backed_and_optional_logins_are_disabled(self):
         example = (SERVER / "storage" / "sync_config.example.php").read_text(encoding="utf-8")
         common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
@@ -57,6 +72,22 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn("'samesite' => 'Lax'", common)
         bootstrap = common.split("function geo_bootstrap", 1)[1].split("function geo_current_web_user", 1)[0]
         self.assertNotIn("INSERT INTO", bootstrap)
+
+    def test_web_mutations_use_csrf_tokens_and_logins_are_rate_limited(self):
+        common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
+        self.assertIn("function geo_csrf_token()", common)
+        self.assertIn("function geo_require_csrf", common)
+        self.assertIn("CREATE TABLE IF NOT EXISTS geo_auth_events", common)
+        self.assertIn("function geo_login_rate_limited", common)
+
+        for relative in ("login/index.php", "register/index.php", "dashboard/index.php"):
+            source = (SERVER / relative).read_text(encoding="utf-8")
+            self.assertIn("geo_require_csrf(", source, relative)
+            self.assertIn('name="csrf_token"', source, relative)
+
+        api_login = (SERVER / "api" / "auth" / "login" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("geo_login_rate_limited($pdo, $account)", api_login)
+        self.assertIn("geo_record_login_attempt($pdo, $account, false)", api_login)
 
     def test_public_asset_references_are_in_the_distribution(self):
         missing = set()

@@ -177,7 +177,7 @@ def _get_references(page: Page) -> list:
                     const t = (el.innerText || '').trim();
                     const r = el.getBoundingClientRect();
                     // 修改正则：支持 "36 个网页"、"已阅读 36 个网页"、"36 search results" 等
-                    if (/(\d+)\s*(个网页|search results)/.test(t) && r.width > 0 && r.height > 0
+                    if (/(\\d+)\\s*(个网页|search results)/.test(t) && r.width > 0 && r.height > 0
                             && t.length < 50) {
                         results.push({x: r.x + r.width/2, y: r.y + r.height/2, text: t, el: el});
                     }

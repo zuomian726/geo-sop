@@ -3907,7 +3907,7 @@ def run_ai_insights_analysis():
                 'temperature': 0.2,
                 'max_tokens': 1200
             }
-        response = requests.post(api_url, headers=headers, json=payload, timeout=75)
+        response = requests.post(api_url, headers=headers, json=payload, timeout=(10, 50))
         response.raise_for_status()
         data = response.json()
         if mode == 'anthropic':
@@ -3931,6 +3931,13 @@ def run_ai_insights_analysis():
             'overview': overview,
             'api_mode': mode,
         })
+    except requests.exceptions.Timeout:
+        logger.warning("AI看板分析失败: provider request timed out")
+        return jsonify({
+            'success': False,
+            'message': 'AI 服务响应超时，请稍后重试或检查模型服务状态。基础分析仍可正常使用。',
+            'fallback': overview['recommendations']
+        }), 504
     except requests.exceptions.HTTPError as e:
         status_code = e.response.status_code if e.response is not None else 'unknown'
         body = ''
@@ -3943,7 +3950,6 @@ def run_ai_insights_analysis():
         return jsonify({
             'success': False,
             'message': f'AI 分析失败：接口返回 HTTP {status_code}。请检查 API URL、Key、模型名称和账户余额。',
-            'detail': body,
             'api_mode': _ai_api_mode(config),
             'api_url': _normalize_anthropic_messages_url(config.ai_api_url) if _ai_api_mode(config) == 'anthropic' else _normalize_openai_chat_url(config.ai_api_url),
             'fallback': overview['recommendations']
@@ -3992,6 +3998,9 @@ def create_sentiment_config():
     if data.get('is_default'):
         SentimentConfig.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
     
+    if data.get('enable_ai_sentiment') and not str(data.get('ai_api_key') or '').strip():
+        return jsonify({'success': False, 'message': '启用 AI 分析时需要填写 API Key'}), 400
+
     config = SentimentConfig(
         user_id=current_user.id,
         name=data.get('name', ''),
@@ -4000,7 +4009,7 @@ def create_sentiment_config():
         enable_ai_sentiment=data.get('enable_ai_sentiment', False),
         ai_platform=data.get('ai_platform'),
         ai_api_url=data.get('ai_api_url'),
-        ai_api_key=data.get('ai_api_key'),
+        ai_api_key=str(data.get('ai_api_key') or '').strip() or None,
         ai_model_name=data.get('ai_model_name'),
         ai_prompt=data.get('ai_prompt'),
         is_default=data.get('is_default', False)
@@ -4032,7 +4041,11 @@ def update_sentiment_config(config_id):
     config.enable_ai_sentiment = data.get('enable_ai_sentiment', config.enable_ai_sentiment)
     config.ai_platform = data.get('ai_platform', config.ai_platform)
     config.ai_api_url = data.get('ai_api_url', config.ai_api_url)
-    config.ai_api_key = data.get('ai_api_key', config.ai_api_key)
+    incoming_api_key = str(data.get('ai_api_key') or '').strip() if 'ai_api_key' in data else ''
+    if incoming_api_key:
+        config.ai_api_key = incoming_api_key
+    if data.get('enable_ai_sentiment', config.enable_ai_sentiment) and not config.ai_api_key:
+        return jsonify({'success': False, 'message': '启用 AI 分析时需要填写 API Key'}), 400
     config.ai_model_name = data.get('ai_model_name', config.ai_model_name)
     config.ai_prompt = data.get('ai_prompt', config.ai_prompt)
     config.is_default = data.get('is_default', config.is_default)

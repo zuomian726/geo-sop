@@ -211,5 +211,5 @@ try {
         ],
     ]);
 } catch (Throwable $e) {
-    geo_json(['success' => false, 'message' => 'restore failed', 'error' => $e->getMessage()], 500);
+    geo_internal_error('workspace_restore', $e, '历史数据恢复失败，客户端将自动重试');
 }

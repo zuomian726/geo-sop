@@ -131,6 +131,17 @@
     gap: 10px;
 }
 
+.task-run-warning {
+    margin: 0 0 15px;
+    padding: 10px 12px;
+    border: 1px solid #f3d19e;
+    border-radius: 6px;
+    background: #fdf6ec;
+    color: #8a5a12;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -981,6 +992,7 @@ body {
                                     <span v-if="aiAnalysisLoading">分析中 [[ aiAnalysisElapsed ]]s</span>
                                     <span v-else>生成 AI 分析</span>
                                 </el-button>
+                                <el-button v-if="aiAnalysisLoading" @click="cancelAiInsightAnalysis">取消</el-button>
                                 <el-alert
                                     v-if="aiAnalysisLoading"
                                     style="margin-top: 14px;"
@@ -1169,6 +1181,12 @@ body {
                                 <div class="info-label">最后运行</div>
                                 <div class="info-value">[[ formatDate(task.last_run_at) ]]</div>
                             </div>
+                        </div>
+
+                        <div v-if="task.last_run_summary && task.last_run_summary.failed" class="task-run-warning">
+                            本次成功 [[ task.last_run_summary.succeeded || 0 ]] / [[ task.last_run_summary.expected || 0 ]] 条，
+                            失败 [[ task.last_run_summary.failed ]] 条。请检查平台登录状态或失败提示后重新采集。
+                            <span v-if="getTaskRunError(task)">原因：[[ getTaskRunError(task) ]]</span>
                         </div>
                         
                         <div class="task-actions">
@@ -1672,7 +1690,12 @@ body {
                             </div>
                         </el-form-item>
                         <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="API密钥">
-                            <el-input v-model="sentimentConfigForm.ai_api_key" type="password" placeholder="输入API密钥"></el-input>
+                            <el-input
+                                v-model="sentimentConfigForm.ai_api_key"
+                                type="password"
+                                show-password
+                                :placeholder="sentimentConfigForm.api_key_configured ? '已安全保存，留空不修改' : '输入 API Key'">
+                            </el-input>
                         </el-form-item>
                         <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="模型名称">
                             <el-input v-model="sentimentConfigForm.ai_model_name" placeholder="如：gpt-4o-mini"></el-input>
@@ -2312,6 +2335,7 @@ const app = createApp({
             aiAnalysisLoading: false,
             aiAnalysisElapsed: 0,
             aiAnalysisTimer: null,
+            aiAnalysisController: null,
             savingQuickAiConfig: false,
             insights: {
                 summary: {},
@@ -2967,8 +2991,11 @@ const app = createApp({
         },
 
         async runAiInsightAnalysis() {
+            if (this.aiAnalysisLoading) return;
             this.aiAnalysisLoading = true;
             this.aiAnalysisElapsed = 0;
+            const controller = new AbortController();
+            this.aiAnalysisController = controller;
             if (this.aiAnalysisTimer) {
                 clearInterval(this.aiAnalysisTimer);
             }
@@ -2976,7 +3003,10 @@ const app = createApp({
                 this.aiAnalysisElapsed += 1;
             }, 1000);
             try {
-                const response = await axios.post('/api/insights/ai-analysis', {}, { timeout: 90000 });
+                const response = await axios.post('/api/insights/ai-analysis', {}, {
+                    timeout: 65000,
+                    signal: controller.signal
+                });
                 if (response.data.success) {
                     this.aiInsight = response.data.analysis || this.aiInsight;
                     this.aiInsightGeneratedAt = response.data.generated_at || new Date().toISOString();
@@ -2984,18 +3014,31 @@ const app = createApp({
                 }
             } catch (error) {
                 const data = error.response?.data;
-                if (data?.needs_config) {
+                if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+                    ElMessage.info('已取消本次 AI 分析');
+                } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+                    ElMessage.error('AI 服务响应超时，基础分析仍可正常使用');
+                } else if (data?.needs_config) {
                     ElMessage.warning(data.message);
                     this.activeTab = 'sentiment_settings';
                 } else {
                     ElMessage.error(data?.message || 'AI 分析失败');
                 }
             } finally {
-                this.aiAnalysisLoading = false;
-                if (this.aiAnalysisTimer) {
-                    clearInterval(this.aiAnalysisTimer);
-                    this.aiAnalysisTimer = null;
+                if (this.aiAnalysisController === controller) {
+                    this.aiAnalysisLoading = false;
+                    this.aiAnalysisController = null;
+                    if (this.aiAnalysisTimer) {
+                        clearInterval(this.aiAnalysisTimer);
+                        this.aiAnalysisTimer = null;
+                    }
                 }
+            }
+        },
+
+        cancelAiInsightAnalysis() {
+            if (this.aiAnalysisController) {
+                this.aiAnalysisController.abort();
             }
         },
 
@@ -4645,10 +4688,22 @@ const app = createApp({
                 running: 'warning',
                 paused: 'info',
                 completed: 'success',
+                partial: 'warning',
                 failed: 'danger',
                 stopped: 'info'
             };
             return types[status] || '';
+        },
+
+        getTaskRunError(task) {
+            const summary = task?.last_run_summary || {};
+            if (summary.error) return summary.error;
+            const platforms = Array.isArray(summary.platforms) ? summary.platforms : [];
+            for (const platform of platforms) {
+                const errors = Array.isArray(platform?.errors) ? platform.errors : [];
+                if (errors[0]?.message) return `${this.getPlatformName(platform.platform)}：${errors[0].message}`;
+            }
+            return '';
         },
         
         getStatusText(status) {
@@ -4657,6 +4712,7 @@ const app = createApp({
                 running: '执行中',
                 paused: '已暂停',
                 completed: '已完成',
+                partial: '部分完成',
                 failed: '失败',
                 stopped: '已结束'
             };
@@ -4773,6 +4829,7 @@ const app = createApp({
                     ai_platform: '',
                     ai_api_url: '',
                     ai_api_key: '',
+                    api_key_configured: false,
                     ai_model_name: '',
                     ai_prompt: '请分析以下文本中关于"内容"的舆情倾向：\n\n文本：{text}\n\n判断规则：\n1. 如果文本中出现具体的价格信息（如"10万"、"15.5万"等），则判定为负面舆情\n2. 如果文本中没有价格信息，根据整体语气判断是正面、负面还是中性\n\n请判断是正面、负面还是中性，并给出简短理由。\n输出格式：{"sentiment": "positive|negative|neutral", "score": -1到1之间的数值, "label": "正面|负面|中性", "reason": "分析理由"}',
                     is_default: false
@@ -4790,7 +4847,8 @@ const app = createApp({
                 enable_ai_sentiment: config.enable_ai_sentiment || false,
                 ai_platform: config.ai_platform || '',
                 ai_api_url: config.ai_api_url || '',
-                ai_api_key: config.ai_api_key || '',
+                ai_api_key: '',
+                api_key_configured: Boolean(config.api_key_configured),
                 ai_model_name: config.ai_model_name || '',
                 ai_prompt: config.ai_prompt || '',
                 is_default: config.is_default || false
@@ -4849,11 +4907,18 @@ const app = createApp({
                 enable_ai_sentiment: this.sentimentConfigForm.enable_ai_sentiment,
                 ai_platform: this.sentimentConfigForm.ai_platform,
                 ai_api_url: this.sentimentConfigForm.ai_api_url.trim(),
-                ai_api_key: this.sentimentConfigForm.ai_api_key.trim(),
                 ai_model_name: this.sentimentConfigForm.ai_model_name.trim(),
                 ai_prompt: this.sentimentConfigForm.ai_prompt.trim(),
                 is_default: this.sentimentConfigForm.is_default
             };
+            const apiKey = this.sentimentConfigForm.ai_api_key.trim();
+            if (apiKey) {
+                data.ai_api_key = apiKey;
+            }
+            if (data.enable_ai_sentiment && !apiKey && !this.sentimentConfigForm.api_key_configured) {
+                ElMessage.error('启用 AI 分析时需要填写 API Key');
+                return;
+            }
             
             try {
                 let response;

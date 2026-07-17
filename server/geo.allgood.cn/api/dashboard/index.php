@@ -131,6 +131,7 @@ function geo_dashboard_remote_status_label(string $status): string {
         'queued' => '本机排队中',
         'running' => '正在采集',
         'completed' => '采集完成',
+        'partial' => '部分完成',
         'failed' => '采集失败',
         'stopped' => '已停止',
         'skipped' => '已跳过',
@@ -1164,5 +1165,5 @@ try {
 
     geo_json(['success' => false, 'message' => 'unknown action'], 400);
 } catch (Throwable $e) {
-    geo_json(['success' => false, 'message' => 'dashboard query failed', 'error' => $e->getMessage()], 500);
+    geo_internal_error('dashboard_query', $e, '云端数据查询失败，请稍后重试');
 }

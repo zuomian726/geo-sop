@@ -8,10 +8,15 @@ if (!is_array($data)) $data = $_POST;
 $account = trim($data['account'] ?? $data['username'] ?? '');
 $password = (string)($data['password'] ?? '');
 if ($account === '' || $password === '') geo_json(['success' => false, 'message' => '请输入账号和密码'], 400);
+if (geo_login_rate_limited($pdo, $account)) geo_json(['success' => false, 'message' => '登录尝试过于频繁，请 15 分钟后再试'], 429);
 $stmt = $pdo->prepare('SELECT * FROM geo_cloud_users WHERE username = ? OR email = ? OR mobile = ? LIMIT 1');
 $stmt->execute([$account, $account, $account]);
 $user = $stmt->fetch();
-if (!$user || !password_verify($password, $user['password_hash'])) geo_json(['success' => false, 'message' => '账号或密码错误'], 401);
+if (!$user || !password_verify($password, $user['password_hash'])) {
+    geo_record_login_attempt($pdo, $account, false);
+    geo_json(['success' => false, 'message' => '账号或密码错误'], 401);
+}
+geo_record_login_attempt($pdo, $account, true);
 $token = geo_random_token(32);
 $hash = hash('sha256', $token);
 $now = geo_now();

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require dirname(__DIR__) . '/api/common.php';
 ?><!doctype html>
 <html lang="zh-CN">
 <head>
@@ -24,7 +25,7 @@ declare(strict_types=1);
             <div class="kicker">Online Demo</div>
             <h1>先看见 AI 如何描述你的品牌。</h1>
             <p>进入只读安全环境，浏览 GEO-SOP 的数据看板、品牌曝光、引用来源、GEO 稿件分析和下一步动作建议。Demo 使用合成样例数据，不会修改线上业务数据。</p>
-            <div class="actions"><form method="post" action="/login/?demo=1"><input type="hidden" name="demo_login" value="1"><button class="button primary" type="submit">一键进入在线 Demo</button></form><a class="button secondary" href="/tools/">了解桌面版</a></div>
+            <div class="actions"><form method="post" action="/login/?demo=1"><input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>"><input type="hidden" name="demo_login" value="1"><button class="button primary" type="submit">一键进入在线 Demo</button></form><a class="button secondary" href="/tools/">了解桌面版</a></div>
         </div>
         <aside class="demo-card">
             <div class="kicker">Read-only Workspace</div>

@@ -28,11 +28,14 @@ class RemoteTaskStateTests(unittest.TestCase):
             ['imported', 'running'],
             ['queued', 'completed'],
             ['running', 'failed'],
+            ['running', 'partial'],
+            ['partial', 'running'],
             ['completed', 'running'],
             ['failed', 'completed'],
             ['stopped', 'running'],
             ['skipped', 'imported'],
             ['completed', 'completed'],
+            ['partial', 'partial'],
         ];
         echo json_encode(array_map(
             fn($case) => geo_remote_status_transition_allowed($case[0], $case[1]),
@@ -46,7 +49,7 @@ class RemoteTaskStateTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(
-            [True, True, True, True, False, False, False, False, True],
+            [True, True, True, True, True, False, False, False, False, False, True, True],
             json.loads(result.stdout),
         )
 

@@ -102,10 +102,9 @@ PYINSTALLER_ARGS=(
   --windowed
   --argv-emulation
   --name "${APP_NAME}"
-  --add-data "web_app:web_app"
+  --add-data "web_app/templates:web_app/templates"
+  --add-data "web_app/static:web_app/static"
   --add-data "platforms:platforms"
-  --add-data "reference_sentiment:reference_sentiment"
-  --add-data "tools:tools"
   --add-data "version.py:."
   --hidden-import flask
   --hidden-import flask_login

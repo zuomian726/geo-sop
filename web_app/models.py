@@ -8,6 +8,8 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import inspect, text
 import json
 
+from credential_store import decrypt_secret, encrypt_secret, is_encrypted
+
 db = SQLAlchemy()
 
 def now_cst():
@@ -116,6 +118,10 @@ class MonitorTask(db.Model):
     results = db.relationship('CollectionResult', backref='task', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
+        try:
+            schedule_config = json.loads(self.schedule_config) if self.schedule_config else {}
+        except (TypeError, json.JSONDecodeError):
+            schedule_config = {}
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -129,7 +135,8 @@ class MonitorTask(db.Model):
             'collection_interval': self.collection_interval,
             'max_parallel_platforms': self.max_parallel_platforms,
             'schedule_type': self.schedule_type,
-            'schedule_config': json.loads(self.schedule_config) if self.schedule_config else {},
+            'schedule_config': schedule_config,
+            'last_run_summary': schedule_config.get('last_run_summary'),
             'schedule_enabled': self.schedule_enabled,
             'sentiment_config_id': self.sentiment_config_id,
             'status': self.status,
@@ -238,7 +245,7 @@ class SentimentConfig(db.Model):
     
     # AI平台API配置
     ai_api_url = db.Column(db.String(500))
-    ai_api_key = db.Column(db.String(255))
+    _ai_api_key = db.Column('ai_api_key', db.String(1024))
     ai_model_name = db.Column(db.String(100))
     
     # AI分析Prompt
@@ -257,8 +264,16 @@ class SentimentConfig(db.Model):
     
     # 关系
     tasks = db.relationship('MonitorTask', backref='sentiment_config', lazy=True)
+
+    @property
+    def ai_api_key(self):
+        return decrypt_secret(self._ai_api_key)
+
+    @ai_api_key.setter
+    def ai_api_key(self, value):
+        self._ai_api_key = encrypt_secret(value)
     
-    def to_dict(self):
+    def to_dict(self, include_secret=False):
         try:
             latest_insight = json.loads(self.latest_insight) if self.latest_insight else None
         except (TypeError, json.JSONDecodeError):
@@ -272,7 +287,8 @@ class SentimentConfig(db.Model):
             'enable_ai_sentiment': self.enable_ai_sentiment,
             'ai_platform': self.ai_platform,
             'ai_api_url': self.ai_api_url,
-            'ai_api_key': self.ai_api_key,
+            'ai_api_key': self.ai_api_key if include_secret else None,
+            'api_key_configured': bool(self.ai_api_key),
             'ai_model_name': self.ai_model_name,
             'ai_prompt': self.ai_prompt,
             'latest_insight': latest_insight,
@@ -313,3 +329,41 @@ def ensure_local_sync_schema():
             for name, sql_type in columns.items():
                 if name not in existing_columns:
                     connection.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {sql_type}'))
+        if 'sentiment_configs' in existing_tables:
+            rows = connection.execute(text('SELECT id, ai_api_key FROM sentiment_configs WHERE ai_api_key IS NOT NULL AND ai_api_key != ""')).fetchall()
+            for row in rows:
+                raw_value = row[1]
+                if not is_encrypted(raw_value):
+                    connection.execute(
+                        text('UPDATE sentiment_configs SET ai_api_key=:value WHERE id=:id'),
+                        {'value': encrypt_secret(raw_value), 'id': row[0]},
+                    )
+
+
+def recover_interrupted_tasks():
+    """Mark task threads lost during a previous app exit as recoverable failures."""
+    interrupted = MonitorTask.query.filter(MonitorTask.status.in_(['running', 'paused'])).all()
+    if not interrupted:
+        return 0
+
+    recovered_at = now_cst().strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    for task in interrupted:
+        try:
+            schedule = json.loads(task.schedule_config or '{}')
+        except (TypeError, json.JSONDecodeError):
+            schedule = {}
+        schedule['last_run_summary'] = {
+            'expected': 0,
+            'succeeded': 0,
+            'failed': 1,
+            'platforms': [],
+            'finished_at': recovered_at,
+            'interrupted': True,
+            'error': '应用上次退出时采集尚未完成，请重新执行任务。',
+        }
+        task.schedule_config = json.dumps(schedule, ensure_ascii=False)
+        task.status = 'failed'
+        task.control_command = None
+        task.last_run_at = now_cst()
+    db.session.commit()
+    return len(interrupted)

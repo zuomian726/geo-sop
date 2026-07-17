@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $route === 'base') {
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        geo_json(['success' => false, 'message' => 'failed to claim remote tasks', 'error' => $e->getMessage()], 500);
+        geo_internal_error('remote_task_claim', $e, '云端任务领取失败，客户端将自动重试');
     }
     geo_json([
         'success' => true,
@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
     if ($installId === '' || (string)($remoteTask['assigned_install_id'] ?? '') !== $installId) {
         geo_json(['success' => false, 'message' => 'remote task is assigned to another client'], 409);
     }
-    $allowed = ['imported', 'queued', 'running', 'completed', 'failed', 'stopped', 'skipped'];
+    $allowed = ['imported', 'queued', 'running', 'completed', 'partial', 'failed', 'stopped', 'skipped'];
     if (!in_array($status, $allowed, true)) {
         geo_json(['success' => false, 'message' => 'invalid status'], 400);
     }
@@ -234,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $route === 'status') {
     $message = (string)($data['message'] ?? '');
     $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $startedAt = $status === 'running' ? $now : null;
-    $finishedAt = in_array($status, ['completed', 'failed', 'stopped', 'skipped'], true) ? $now : null;
+    $finishedAt = in_array($status, ['completed', 'partial', 'failed', 'stopped', 'skipped'], true) ? $now : null;
     $stmt = $pdo->prepare("UPDATE geo_remote_tasks
         SET status=?, assigned_install_id=COALESCE(NULLIF(?, ''), assigned_install_id),
             assigned_user_key=COALESCE(NULLIF(?, ''), assigned_user_key),

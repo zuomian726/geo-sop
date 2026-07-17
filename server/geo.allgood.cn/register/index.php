@@ -6,6 +6,9 @@ function wants_json(): bool {
     return stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
 }
 function register_error(string $message, int $status = 400): void {
+    if (!empty($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        geo_record_auth_event($GLOBALS['pdo'], 'register_ip', geo_client_ip(), false);
+    }
     if (wants_json()) geo_json(['success' => false, 'message' => $message], $status);
     $GLOBALS['error'] = $message;
 }
@@ -13,11 +16,13 @@ function register_error(string $message, int $status = 400): void {
 $error = '';
 $username = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    geo_require_csrf($_POST['csrf_token'] ?? null);
     $username = trim($_POST['username'] ?? '');
     $password = (string)($_POST['password'] ?? '');
     $derivedEmail = $username . '@geo.allgood.cn';
 
-    if (!preg_match('/^[A-Za-z0-9_\x{4e00}-\x{9fa5}]{3,40}$/u', $username)) register_error('用户名需 3-40 位，可使用中文、英文、数字和下划线');
+    if (geo_auth_rate_limited($pdo, 'register_ip', geo_client_ip(), 10, 3600)) register_error('注册尝试过于频繁，请稍后再试', 429);
+    elseif (!preg_match('/^[A-Za-z0-9_\x{4e00}-\x{9fa5}]{3,40}$/u', $username)) register_error('用户名需 3-40 位，可使用中文、英文、数字和下划线');
     elseif (strlen($password) < 8) register_error('密码至少 8 位');
     else {
         $stmt = $pdo->prepare('SELECT username,email FROM geo_cloud_users WHERE username=? OR email=? LIMIT 1');
@@ -29,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $created = geo_create_user($pdo, $username, $password);
+                geo_record_auth_event($pdo, 'register_ip', geo_client_ip(), true);
                 $stmt = $pdo->prepare('SELECT * FROM geo_cloud_users WHERE id=? LIMIT 1');
                 $stmt->execute([$created['id']]);
                 $user = $stmt->fetch();
@@ -70,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <p class="muted">使用用户名和密码即可创建云端账号。</p>
 <div id="notice" class="<?= $error ? 'err' : '' ?>"><?= $error ? geo_h($error) : '' ?></div>
 <form id="registerForm" method="post">
+<input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>">
 <div class="field"><input name="username" placeholder="用户名" value="<?=geo_h($username)?>" required></div>
 <div class="field"><input name="password" type="password" placeholder="密码，至少 8 位" required></div>
 <button id="submitBtn">注册并进入工作台</button>

@@ -20,6 +20,23 @@ function geo_config(): array {
     return $config;
 }
 function geo_json(array $data, int $status = 200): void { http_response_code($status); header('Content-Type: application/json; charset=utf-8'); echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit; }
+function geo_internal_error(string $context, Throwable $error, string $message = '服务暂时不可用，请稍后重试'): void {
+    try {
+        $requestId = bin2hex(random_bytes(6));
+    } catch (Throwable $ignored) {
+        $requestId = substr(hash('sha256', uniqid('', true)), 0, 12);
+    }
+    error_log(sprintf(
+        '[GEO-SOP][%s][%s] %s: %s in %s:%d',
+        $requestId,
+        $context,
+        get_class($error),
+        $error->getMessage(),
+        $error->getFile(),
+        $error->getLine()
+    ));
+    geo_json(['success' => false, 'message' => $message, 'request_id' => $requestId], 500);
+}
 function geo_pdo(): PDO { $c = geo_config(); $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $c['db_host'], $c['db_port'], $c['db_name']); return new PDO($dsn, $c['db_user'], $c['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]); }
 function geo_token(): string { $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? ''; return stripos($h, 'Bearer ') === 0 ? trim(substr($h, 7)) : ''; }
 function geo_h($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -43,6 +60,21 @@ function geo_start_session(): void {
     ini_set('session.use_strict_mode', '1');
     session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Lax']);
     session_start();
+}
+function geo_csrf_token(): string {
+    geo_start_session();
+    if (empty($_SESSION['geo_csrf_token']) || !is_string($_SESSION['geo_csrf_token'])) {
+        $_SESSION['geo_csrf_token'] = geo_random_token(24);
+    }
+    return $_SESSION['geo_csrf_token'];
+}
+function geo_valid_csrf(?string $token): bool {
+    geo_start_session();
+    $expected = (string)($_SESSION['geo_csrf_token'] ?? '');
+    return $expected !== '' && is_string($token) && hash_equals($expected, $token);
+}
+function geo_require_csrf(?string $token): void {
+    if (!geo_valid_csrf($token)) geo_json(['success' => false, 'message' => '页面已过期，请刷新后重试'], 419);
 }
 function geo_schema_exec(PDO $pdo, string $sql, array $ignoredDriverCodes = []): void {
     try {
@@ -108,7 +140,7 @@ function geo_run_schema_migration(PDO $pdo, string $component, int $targetVersio
 }
 
 function geo_ensure_schema(PDO $pdo): void {
-    geo_run_schema_migration($pdo, 'core', 2026071601, function (PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'core', 2026071701, function (PDO $pdo): void {
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_cloud_users (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, username VARCHAR(120) NOT NULL UNIQUE, email VARCHAR(255) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, api_token_hash CHAR(64) NOT NULL UNIQUE, api_token_last4 VARCHAR(8) NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         geo_add_column($pdo, 'geo_cloud_users', 'mobile', "VARCHAR(20) NULL");
         geo_add_column($pdo, 'geo_cloud_users', 'mobile_verified', "TINYINT(1) NOT NULL DEFAULT 0");
@@ -123,7 +155,39 @@ function geo_ensure_schema(PDO $pdo): void {
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_phone_codes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, mobile VARCHAR(20) NOT NULL, scene VARCHAR(40) NOT NULL, code_hash CHAR(64) NOT NULL, ip VARCHAR(80) NULL, attempts INT NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL, used_at DATETIME NULL, created_at DATETIME NOT NULL, KEY idx_geo_phone_mobile_scene (mobile, scene), KEY idx_geo_phone_ip_time (ip, created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_wechat_states (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, state VARCHAR(80) NOT NULL UNIQUE, scene VARCHAR(40) NOT NULL, created_at DATETIME NOT NULL, expires_at DATETIME NOT NULL, used_at DATETIME NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_remote_tasks (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, cloud_user_id BIGINT UNSIGNED NOT NULL, name VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, status VARCHAR(40) NOT NULL DEFAULT 'pending', assigned_install_id VARCHAR(64) NULL, assigned_user_key VARCHAR(255) NULL, local_task_id INT NULL, created_at DATETIME NOT NULL, pulled_at DATETIME NULL, updated_at DATETIME NOT NULL, KEY idx_remote_user_status (cloud_user_id, status), KEY idx_remote_assigned (assigned_install_id, assigned_user_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS geo_auth_events (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, scope VARCHAR(40) NOT NULL, bucket_hash CHAR(64) NOT NULL, success TINYINT(1) NOT NULL DEFAULT 0, created_at DATETIME NOT NULL, KEY idx_geo_auth_bucket (scope, bucket_hash, created_at), KEY idx_geo_auth_cleanup (created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     });
+}
+
+function geo_auth_bucket(string $value): string {
+    return hash('sha256', strtolower(trim($value)));
+}
+function geo_auth_rate_limited(PDO $pdo, string $scope, string $bucket, int $maxFailures, int $windowSeconds): bool {
+    $since = date('Y-m-d H:i:s', time() - max(1, $windowSeconds));
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM geo_auth_events WHERE scope=? AND bucket_hash=? AND success=0 AND created_at>=?');
+    $stmt->execute([$scope, geo_auth_bucket($bucket), $since]);
+    return (int)$stmt->fetchColumn() >= $maxFailures;
+}
+function geo_record_auth_event(PDO $pdo, string $scope, string $bucket, bool $success): void {
+    $stmt = $pdo->prepare('INSERT INTO geo_auth_events (scope,bucket_hash,success,created_at) VALUES (?,?,?,?)');
+    $stmt->execute([$scope, geo_auth_bucket($bucket), $success ? 1 : 0, geo_now()]);
+    if (random_int(1, 100) === 1) {
+        $pdo->prepare('DELETE FROM geo_auth_events WHERE created_at < ?')->execute([date('Y-m-d H:i:s', time() - 604800)]);
+    }
+}
+function geo_login_rate_limited(PDO $pdo, string $account): bool {
+    $ip = geo_client_ip();
+    return geo_auth_rate_limited($pdo, 'login_pair', $ip . '|' . $account, 8, 900)
+        || geo_auth_rate_limited($pdo, 'login_ip', $ip, 40, 900);
+}
+function geo_record_login_attempt(PDO $pdo, string $account, bool $success): void {
+    $ip = geo_client_ip();
+    if ($success) {
+        $pdo->prepare('DELETE FROM geo_auth_events WHERE scope=? AND bucket_hash=? AND success=0')
+            ->execute(['login_pair', geo_auth_bucket($ip . '|' . $account)]);
+    }
+    geo_record_auth_event($pdo, 'login_pair', $ip . '|' . $account, $success);
+    geo_record_auth_event($pdo, 'login_ip', $ip, $success);
 }
 
 function geo_auth_user(PDO $pdo): ?array { $token = geo_token(); if ($token === '') return null; $hash = hash('sha256', $token); $stmt = $pdo->prepare('SELECT * FROM geo_cloud_users WHERE api_token_hash = ? LIMIT 1'); $stmt->execute([$hash]); $u = $stmt->fetch(); if ($u) return $u; $stmt = $pdo->prepare('SELECT u.* FROM geo_cloud_tokens t JOIN geo_cloud_users u ON u.id=t.cloud_user_id WHERE t.token_hash=? AND t.revoked_at IS NULL LIMIT 1'); $stmt->execute([$hash]); $u = $stmt->fetch(); if ($u) { $pdo->prepare('UPDATE geo_cloud_tokens SET last_used_at=? WHERE token_hash=?')->execute([geo_now(), $hash]); return $u; } return null; }

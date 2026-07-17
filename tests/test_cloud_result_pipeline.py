@@ -18,6 +18,7 @@ for path in (str(ROOT), str(WEB_APP)):
 
 import cloud_sync  # noqa: E402
 import remote_worker  # noqa: E402
+import credential_store  # noqa: E402
 from models import CollectionResult, MonitorTask, User, db  # noqa: E402
 
 
@@ -165,6 +166,7 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         account_path = Path(self.temp_dir.name) / "cloud_account.json"
         with (
             patch.object(cloud_sync, "cloud_account_path", return_value=account_path),
+            patch.object(credential_store, "_key_path", return_value=Path(self.temp_dir.name) / "desktop_secret.key"),
             patch.dict(
                 cloud_sync.os.environ,
                 {"GEO_CLOUD_SYNC_TOKEN": "secret", "GEO_CLOUD_SYNC_ENABLED": "1"},
@@ -173,6 +175,7 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         ):
             cloud_sync.save_cloud_account({"token": "secret", "cloud_sync_url": "https://cloud.example/api"})
             self.assertEqual("secret", cloud_sync.load_cloud_account()["token"])
+            self.assertNotIn("secret", account_path.read_text(encoding="utf-8"))
             if not sys.platform.startswith("win"):
                 self.assertEqual(0o600, account_path.stat().st_mode & 0o777)
                 account_path.chmod(0o644)
@@ -457,6 +460,33 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
         self.assertTrue(config["remote_results_synced"])
         self.assertTrue(config["remote_assets_uploaded"])
         self.assertNotIn(task.id, remote_worker._running_task_ids)
+
+    def test_partial_remote_task_syncs_available_results_assets_and_status(self):
+        task = self.create_remote_task(remote_id=111)
+
+        def finish_collection(task_id, **_kwargs):
+            local_task = db.session.get(MonitorTask, task_id)
+            local_task.status = "partial"
+            db.session.commit()
+
+        collector = types.SimpleNamespace(run_collection=finish_collection)
+        with (
+            patch.dict(sys.modules, {"collector": collector}),
+            patch.object(remote_worker, "report_remote_task_status", return_value={"success": True}) as report,
+            patch.object(remote_worker, "sync_user_workspace", return_value={"success": True}) as sync,
+            patch.object(remote_worker, "upload_workspace_assets", return_value={"enabled": True}) as upload,
+        ):
+            remote_worker._execute_remote_task(self.app, self.user.id, task.id, 111)
+
+        self.assertEqual(["running", "partial"], [call.args[3] for call in report.call_args_list])
+        sync.assert_called_once_with(self.user.id)
+        upload.assert_called_once_with(self.user.id, task_ids=[task.id])
+        db.session.expire_all()
+        stored = db.session.get(MonitorTask, task.id)
+        self.assertEqual("partial", stored.status)
+        config = json.loads(stored.schedule_config)
+        self.assertTrue(config["remote_results_synced"])
+        self.assertTrue(config["remote_assets_uploaded"])
 
     def test_collection_failure_is_persisted_synced_and_reported(self):
         task = self.create_remote_task(remote_id=102)

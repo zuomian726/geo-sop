@@ -61,7 +61,7 @@ def _init_database():
     _boot_log("importing Flask application")
     from app import app
     _boot_log("Flask application imported")
-    from models import db, ensure_local_sync_schema
+    from models import db, ensure_local_sync_schema, recover_interrupted_tasks
     from sqlalchemy import inspect
 
     with app.app_context():
@@ -83,6 +83,9 @@ def _init_database():
             raise RuntimeError(f"Local database initialization failed, missing tables: {', '.join(missing_tables)}")
         _boot_log("applying local sync schema")
         ensure_local_sync_schema()
+        recovered = recover_interrupted_tasks()
+        if recovered:
+            _boot_log(f"recovered interrupted tasks={recovered}")
         _boot_log(f"database initialized tables={len(existing_tables)}")
 
 

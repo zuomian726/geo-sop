@@ -448,5 +448,5 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    json_response(['success' => false, 'message' => 'sync failed', 'error' => $e->getMessage()], 500);
+    geo_internal_error('workspace_sync', $e, '数据同步失败，客户端将自动重试');
 }

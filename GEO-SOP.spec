@@ -10,7 +10,12 @@ a = Analysis(
     ['desktop_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('web_app', 'web_app'), ('platforms', 'platforms'), ('reference_sentiment', 'reference_sentiment'), ('tools', 'tools'), ('version.py', '.')],
+    datas=[
+        ('web_app/templates', 'web_app/templates'),
+        ('web_app/static', 'web_app/static'),
+        ('platforms', 'platforms'),
+        ('version.py', '.'),
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
