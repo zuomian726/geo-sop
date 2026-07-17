@@ -1,14 +1,17 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/common.php';
+require_once dirname(__DIR__) . '/common.php';
 
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Authorization, Content-Type');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
+$geoSyncSchemaOnly = defined('GEO_SYNC_SCHEMA_ONLY') && GEO_SYNC_SCHEMA_ONLY === true;
+if (!$geoSyncSchemaOnly) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (!$geoSyncSchemaOnly && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
@@ -37,11 +40,12 @@ function require_config(): array {
 
 function pdo_conn(array $config): PDO {
     $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $config['db_host'], $config['db_port'], $config['db_name']);
-    return new PDO($dsn, $config['db_user'], $config['db_pass'], [
+    $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    return geo_align_pdo_timezone($pdo);
 }
 
 function result_summary(array $result): array {
@@ -78,7 +82,7 @@ function result_summary(array $result): array {
     ];
 }
 
-function ensure_schema(PDO $pdo): void {
+function geo_sync_ensure_schema(PDO $pdo): void {
     geo_run_schema_migration($pdo, 'sync_workspace', 2026071601, function (PDO $pdo): void {
     $sqls = [
         "CREATE TABLE IF NOT EXISTS geo_sync_users (
@@ -290,6 +294,10 @@ function payload_json(array $payload): string {
     return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
+if ($geoSyncSchemaOnly) {
+    return;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['success' => false, 'message' => 'method not allowed'], 405);
 }
@@ -319,7 +327,7 @@ $pruneInstall = !empty($data['prune_install']);
 
 try {
     $pdo = pdo_conn($config);
-    ensure_schema($pdo);
+    geo_sync_ensure_schema($pdo);
     $cloudUserId = cloud_user_id_for_token($pdo, $config, $token);
     if ($token === '' || $cloudUserId <= 0) {
         json_response(['success' => false, 'message' => 'unauthorized'], 401);

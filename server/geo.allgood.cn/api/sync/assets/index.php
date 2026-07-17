@@ -1,33 +1,38 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/common.php';
+require_once dirname(__DIR__, 2) . '/common.php';
 
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Authorization, Content-Type');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+$geoAssetsSchemaOnly = defined('GEO_ASSETS_SCHEMA_ONLY') && GEO_ASSETS_SCHEMA_ONLY === true;
+if (!$geoAssetsSchemaOnly) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+}
+if (!$geoAssetsSchemaOnly && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (!$geoAssetsSchemaOnly && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     geo_json(['success' => false, 'message' => 'method not allowed'], 405);
 }
-$requestSize = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
-if ($requestSize > 32 * 1024 * 1024) {
-    geo_json(['success' => false, 'message' => 'request is larger than 32MB'], 413);
-}
+if (!$geoAssetsSchemaOnly) {
+    $requestSize = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($requestSize > 32 * 1024 * 1024) {
+        geo_json(['success' => false, 'message' => 'request is larger than 32MB'], 413);
+    }
 
-$pdo = geo_pdo();
-geo_ensure_schema($pdo);
-geo_bootstrap($pdo);
-$user = geo_auth_user($pdo);
-if (!$user) {
-    geo_json(['success' => false, 'message' => 'unauthorized'], 401);
-}
-if (geo_is_demo_user($user)) {
-    geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);
+    $pdo = geo_pdo();
+    geo_ensure_schema($pdo);
+    geo_bootstrap($pdo);
+    $user = geo_auth_user($pdo);
+    if (!$user) {
+        geo_json(['success' => false, 'message' => 'unauthorized'], 401);
+    }
+    if (geo_is_demo_user($user)) {
+        geo_json(['success' => false, 'message' => 'online demo is read-only'], 403);
+    }
 }
 
 function geo_assets_ensure_schema(PDO $pdo): void {
@@ -72,6 +77,10 @@ function geo_assets_ensure_schema(PDO $pdo): void {
         geo_add_index($pdo, 'geo_sync_assets', 'uniq_geo_asset_hash', 'UNIQUE KEY uniq_geo_asset_hash (cloud_user_id, install_id, local_result_id, kind, sha256)');
     }
     });
+}
+
+if ($geoAssetsSchemaOnly) {
+    return;
 }
 
 function geo_assets_mark_result_screenshot(PDO $pdo, int $cloudUserId, string $installId, int $localResultId): void {
@@ -229,8 +238,8 @@ try {
         $now,
         $now,
     ]);
-    geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
     $assetId = (int)$pdo->lastInsertId();
+    geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
     geo_json(['success' => true, 'deduped' => false, 'id' => $assetId, 'url' => "/api/dashboard/?action=asset&asset_id={$assetId}", 'size' => $size, 'sha256' => $sha]);
 } catch (Throwable $e) {
     geo_internal_error('asset_upload', $e, '截图上传失败，客户端将自动重试');

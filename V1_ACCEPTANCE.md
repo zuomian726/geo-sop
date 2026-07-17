@@ -104,15 +104,21 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 131 tests passing on 2026-07-17.
+- Unit and contract suite: 132 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
   pass at both sizes.
 - Desktop and cloud GEO manuscript analysis now share multi-task manuscript
   filtering, date-range filters, title grouping, and URL/article-ID matching.
-- Existing production Demo baseline: 6 synthetic tasks, 144 synthetic results,
-  and 6 platforms; read-only smoke passed.
+- Fresh-schema staging Demo: 6 synthetic tasks, 144 synthetic results, 4 GEO
+  manuscripts, and 6 platforms; query/export and read-only smoke passed.
+- Disposable two-account staging pipeline: registration, desktop login,
+  heartbeat, workspace/history sync, private statistics and screenshots, cloud
+  analysis, remote-task execution, cross-account isolation, and both export
+  formats passed end to end.
+- Database sessions now inherit the PHP runtime timezone, preventing new
+  heartbeats from being misclassified as eight-hour-old offline clients.
 - The strengthened V1 cloud smoke now requires CSRF-protected registration and
   Demo login plus account-private screenshots. Current legacy production is
   intentionally rejected until the one-time V1 deployment.
@@ -122,6 +128,5 @@ This section records development evidence without changing production packages.
   `update.json` is switched last.
 - Tracked-file audit: no databases, browser profiles, screenshots, private
   configuration, certificates, private keys, or common live API Key formats.
-- Pending final release gates: staging deployment, disposable two-account V1
-  pipeline, native Windows install, both native macOS installs, Apple
-  notarization, and Windows Authenticode signing.
+- Pending final release gates: native Windows install, both native macOS
+  installs, Apple notarization, and Windows Authenticode signing.

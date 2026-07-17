@@ -37,7 +37,21 @@ function geo_internal_error(string $context, Throwable $error, string $message =
     ));
     geo_json(['success' => false, 'message' => $message, 'request_id' => $requestId], 500);
 }
-function geo_pdo(): PDO { $c = geo_config(); $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $c['db_host'], $c['db_port'], $c['db_name']); return new PDO($dsn, $c['db_user'], $c['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]); }
+function geo_align_pdo_timezone(PDO $pdo): PDO {
+    $offset = (new DateTimeImmutable('now'))->format('P');
+    $pdo->exec("SET time_zone = " . $pdo->quote($offset));
+    return $pdo;
+}
+function geo_pdo(): PDO {
+    $c = geo_config();
+    $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $c['db_host'], $c['db_port'], $c['db_name']);
+    $pdo = new PDO($dsn, $c['db_user'], $c['db_pass'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+    return geo_align_pdo_timezone($pdo);
+}
 function geo_token(): string { $h = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? ''; return stripos($h, 'Bearer ') === 0 ? trim(substr($h, 7)) : ''; }
 function geo_h($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function geo_now(): string { return date('Y-m-d H:i:s'); }

@@ -1,24 +1,29 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__) . '/common.php';
-require dirname(__DIR__) . '/platforms.php';
-require dirname(__DIR__) . '/remote-task-state.php';
+require_once dirname(__DIR__) . '/common.php';
+require_once dirname(__DIR__) . '/platforms.php';
+require_once dirname(__DIR__) . '/remote-task-state.php';
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Authorization, Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+$geoRemoteSchemaOnly = defined('GEO_REMOTE_SCHEMA_ONLY') && GEO_REMOTE_SCHEMA_ONLY === true;
+if (!$geoRemoteSchemaOnly) {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+}
+if (!$geoRemoteSchemaOnly && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
 
-$pdo = geo_pdo();
-geo_ensure_schema($pdo);
-geo_bootstrap($pdo);
-$user = geo_auth_user($pdo);
-if (!$user) {
-    geo_json(['success' => false, 'message' => 'unauthorized'], 401);
+if (!$geoRemoteSchemaOnly) {
+    $pdo = geo_pdo();
+    geo_ensure_schema($pdo);
+    geo_bootstrap($pdo);
+    $user = geo_auth_user($pdo);
+    if (!$user) {
+        geo_json(['success' => false, 'message' => 'unauthorized'], 401);
+    }
 }
 
 function geo_remote_ensure_schema(PDO $pdo): void {
@@ -44,6 +49,10 @@ function geo_remote_ensure_schema(PDO $pdo): void {
     // Older deployments used `pulled` for the same state now called `imported`.
     $pdo->exec("UPDATE geo_remote_tasks SET status='imported' WHERE status='pulled'");
     });
+}
+
+if ($geoRemoteSchemaOnly) {
+    return;
 }
 
 function geo_remote_body(): array {

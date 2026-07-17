@@ -6,7 +6,12 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-require dirname(__DIR__) . '/api/common.php';
+define('GEO_SYNC_SCHEMA_ONLY', true);
+require dirname(__DIR__) . '/api/sync/index.php';
+define('GEO_ASSETS_SCHEMA_ONLY', true);
+require dirname(__DIR__) . '/api/sync/assets/index.php';
+define('GEO_REMOTE_SCHEMA_ONLY', true);
+require dirname(__DIR__) . '/api/remote-tasks/index.php';
 
 const DEMO_INSTALL_ID = 'demo-static';
 const DEMO_EXPECTED_TASKS = 6;
@@ -36,6 +41,9 @@ if ($username === '') {
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
 geo_bootstrap($pdo);
+geo_sync_ensure_schema($pdo);
+geo_assets_ensure_schema($pdo);
+geo_remote_ensure_schema($pdo);
 
 $userStmt = $pdo->prepare('SELECT id,username,email FROM geo_cloud_users WHERE username=? LIMIT 1');
 $userStmt->execute([$username]);

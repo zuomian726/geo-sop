@@ -170,9 +170,13 @@ function geo_dashboard_date_param(string $name, string $fallback = ''): string {
 }
 
 function geo_dashboard_stream_rows(PDO $pdo): void {
-    if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
-        $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+    $attribute = null;
+    if (PHP_VERSION_ID >= 80500 && class_exists('Pdo\\Mysql') && defined('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')) {
+        $attribute = constant('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY');
+    } elseif (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
+        $attribute = constant('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY');
     }
+    if ($attribute !== null) $pdo->setAttribute($attribute, false);
 }
 
 function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplicate = false): array {
