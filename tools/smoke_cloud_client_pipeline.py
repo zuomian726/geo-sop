@@ -365,10 +365,29 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
             "collection_interval": 5,
             "max_parallel_platforms": 1,
         }
+        dashboard_page = _session_a.get(endpoint(base_url, "/dashboard/"), timeout=(5, 20))
+        dashboard_page.raise_for_status()
+        dashboard_csrf = re.search(r'name="csrf_token"\s+value="([^"]+)"', dashboard_page.text)
+        if not dashboard_csrf:
+            raise AcceptanceError("cloud dashboard did not provide a CSRF token")
         created_task = expect_json(
-            requests.post(endpoint(base_url, "/api/remote-tasks/"), headers=headers, json={"payload": remote_payload}, timeout=(5, 15))
+            _session_a.post(
+                endpoint(base_url, "/dashboard/"),
+                data={
+                    "csrf_token": dashboard_csrf.group(1),
+                    "name": remote_payload["name"],
+                    "brand_name": remote_payload["brand_name"],
+                    "brand_keywords": "\n".join(remote_payload["brand_keywords"]),
+                    "competitor_brands": "",
+                    "questions": "\n".join(remote_payload["questions"]),
+                    "platforms[]": remote_payload["platforms"],
+                },
+                headers={"Accept": "application/json", "X-Requested-With": "fetch"},
+                timeout=(5, 15),
+            ),
+            expected=201,
         )
-        remote_id = int(created_task.get("id") or 0)
+        remote_id = int(created_task.get("task_id") or 0)
         pending_heartbeat = expect_json(
             requests.post(
                 endpoint(base_url, "/api/remote-tasks/heartbeat/"),

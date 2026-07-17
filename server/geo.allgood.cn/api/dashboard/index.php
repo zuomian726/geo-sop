@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/common.php';
 require dirname(__DIR__) . '/platforms.php';
+require dirname(__DIR__) . '/workspace-schema.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
+geo_ensure_workspace_schema($pdo);
 geo_bootstrap($pdo);
 $user = geo_current_web_user($pdo) ?: geo_auth_user($pdo);
 if (!$user) {

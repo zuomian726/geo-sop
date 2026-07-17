@@ -15,6 +15,7 @@ class ServerDistributionTests(unittest.TestCase):
             "api/auth/logout/index.php",
             "api/dashboard/index.php",
             "api/remote-tasks/index.php",
+            "api/workspace-schema.php",
             "api/sync/index.php",
             "dashboard/index.php",
             "login/index.php",
@@ -121,6 +122,26 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn("geo_login_rate_limited($pdo, $account)", api_login)
         self.assertIn("geo_record_login_attempt($pdo, $account, false)", api_login)
 
+    def test_cloud_task_form_submits_without_losing_user_input(self):
+        dashboard = (SERVER / "dashboard" / "index.php").read_text(encoding="utf-8")
+        for marker in (
+            'id="cloudTaskForm"',
+            'id="cloudTaskNotice"',
+            "function initCloudTaskForm()",
+            "headers: {Accept: 'application/json', 'X-Requested-With': 'fetch'}",
+            "'task_id' => $createdTaskId",
+            "header('Location: /dashboard/?task_created=1#remote-tasks', true, 303)",
+            'id="remote-tasks"',
+        ):
+            self.assertIn(marker, dashboard)
+        self.assertIn("value=\"<?=geo_h($taskForm['brand_name'])?>\"", dashboard)
+        self.assertIn("><?=geo_h($taskForm['questions'])?></textarea>", dashboard)
+
+        pipeline = (ROOT / "tools" / "smoke_cloud_client_pipeline.py").read_text(encoding="utf-8")
+        self.assertIn('endpoint(base_url, "/dashboard/")', pipeline)
+        self.assertIn('expected=201', pipeline)
+        self.assertIn('created_task.get("task_id")', pipeline)
+
     def test_public_asset_references_are_in_the_distribution(self):
         missing = set()
         for relative in ("index.html", "tools/index.html", "login/index.php", "register/index.php"):
@@ -178,6 +199,22 @@ class ServerDistributionTests(unittest.TestCase):
         for relative, component in components.items():
             source = (SERVER / relative).read_text(encoding="utf-8")
             self.assertIn(f"geo_run_schema_migration($pdo, '{component}'", source, relative)
+
+    def test_fresh_dashboard_initializes_the_complete_workspace_schema(self):
+        schema = (SERVER / "api" / "workspace-schema.php").read_text(encoding="utf-8")
+        for marker in (
+            "GEO_SYNC_SCHEMA_ONLY",
+            "GEO_ASSETS_SCHEMA_ONLY",
+            "GEO_REMOTE_SCHEMA_ONLY",
+            "geo_sync_ensure_schema($pdo)",
+            "geo_assets_ensure_schema($pdo)",
+            "geo_remote_ensure_schema($pdo)",
+        ):
+            self.assertIn(marker, schema)
+        for relative in ("dashboard/index.php", "api/dashboard/index.php"):
+            source = (SERVER / relative).read_text(encoding="utf-8")
+            self.assertIn("workspace-schema.php", source, relative)
+            self.assertIn("geo_ensure_workspace_schema($pdo)", source, relative)
 
     def test_database_session_timezone_matches_php_runtime(self):
         common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")

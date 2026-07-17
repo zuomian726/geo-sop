@@ -104,7 +104,7 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 134 tests passing on 2026-07-17.
+- Unit and contract suite: 136 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
@@ -119,6 +119,10 @@ This section records development evidence without changing production packages.
   of limiting users to a short table excerpt.
 - Fresh-schema staging Demo: 6 synthetic tasks, 144 synthetic results, 4 GEO
   manuscripts, and 6 platforms; query/export and read-only smoke passed.
+- Fresh empty-database account flow: registration opens the dashboard without
+  administrator pre-seeding, creates all workspace schemas, rejects invalid
+  tasks without losing the form, creates tasks through the AJAX and fallback
+  paths, and exposes the new queue through the account-private dashboard API.
 - Disposable two-account staging pipeline: registration, desktop login,
   heartbeat, workspace/history sync, private statistics and screenshots, cloud
   analysis, remote-task execution, cross-account isolation, and both export

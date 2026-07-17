@@ -1,9 +1,11 @@
 <?php
 require dirname(__DIR__) . '/api/common.php';
 require dirname(__DIR__) . '/api/platforms.php';
+require dirname(__DIR__) . '/api/workspace-schema.php';
 
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
+geo_ensure_workspace_schema($pdo);
 geo_bootstrap($pdo);
 $user = geo_current_web_user($pdo);
 if (!$user) {
@@ -75,18 +77,46 @@ function geo_remote_status_label(string $status): string {
         'pulled' => '已导入本机',
     ][$status] ?? ($status !== '' ? $status : '未知');
 }
+
+function geo_dashboard_wants_json(): bool {
+    return stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false
+        || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
+}
+
+$taskForm = [
+    'name' => '云端下发任务',
+    'brand_name' => '',
+    'brand_keywords' => '',
+    'competitor_brands' => '',
+    'questions' => '',
+    'platforms' => ['doubao'],
+];
+$messageType = 'success';
+if (isset($_GET['task_created'])) {
+    $message = '远程任务已创建。桌面端登录同一账号后会自动拉取并执行。';
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     geo_require_csrf($_POST['csrf_token'] ?? null);
+    $taskForm = [
+        'name' => trim((string)($_POST['name'] ?? '')),
+        'brand_name' => trim((string)($_POST['brand_name'] ?? '')),
+        'brand_keywords' => (string)($_POST['brand_keywords'] ?? ''),
+        'competitor_brands' => (string)($_POST['competitor_brands'] ?? ''),
+        'questions' => (string)($_POST['questions'] ?? ''),
+        'platforms' => array_values(array_filter($_POST['platforms'] ?? [])),
+    ];
+    $createdTaskId = 0;
     if ($isDemoUser) {
         $message = '在线 Demo 为只读安全模式，不能创建或修改任务。';
+        $messageType = 'error';
     } else {
     $payload = [
-        'name' => trim($_POST['name'] ?? '服务端采集任务'),
-        'brand_name' => trim($_POST['brand_name'] ?? ''),
-        'brand_keywords' => array_values(array_filter(array_map('trim', explode("\n", (string)($_POST['brand_keywords'] ?? ''))))),
-        'competitor_brands' => array_values(array_filter(array_map('trim', explode("\n", (string)($_POST['competitor_brands'] ?? ''))))),
-        'questions' => array_values(array_filter(array_map('trim', explode("\n", (string)($_POST['questions'] ?? ''))))),
-        'platforms' => array_values(array_filter($_POST['platforms'] ?? [])),
+        'name' => $taskForm['name'],
+        'brand_name' => $taskForm['brand_name'],
+        'brand_keywords' => array_values(array_filter(array_map('trim', explode("\n", $taskForm['brand_keywords'])))),
+        'competitor_brands' => array_values(array_filter(array_map('trim', explode("\n", $taskForm['competitor_brands'])))),
+        'questions' => array_values(array_filter(array_map('trim', explode("\n", $taskForm['questions'])))),
+        'platforms' => $taskForm['platforms'],
         'screenshot_config' => [],
         'collection_interval' => 20,
         'max_parallel_platforms' => 2,
@@ -99,10 +129,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $now = date('Y-m-d H:i:s');
         $stmt = $pdo->prepare('INSERT INTO geo_remote_tasks (cloud_user_id,name,payload,status,created_at,updated_at) VALUES (?,?,?,?,?,?)');
         $stmt->execute([(int)$user['id'], $payload['name'], json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'pending', $now, $now]);
+        $createdTaskId = (int)$pdo->lastInsertId();
         $message = '远程任务已创建。桌面端登录同一账号后会自动拉取并执行。';
     } else {
         $message = $validation['message'];
+        $messageType = 'error';
     }
+    }
+    if (geo_dashboard_wants_json()) {
+        geo_json([
+            'success' => $createdTaskId > 0,
+            'message' => $message,
+            'task_id' => $createdTaskId,
+        ], $createdTaskId > 0 ? 201 : 400);
+    }
+    if ($createdTaskId > 0) {
+        header('Location: /dashboard/?task_created=1#remote-tasks', true, 303);
+        exit;
     }
 }
 
@@ -289,7 +332,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
 	select{width:100%;padding:12px 14px;border:1px solid #ccd6e4;border-radius:6px;background:#fff;font-size:14px}.query-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end}.query-grid label{display:grid;gap:7px;color:#7b8aa0;font-size:12px;font-weight:800}.query-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}.query-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 0;border-top:1px solid #edf1f7}.query-page-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.query-page-controls select{width:auto;height:34px;padding:0 28px 0 10px}.query-page-controls button:disabled{opacity:.45;cursor:not-allowed}.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:999px;background:#eef4ff;color:#175cd3;font-size:12px;font-weight:800}.pill.good{background:#ecfdf3;color:#027a48}.pill.bad{background:#fff1f3;color:#c01048}.answer-snippet{max-width:360px;color:#475467;line-height:1.55}.query-count{color:#7b8aa0;font-size:13px;font-weight:700}.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.geo-summary-item{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px}.geo-summary-item span{display:block;color:var(--muted);font-size:12px;font-weight:800}.geo-summary-item strong{display:block;font-size:24px;margin-top:6px}.geo-title-row{cursor:pointer}.geo-title-main{display:flex;align-items:center;gap:10px;font-weight:800}.geo-caret{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#667085;font-size:12px}.geo-child-row{background:#fbfdff}.geo-url-list{padding:8px 0}.geo-url-card{display:grid;grid-template-columns:minmax(260px,1fr) 150px 150px 170px;gap:14px;align-items:start;padding:12px 14px;border-bottom:1px solid #edf1f7}.geo-url-card:last-child{border-bottom:0}.geo-url{color:#175cd3;word-break:break-all;line-height:1.5}.geo-detail-list{margin-top:8px;display:grid;gap:7px}.geo-detail-item{padding:8px 10px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:6px;color:#475467;line-height:1.5}.geo-muted{color:#7b8aa0;font-size:12px}@media(max-width:1100px){.workspace-hero{grid-template-columns:1fr}.side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hero-panel{min-height:0}.query-grid{grid-template-columns:1fr 1fr}.geo-summary{grid-template-columns:1fr 1fr}.geo-url-card{grid-template-columns:1fr}}@media(max-width:720px){.side-stack{grid-template-columns:1fr}.query-grid{grid-template-columns:1fr}.geo-summary{grid-template-columns:1fr}}
 		.reference-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.reference-ranking{display:grid;gap:12px;margin-top:16px}.reference-rank-row{display:grid;grid-template-columns:minmax(120px,220px) 1fr 58px;gap:12px;align-items:center}.reference-rank-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reference-trend{min-height:260px;display:grid;place-items:center;margin-top:12px}.reference-trend svg{width:100%;height:auto;min-height:220px}.reference-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.reference-legend span{display:inline-flex;align-items:center;gap:6px;color:#667085;font-size:12px}.reference-legend i{width:10px;height:10px;border-radius:999px}@media(max-width:720px){.reference-summary{grid-template-columns:1fr}.reference-rank-row{grid-template-columns:110px 1fr 46px}}
 		.app-launch-notice.demo{border-left-color:var(--cyan);background:#f0fdff}
-		.result-modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.52)}.result-modal.show{display:flex}.result-dialog{width:min(920px,100%);max-height:min(760px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;border-radius:8px;background:#fff;box-shadow:0 28px 80px rgba(15,23,42,.28)}.result-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 22px;border-bottom:1px solid var(--line)}.result-dialog-head h2{margin:4px 0 0;font-size:23px}.result-close{width:34px;min-width:34px;padding:0;font-size:24px;line-height:1}.result-dialog-body{overflow:auto;padding:22px}.result-detail-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}.result-detail-meta div{padding:12px;border:1px solid var(--line);border-radius:6px;background:#f8fafc}.result-detail-meta span{display:block;color:var(--muted);font-size:12px;font-weight:700}.result-detail-meta strong{display:block;margin-top:5px;word-break:break-word}.result-section{margin-top:20px}.result-section h3{margin:0 0 10px;font-size:17px}.result-answer{max-height:320px;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:6px;background:#fbfdff;white-space:pre-wrap;word-break:break-word;line-height:1.75}.result-reference-list{display:grid;gap:8px}.result-reference-list a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:6px;color:#175cd3;word-break:break-all}.text-action{height:auto;padding:0;border:0;background:transparent;color:#175cd3;font-size:13px}@media(max-width:720px){.result-modal{padding:10px}.result-dialog{max-height:calc(100vh - 20px)}.result-detail-meta{grid-template-columns:1fr 1fr}.result-dialog-body{padding:16px}}
+		.result-modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.52)}.result-modal.show{display:flex}.result-dialog{width:min(920px,100%);max-height:min(760px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;border-radius:8px;background:#fff;box-shadow:0 28px 80px rgba(15,23,42,.28)}.result-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 22px;border-bottom:1px solid var(--line)}.result-dialog-head h2{margin:4px 0 0;font-size:23px}.result-close{width:34px;min-width:34px;padding:0;font-size:24px;line-height:1}.result-dialog-body{overflow:auto;padding:22px}.result-detail-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px}.result-detail-meta div{padding:12px;border:1px solid var(--line);border-radius:6px;background:#f8fafc}.result-detail-meta span{display:block;color:var(--muted);font-size:12px;font-weight:700}.result-detail-meta strong{display:block;margin-top:5px;word-break:break-word}.result-section{margin-top:20px}.result-section h3{margin:0 0 10px;font-size:17px}.result-answer{max-height:320px;overflow:auto;padding:16px;border:1px solid var(--line);border-radius:6px;background:#fbfdff;white-space:pre-wrap;word-break:break-word;line-height:1.75}.result-reference-list{display:grid;gap:8px}.result-reference-list a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:6px;color:#175cd3;word-break:break-all}.text-action{height:auto;padding:0;border:0;background:transparent;color:#175cd3;font-size:13px}.btn:disabled,button:disabled{opacity:.55;cursor:not-allowed}.task-form-error,#cloudTaskNotice.error{background:#fff1f3;color:#c01048;border:1px solid #fecdd6}#cloudTaskNotice{margin:0} @media(max-width:720px){.result-modal{padding:10px}.result-dialog{max-height:calc(100vh - 20px)}.result-detail-meta{grid-template-columns:1fr 1fr}.result-dialog-body{padding:16px}}
 	</style>
 </head>
 <body>
@@ -358,7 +401,7 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         </div>
     </section>
 
-    <?php if($message): ?><div class="msg"><?=geo_h($message)?></div><?php endif; ?>
+    <?php if($message): ?><div class="msg<?= $messageType === 'error' ? ' task-form-error' : '' ?>"><?=geo_h($message)?></div><?php endif; ?>
 
     <section class="metric-grid">
         <div class="metric-card"><span>监测任务</span><strong><?=geo_h((string)$totalTaskCount)?></strong><small class="muted"><?=geo_h((string)$runningTasks)?> 个运行/暂停中</small></div>
@@ -579,30 +622,31 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <span class="kicker">Task</span>
         <h2>创建监测任务</h2>
         <p class="muted">云端可创建任务；真正的平台登录、浏览器采集、截图留证会由同账号本机 App 完成。</p>
-        <form method="post">
+        <form method="post" id="cloudTaskForm">
             <input type="hidden" name="csrf_token" value="<?=geo_h(geo_csrf_token())?>">
             <div class="form-grid">
-                <p><input name="name" placeholder="任务名称" value="云端下发任务"></p>
-                <p><input name="brand_name" placeholder="品牌名称"></p>
-                <p><textarea name="brand_keywords" placeholder="品牌关键词，每行一个" required></textarea></p>
-                <p><textarea name="competitor_brands" placeholder="竞品品牌，每行一个，可选"></textarea></p>
+                <p><input name="name" placeholder="任务名称" value="<?=geo_h($taskForm['name'])?>"></p>
+                <p><input name="brand_name" placeholder="品牌名称" value="<?=geo_h($taskForm['brand_name'])?>"></p>
+                <p><textarea name="brand_keywords" placeholder="品牌关键词，每行一个" required><?=geo_h($taskForm['brand_keywords'])?></textarea></p>
+                <p><textarea name="competitor_brands" placeholder="竞品品牌，每行一个，可选"><?=geo_h($taskForm['competitor_brands'])?></textarea></p>
             </div>
-            <p><textarea name="questions" placeholder="采集问题，每行一个" required></textarea></p>
+            <p><textarea name="questions" placeholder="采集问题，每行一个" required><?=geo_h($taskForm['questions'])?></textarea></p>
             <p class="checks">
                 <?php foreach($supportedPlatforms as $platformId => $platformMeta): ?>
-                <label><input type="checkbox" name="platforms[]" value="<?=geo_h($platformId)?>" <?= $platformId === 'doubao' ? 'checked' : '' ?>><?=geo_h($platformMeta['name'])?></label>
+                <label><input type="checkbox" name="platforms[]" value="<?=geo_h($platformId)?>" <?= in_array($platformId, $taskForm['platforms'], true) ? 'checked' : '' ?>><?=geo_h($platformMeta['name'])?></label>
                 <?php endforeach; ?>
             </p>
+            <div id="cloudTaskNotice" class="msg" role="status" aria-live="polite" hidden></div>
             <?php if($isDemoUser): ?>
             <button type="button" class="primary" data-demo-restricted="true" aria-label="创建任务，Demo 中仅展示，点击查看说明" title="点击查看 Demo 限制" onclick="showDemoRestriction('创建任务')">创建任务</button>
             <?php else: ?>
-            <button class="primary">创建任务</button>
+            <button class="primary" id="cloudTaskSubmit">创建任务</button>
             <?php endif; ?>
             <button type="button" onclick="requestLocalApp('dashboard', '本机采集执行')">打开本机 App 执行</button>
         </form>
     </section>
 
-    <section class="panel" style="margin-top:16px" data-collapsible="remote-tasks" data-collapse-default="closed">
+    <section class="panel" id="remote-tasks" style="margin-top:16px" data-collapsible="remote-tasks" data-collapse-default="closed">
         <span class="kicker">Queue</span>
         <h2>任务管理</h2>
         <p class="muted">云端下发任务是从网页创建、等待客户端执行的队列；本地同步任务是桌面端已经采集并同步回来的历史任务。</p>
@@ -1271,6 +1315,53 @@ function openLocalApp(target){
     }, 1800);
 }
 
+function initCloudTaskForm(){
+    var form = document.getElementById('cloudTaskForm');
+    var submit = document.getElementById('cloudTaskSubmit');
+    var notice = document.getElementById('cloudTaskNotice');
+    if (!form || !submit || !notice) return;
+
+    function showTaskNotice(message, isError){
+        notice.hidden = false;
+        notice.className = 'msg' + (isError ? ' error' : '');
+        notice.textContent = message;
+    }
+
+    form.addEventListener('submit', async function(event){
+        event.preventDefault();
+        if (submit.disabled) return;
+        submit.disabled = true;
+        submit.textContent = '正在创建...';
+        notice.hidden = true;
+        try {
+            var response = await fetch('/dashboard/', {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin',
+                headers: {Accept: 'application/json', 'X-Requested-With': 'fetch'}
+            });
+            var data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || '任务创建失败');
+            showTaskNotice(data.message || '任务已创建，等待同账号客户端执行。', false);
+            ['brand_name', 'brand_keywords', 'competitor_brands', 'questions'].forEach(function(name){
+                var field = form.elements.namedItem(name);
+                if (field) field.value = '';
+            });
+            form.elements.namedItem('name').value = '云端下发任务';
+            form.querySelectorAll('input[name="platforms[]"]').forEach(function(input){
+                input.checked = input.value === 'doubao';
+            });
+            await loadRemoteStatus();
+            openDashboardTarget('remote-tasks', false);
+        } catch (error) {
+            showTaskNotice(error.message || '网络异常，请稍后重试。', true);
+        } finally {
+            submit.disabled = false;
+            submit.textContent = '创建任务';
+        }
+    });
+}
+
 function initCollapsibleSections(){
     document.querySelectorAll('[data-collapsible]').forEach(function(section){
         var key = section.dataset.collapsible;
@@ -1341,6 +1432,7 @@ function initDashboardNavigation(){
 document.addEventListener('DOMContentLoaded', function(){
     initCollapsibleSections();
     initDashboardNavigation();
+    initCloudTaskForm();
     initReferenceAnalysis();
     var geoStart = document.getElementById('geoStart');
     var geoEnd = document.getElementById('geoEnd');
