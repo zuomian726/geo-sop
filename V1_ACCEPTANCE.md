@@ -104,7 +104,7 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 139 tests passing on 2026-07-17.
+- Unit and contract suite: 140 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow

@@ -121,7 +121,7 @@
         <div class="tool-copy-stack">
             <div class="tool-lang-row">
                 <span class="tool-kicker" data-en="GEO desktop tool" data-zh="GEO 桌面工具">GEO desktop tool</span>
-                <span class="tool-version-badge" id="release-badge">v0.3.43-dev</span>
+                <span class="tool-version-badge" id="release-badge">v1.0.0</span>
                 <button class="tool-lang-toggle" type="button" data-lang-toggle aria-label="Switch language">中文</button>
             </div>
             <img class="tool-app-icon" src="/public/assets/tools/geo-sop-icon.svg" alt="GEO-SOP icon" width="96" height="96">
@@ -131,12 +131,12 @@
             <div class="tool-download-actions">
                 <a class="tool-demo-hero-link" href="/login/"><span data-en="Login or create account" data-zh="登录或注册账号">Login or create account</span><small data-en="Cloud dashboard + desktop sync" data-zh="云端工作台 + 桌面同步">Cloud dashboard + desktop sync</small></a>
                 <a class="tool-demo-hero-link" href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener"><span data-en="Try online demo" data-zh="在线体验 Demo">Try online demo</span><small>tuke / 123456</small></a>
-                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="macOS · Apple Silicon" data-zh="macOS · Apple 芯片">macOS · Apple Silicon</span><small id="release-mac-hero">v0.3.43-dev · DMG · 174 MB</small></a>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span data-en="macOS · Intel" data-zh="macOS · Intel 芯片">macOS · Intel</span><small id="release-mac-intel-hero">v0.3.43-dev · DMG · 186 MB</small></a>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download for Windows" data-zh="下载 Windows 版">Download for Windows</span><small id="release-windows-hero" data-en="v0.3.43-dev · EXE setup installer · 146 MB" data-zh="v0.3.43-dev · EXE 安装包 · 146 MB">v0.3.43-dev · EXE setup installer · 146 MB</small></a>
+                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="macOS · Apple Silicon" data-zh="macOS · Apple 芯片">macOS · Apple Silicon</span><small id="release-mac-hero">v1.0.0 · signed DMG</small></a>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span data-en="macOS · Intel" data-zh="macOS · Intel 芯片">macOS · Intel</span><small id="release-mac-intel-hero">v1.0.0 · signed DMG</small></a>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download for Windows" data-zh="下载 Windows 版">Download for Windows</span><small id="release-windows-hero" data-en="v1.0.0 · signed EXE setup installer" data-zh="v1.0.0 · 已签名 EXE 安装包">v1.0.0 · signed EXE setup installer</small></a>
             </div>
             <div class="tool-availability" data-en="macOS package includes the desktop app. Windows ships as an EXE setup installer." data-zh="macOS 包含桌面 App。Windows 已切换为 EXE 安装包。">macOS package includes the desktop app. Windows ships as an EXE setup installer.</div>
-            <div class="tool-release-line"><span data-en="Current release" data-zh="当前版本">Current release</span>: <span id="release-current-version">v0.3.43-dev</span></div>
+            <div class="tool-release-line"><span data-en="Current release" data-zh="当前版本">Current release</span>: <span id="release-current-version">v1.0.0</span></div>
         </div>
         <figure class="tool-hero-visual">
             <img src="/public/assets/tools/geo-hero-product-v010.webp" alt="GEO-SOP desktop dashboard and results screenshots" width="1600" height="1000">
@@ -290,8 +290,8 @@
                     <li data-en="Application runtime included; collection uses local Chrome or Edge" data-zh="内置应用运行时，采集使用本机 Chrome 或 Edge">Application runtime included; collection uses local Chrome or Edge</li>
                 </ul>
                 <div class="tool-platform-downloads">
-                    <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="Apple Silicon" data-zh="Apple 芯片">Apple Silicon</span><small id="release-mac-card">v0.3.43-dev · 174 MB</small></a>
-                    <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span>Intel</span><small id="release-mac-intel-card">v0.3.43-dev · 186 MB</small></a>
+                    <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="Apple Silicon" data-zh="Apple 芯片">Apple Silicon</span><small id="release-mac-card">v1.0.0 · signed</small></a>
+                    <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span>Intel</span><small id="release-mac-intel-card">v1.0.0 · signed</small></a>
                 </div>
             </article>
             <article class="tool-platform-card">
@@ -302,14 +302,14 @@
                     <li data-en="Windows 10/11, 64-bit" data-zh="Windows 10/11，64 位">Windows 10/11, 64-bit</li>
                     <li data-en="Native desktop app; Python is not required" data-zh="原生桌面应用，无需安装 Python">Native desktop app; Python is not required</li>
                     <li data-en="Includes the application runtime and Chromium" data-zh="内置应用运行时和 Chromium 浏览器">Includes the application runtime and Chromium</li>
-                    <li id="release-windows-signing" data-en="Unsigned preview build may show SmartScreen" data-zh="未签名预览版可能触发 SmartScreen 提示">Unsigned preview build may show SmartScreen</li>
+                    <li id="release-windows-signing" data-en="Authenticode-signed installer with bundled runtime" data-zh="已完成 Authenticode 签名并内置运行环境">Authenticode-signed installer with bundled runtime</li>
                 </ul>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span><small id="release-windows-card">v0.3.43-dev · 146 MB</small></a>
+                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span><small id="release-windows-card">v1.0.0 · signed</small></a>
             </article>
         </div>
         <div class="tool-release-note">
-            <span id="release-notes-title" data-en="What is new in v0.3.43-dev" data-zh="v0.3.43-dev 更新内容">What is new in v0.3.43-dev</span>
-            <p data-en="Fresh installs now restore the complete cloud history even when an old pull cursor remains. Large workspaces also avoid retransmitting task, manuscript, and sentiment metadata on every result page." data-zh="重新安装后即使残留旧同步游标，也会完整恢复云端历史；大数据账号分页恢复时不再每页重复传输任务、稿件和智慧舆情配置。">Fresh installs now restore the complete cloud history even when an old pull cursor remains. Large workspaces also avoid retransmitting task, manuscript, and sentiment metadata on every result page.</p>
+            <span id="release-notes-title" data-en="What is new in v1.0.0" data-zh="v1.0.0 更新内容">What is new in v1.0.0</span>
+            <p data-en="Commercial detection and sentiment analysis, synchronized desktop/cloud history, remote task execution, signed native installers, and verified in-app updates." data-zh="正式提供检测与舆情分析、桌面与云端历史同步、云端任务执行、已签名原生安装包和安全校验更新。">Commercial detection and sentiment analysis, synchronized desktop/cloud history, remote task execution, signed native installers, and verified in-app updates.</p>
         </div>
         <section class="tool-roadmap-panel" id="roadmap">
             <div class="tool-roadmap-head">
@@ -359,8 +359,8 @@
         <div class="tool-security-note">
             <div class="tool-security-intro">
                 <span class="tool-kicker" data-en="Security Notice" data-zh="安全提示">Security Notice</span>
-                <h3 id="release-security-title" data-en="Unsigned builds may trigger system warnings." data-zh="未正式签名版本可能触发系统安全提示。">Unsigned builds may trigger system warnings.</h3>
-                <p id="release-security-copy" data-en="This release is locally signed but not yet Apple-notarized or Windows code-signed, so macOS or Windows may warn that the publisher cannot be verified." data-zh="当前版本已做本地签名，但尚未完成 Apple 公证或 Windows 代码签名，所以 macOS 或 Windows 可能提示无法验证发布者。">This release is locally signed but not yet Apple-notarized or Windows code-signed, so macOS or Windows may warn that the publisher cannot be verified.</p>
+                <h3 id="release-security-title" data-en="Signed packages for macOS and Windows." data-zh="macOS 与 Windows 安装包均已正式签名。">Signed packages for macOS and Windows.</h3>
+                <p id="release-security-copy" data-en="The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release." data-zh="macOS DMG 已完成 Developer ID 签名与公证；Windows 安装包已完成 Authenticode 签名，并在发布前校验完整性。">The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release.</p>
             </div>
             <div class="tool-security-grid">
                 <article>
@@ -368,17 +368,17 @@
                         <span>macOS</span>
                         <strong>Gatekeeper</strong>
                     </div>
-                    <p id="release-macos-security-guide" data-en="First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app." data-zh="请先把 GEO-SOP 拖入“应用程序”，再右键选择“打开”，或对已安装的 App 移除隔离属性。">First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app.</p>
-                    <code id="release-gatekeeper-command">xattr -dr com.apple.quarantine<br>"/Applications/GEO-SOP.app"</code>
-                    <p id="release-macos-security-status" class="tool-security-action" data-en="Production fix: Apple Developer ID signing + notarization." data-zh="正式方案：Apple Developer ID 签名 + notarization 公证。">Production fix: Apple Developer ID signing + notarization.</p>
+                    <p id="release-macos-security-guide" data-en="Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release." data-zh="把 GEO-SOP 拖入“应用程序”后即可正常打开；安装包已在发布前完成公证校验。">Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release.</p>
+                    <code id="release-gatekeeper-command" hidden></code>
+                    <p id="release-macos-security-status" class="tool-security-action" data-en="Developer ID signature and Apple notarization verified." data-zh="Developer ID 签名与 Apple 公证已验证。">Developer ID signature and Apple notarization verified.</p>
                 </article>
                 <article>
                     <div class="tool-security-card-head">
                         <span>Windows</span>
                         <strong>SmartScreen</strong>
                     </div>
-                    <p id="release-windows-security-guide" data-en="Testing workaround: click More info, then choose Run anyway when the warning appears." data-zh="测试版处理：出现提示时点击“更多信息”，再选择“仍要运行”。">Testing workaround: click More info, then choose Run anyway when the warning appears.</p>
-                    <p id="release-windows-security-status" class="tool-security-action" data-en="Production fix: OV/EV code signing certificate + signed installer." data-zh="正式方案：OV/EV 代码签名证书 + 已签名安装包。">Production fix: OV/EV code signing certificate + signed installer.</p>
+                    <p id="release-windows-security-guide" data-en="The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning." data-zh="已签名安装包应显示 GEO-SOP 发布者；如 Windows 仍提示风险，请先核对数字签名再继续。">The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning.</p>
+                    <p id="release-windows-security-status" class="tool-security-action" data-en="Authenticode signature and SHA-256 checksum verified." data-zh="Authenticode 签名与 SHA-256 完整性已验证。">Authenticode signature and SHA-256 checksum verified.</p>
                 </article>
             </div>
         </div>
@@ -419,7 +419,7 @@
             ],
             "url": "/tools",
             "downloadUrl": "/downloads/GEO-SOP-Setup.exe",
-            "softwareVersion": "v0.3.43-dev",
+            "softwareVersion": "v1.0.0",
             "description": "GEO-SOP is a GEO tool for AI search visibility, generative engine optimization monitoring, AI answer screenshots, brand exposure tracking, and GEO report exports.",
             "publisher": {
                 "@type": "Organization",

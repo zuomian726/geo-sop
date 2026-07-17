@@ -41,7 +41,7 @@ Release focus:
 - Local keyword sentiment analysis and AI-assisted sentiment analysis.
 - Compact KPI dashboard for non-technical users.
 - Cloud account login, local/cloud data sync, and server-side task visibility.
-- Signed or clearly packaged macOS and Windows builds for customer use.
+- Developer ID signed and notarized macOS builds plus an Authenticode-signed Windows installer for customer use.
 
 Acceptance criteria:
 
@@ -89,6 +89,7 @@ Acceptance criteria:
 
 ## Distribution Notes
 
-- Current macOS development builds may still trigger Gatekeeper until notarization is complete.
-- Current Windows downloads are development build packages until native signed installers are produced.
+- V1.0 is published only after both macOS architectures pass Developer ID signing and notarization, and the Windows installer passes Authenticode verification.
+- Permanent download links are switched only after versioned packages, checksums, first-launch checks, and upgrade checks pass; the previous production files remain available until then.
+- V1.0 is built and released once after the complete acceptance checklist passes instead of publishing each intermediate fix.
 - AI platform login and collection behavior can change when each platform updates its web UI.

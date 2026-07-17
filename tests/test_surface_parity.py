@@ -8,6 +8,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SurfaceParityTests(unittest.TestCase):
+    def test_v1_release_metadata_is_canonical_and_stable(self):
+        version = (ROOT / "version.py").read_text(encoding="utf-8")
+        notes = (ROOT / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+        self.assertIn('APP_VERSION = "1.0.0"', version)
+        self.assertIn('APP_CHANNEL = "stable"', version)
+        self.assertIn("## v1.0.0 - 2026-07-17", notes)
+        for relative_path in ("index.html", "tools/index.html"):
+            source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
+            self.assertIn('id="release-badge">v1.0.0</span>', source)
+            self.assertIn('"softwareVersion": "v1.0.0"', source)
+            self.assertNotIn("v0.3.43-dev", source)
+
     def test_installer_build_is_manual_while_pushes_only_run_tests(self):
         installer_workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(
             encoding="utf-8"
