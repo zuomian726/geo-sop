@@ -351,6 +351,14 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("def export_reference_analysis", app)
         self.assertGreaterEqual(app.count("_maybe_save_desktop_download("), 4)
 
+    def test_result_rankings_only_use_explicit_brand_matches(self):
+        results = (ROOT / "web_app" / "templates" / "results.html").read_text(encoding="utf-8")
+        self.assertIn("明确排名均值", results)
+        self.assertNotIn("minHospitalRank", results)
+        self.assertNotIn("有曝光但未明确排名", results)
+        self.assertNotIn("avgRank = 1", results)
+        self.assertTrue((ROOT / "METRICS.md").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

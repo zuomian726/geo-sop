@@ -78,6 +78,8 @@ through GitHub Actions; source pushes run tests only. V1.0 release requirements
 are tracked in [V1_ACCEPTANCE.md](V1_ACCEPTANCE.md), and product boundaries are
 tracked in [ROADMAP.md](ROADMAP.md).
 
+Product metric definitions are documented in [METRICS.md](METRICS.md).
+
 ## Secrets and Customer Data
 
 Do not add `.env` files, databases, screenshots, browser profiles, API Keys,

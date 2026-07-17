@@ -873,7 +873,7 @@
                                 <span class="index-value-number">[[ item.total_count ]]</span>
                             </div>
                             <div class="index-value-item">
-                                <span class="index-value-label">平均排名</span>
+                                <span class="index-value-label">明确排名均值</span>
                                 <span class="index-value-number" style="color: #fa8c16;">
                                     #[[ item.rank ]]
                                 </span>
@@ -996,7 +996,7 @@
                             </el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="rank" label="平均排名" width="120" align="center">
+                    <el-table-column prop="rank" label="明确排名均值" width="140" align="center">
                         <template #default="scope">
                             #[[ scope.row.rank ]]
                         </template>
@@ -1393,7 +1393,7 @@ const app = createApp({
                 const exposure_count = keywordStats[keyword] || 0;
                 const exposure_rate = total_count > 0 ? Math.round((exposure_count / total_count) * 100) : 0;
                 
-                // 计算该关键词的平均排名
+                // 仅统计平台回答中明确解析并匹配品牌词的排名。
                 let avgRank = '-';
                 const ranks = [];
                 
@@ -1410,24 +1410,6 @@ const app = createApp({
                 if (ranks.length > 0) {
                     const sum = ranks.reduce((a, b) => a + b, 0);
                     avgRank = Math.round(sum / ranks.length);
-                } else if (exposure_count > 0) {
-                    // 如果没有解析排名但有曝光，根据提及位置估算排名
-                    let estimatedRank = 1;
-                    this.filteredResults
-                        .filter(r => r.rankings && r.rankings.length > 0 && (r.answer || '').includes(keyword))
-                        .forEach(r => {
-                            const allRanks = r.rankings.map(ri => ri.rank).filter(rk => rk <= 100);
-                            if (allRanks.length > 0) {
-                                const avgPosition = Math.round(allRanks.reduce((a, b) => a + b, 0) / allRanks.length);
-                                ranks.push(avgPosition);
-                            }
-                        });
-                    if (ranks.length > 0) {
-                        const sum = ranks.reduce((a, b) => a + b, 0);
-                        avgRank = Math.round(sum / ranks.length);
-                    } else {
-                        avgRank = 1;
-                    }
                 }
                 
                 // 统计舆情（基于关键词的本地分析）
@@ -1535,7 +1517,7 @@ const app = createApp({
             return Object.values(questionMap).map(item => {
                 const exposure_rate = item.total_count > 0 ? Math.round((item.exposure_count / item.total_count) * 100) : 0;
                 
-                // 计算平均排名（从解析的排名信息中提取）
+                // 仅统计平台回答中明确解析并匹配品牌词的排名。
                 let avgRank = '-';
                 const ranks = [];
                 
@@ -1543,49 +1525,14 @@ const app = createApp({
                 this.filteredResults
                     .filter(r => r.question === item.question && r.rankings && r.rankings.length > 0)
                     .forEach(r => {
-                        // 尝试从排名中找到品牌关键词
-                        let foundRank = false;
                         r.rankings.forEach(rankInfo => {
                             if (rankInfo.name && this.task.brand_keywords.some(kw => kw.includes(rankInfo.name) || rankInfo.name.includes(kw))) {
                                 ranks.push(rankInfo.rank);
-                                foundRank = true;
                             }
                         });
-                        
-                        // 如果没有找到品牌关键词的排名，但有曝光，根据提及位置估算排名
-                        if (!foundRank && (r.answer || '').includes(this.selectedKeyword)) {
-                            // 策略 1：如果排名列表中有医院相关条目（如"长宁院区"、"浦东院区"等），取最小排名
-                            const hospitalRanks = r.rankings
-                                .filter(ri => ri.name && (
-                                    ri.name.includes('院区') || 
-                                    ri.name.includes('医院') ||
-                                    ri.name.includes('总院') ||
-                                    ri.name.includes('分院')
-                                ))
-                                .map(ri => ri.rank);
-                            
-                            if (hospitalRanks.length > 0) {
-                                // 取医院排名的最小值 +1 作为估算排名
-                                const minHospitalRank = Math.min(...hospitalRanks);
-                                ranks.push(minHospitalRank + 1);
-                            } else {
-                                // 策略 2：如果排名列表中有其他条目，取平均排名作为估算
-                                const allRanks = r.rankings.map(ri => ri.rank).filter(rk => rk <= 100);
-                                if (allRanks.length > 0) {
-                                    const avgPosition = Math.round(allRanks.reduce((a, b) => a + b, 0) / allRanks.length);
-                                    ranks.push(avgPosition);
-                                } else {
-                                    // 策略 3：默认显示为第 1 位（有曝光但未明确排名）
-                                    ranks.push(1);
-                                }
-                            }
-                        }
-                        
-                        // 注意：移除了策略4，因为如果没有匹配到品牌关键词且没有曝光，
-                        // 这个结果与品牌排名无关，不应该纳入平均排名计算
                     });
                 
-                // 计算平均排名
+                // 计算明确排名的算术平均值；没有可靠排名证据时显示“-”。
                 if (ranks.length > 0) {
                     const sum = ranks.reduce((a, b) => a + b, 0);
                     avgRank = Math.round(sum / ranks.length);
