@@ -113,6 +113,9 @@ This section records development evidence without changing production packages.
   filtering, date-range filters, title grouping, and URL/article-ID matching.
 - Existing production Demo baseline: 6 synthetic tasks, 144 synthetic results,
   and 6 platforms; read-only smoke passed.
+- The strengthened V1 cloud smoke now requires CSRF-protected registration and
+  Demo login plus account-private screenshots. Current legacy production is
+  intentionally rejected until the one-time V1 deployment.
 - Tracked-file audit: no databases, browser profiles, screenshots, private
   configuration, certificates, private keys, or common live API Key formats.
 - Pending final release gates: staging deployment, disposable two-account V1

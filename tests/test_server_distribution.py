@@ -134,6 +134,14 @@ class ServerDistributionTests(unittest.TestCase):
         smoke = (ROOT / "tools" / "smoke_cloud_site.py").read_text(encoding="utf-8")
         for marker in ("action=overview", "action=export_geo", "action=remote_status", "不能创建或修改任务"):
             self.assertIn(marker, smoke)
+        self.assertIn('name="csrf_token"', smoke)
+        self.assertIn('"csrf_token": csrf_match.group(1).decode()', smoke)
+
+        pipeline = (ROOT / "tools" / "smoke_cloud_client_pipeline.py").read_text(encoding="utf-8")
+        self.assertIn("registration page did not provide a CSRF token", pipeline)
+        self.assertIn('"csrf_token": csrf_match.group(1)', pipeline)
+        self.assertIn('runpy.run_path(str(ROOT / "version.py"))', pipeline)
+        self.assertNotIn('"app_version": "0.3.', pipeline)
 
     def test_demo_entry_is_one_click_and_read_only_identity_is_centralized(self):
         common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
@@ -200,6 +208,12 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn("Content-Security-Policy: sandbox", dashboard)
         self.assertIn("location ^~ /storage/cloud-assets/", nginx)
         self.assertLess(nginx.index("location ^~ /storage/cloud-assets/"), nginx.rindex("}"))
+
+        pipeline = (ROOT / "tools" / "smoke_cloud_client_pipeline.py").read_text(encoding="utf-8")
+        self.assertIn("owner_asset.status_code != 200", pipeline)
+        self.assertIn("anonymous_asset.status_code not in {401, 403}", pipeline)
+        self.assertIn("other_asset.status_code not in {403, 404}", pipeline)
+        self.assertNotIn("uploaded screenshot is not publicly readable", pipeline)
 
     def test_nginx_preserves_json_404_responses_for_api_routes(self):
         source = (SERVER / "deploy" / "nginx" / "geo.allgood.cn.conf").read_text(encoding="utf-8")

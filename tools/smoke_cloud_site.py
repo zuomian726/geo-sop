@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import http.cookiejar
 import json
+import re
 import sys
 import uuid
 from urllib.parse import urlencode
@@ -47,10 +48,14 @@ def main(base_url: str) -> None:
     if status != 200 or set(manifest.get("downloads", {})) != {"macos", "macos_intel", "windows"}:
         raise AssertionError("release manifest does not contain all desktop platforms")
 
+    status, _, demo_login_page = request(opener, base_url + "/login/?demo=1")
+    csrf_match = re.search(rb'name="csrf_token"\s+value="([^"]+)"', demo_login_page)
+    if status != 200 or not csrf_match:
+        raise AssertionError("Demo login page did not provide a CSRF token")
     status, _, body = request(
         opener,
         base_url + "/login/?demo=1",
-        data={"demo_login": "1"},
+        data={"csrf_token": csrf_match.group(1).decode(), "demo_login": "1"},
         headers={"Accept": "application/json", "X-Requested-With": "fetch"},
     )
     login = json.loads(body.decode("utf-8"))
@@ -60,6 +65,9 @@ def main(base_url: str) -> None:
     status, _, dashboard = request(opener, base_url + "/dashboard/")
     if status != 200 or "在线 Demo 只读模式".encode("utf-8") not in dashboard:
         raise AssertionError("Demo dashboard did not enter read-only mode")
+    dashboard_csrf = re.search(rb'name="csrf_token"\s+value="([^"]+)"', dashboard)
+    if not dashboard_csrf:
+        raise AssertionError("Demo dashboard did not provide a CSRF token")
 
     overview = json_request(opener, base_url + "/api/dashboard/?action=overview")
     metrics = overview.get("metrics") or {}
@@ -76,6 +84,7 @@ def main(base_url: str) -> None:
         opener,
         base_url + "/dashboard/",
         data={
+            "csrf_token": dashboard_csrf.group(1).decode(),
             "name": marker,
             "brand_name": "Demo",
             "brand_keywords": "Demo",

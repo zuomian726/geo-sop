@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import re
+import runpy
 import secrets
 import shlex
 import subprocess
@@ -13,9 +15,14 @@ import sys
 import time
 import zipfile
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
+
+
+ROOT = Path(__file__).resolve().parents[1]
+APP_VERSION = str(runpy.run_path(str(ROOT / "version.py"))["APP_VERSION"])
 
 
 PNG_1X1 = bytes.fromhex(
@@ -98,9 +105,14 @@ def expect_json(response: requests.Response, expected: int = 200) -> dict:
 
 def register_and_login(base_url: str, username: str, password: str) -> tuple[requests.Session, dict]:
     session = requests.Session()
+    registration_page = session.get(endpoint(base_url, "/register/"), timeout=(5, 20))
+    registration_page.raise_for_status()
+    csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', registration_page.text)
+    if not csrf_match:
+        raise AcceptanceError("registration page did not provide a CSRF token")
     response = session.post(
         endpoint(base_url, "/register/"),
-        data={"username": username, "password": password},
+        data={"csrf_token": csrf_match.group(1), "username": username, "password": password},
         headers={"Accept": "application/json", "X-Requested-With": "fetch"},
         timeout=(5, 20),
     )
@@ -164,7 +176,7 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
                     "user_key": user_key,
                     "status": "online",
                     "message": "production acceptance client online",
-                    "desktop": {"app_version": "0.3.38-dev", "platform": "acceptance", "python": sys.version.split()[0]},
+                    "desktop": {"app_version": APP_VERSION, "platform": "acceptance", "python": sys.version.split()[0]},
                     "runtime": {
                         "worker_state": "ready",
                         "running_tasks": 0,
@@ -294,9 +306,20 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
             )
         )
         screenshot_url = uploaded.get("url")
-        if not screenshot_url or requests.get(screenshot_url, timeout=(5, 15)).status_code != 200:
-            raise AcceptanceError(f"uploaded screenshot is not publicly readable: {uploaded}")
-        print("[4/8] statistics and screenshot upload passed")
+        screenshot_endpoint = endpoint(base_url, str(screenshot_url or ""))
+        if not screenshot_url:
+            raise AcceptanceError(f"screenshot upload did not return an authenticated asset URL: {uploaded}")
+        owner_asset = requests.get(screenshot_endpoint, headers=headers, timeout=(5, 15))
+        anonymous_asset = requests.get(screenshot_endpoint, timeout=(5, 15))
+        other_asset = requests.get(screenshot_endpoint, headers=headers_b, timeout=(5, 15))
+        if owner_asset.status_code != 200 or not owner_asset.content.startswith(PNG_1X1[:8]):
+            raise AcceptanceError(f"uploaded screenshot is not readable by its owner: HTTP {owner_asset.status_code}")
+        if anonymous_asset.status_code not in {401, 403} or other_asset.status_code not in {403, 404}:
+            raise AcceptanceError(
+                "uploaded screenshot is not account-private: "
+                f"anonymous={anonymous_asset.status_code} other_account={other_asset.status_code}"
+            )
+        print("[4/8] private statistics and screenshot upload passed")
 
         def dashboard(action: str, **params) -> dict:
             return expect_json(
@@ -348,7 +371,7 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
                     "user_key": user_key,
                     "status": "online",
                     "message": "acceptance client waiting for work",
-                    "desktop": {"app_version": "0.3.44-dev", "platform": "acceptance"},
+                    "desktop": {"app_version": APP_VERSION, "platform": "acceptance"},
                     "runtime": {"worker_state": "ready", "poll_seconds": 60},
                 },
                 timeout=(5, 10),
