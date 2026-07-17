@@ -7,10 +7,20 @@ on:
         description: "Optional GEO-SOP version override (defaults to version.py)"
         required: false
         default: ""
+      release_channel:
+        description: "Build channel"
+        required: true
+        type: choice
+        options:
+          - dev
+          - stable
+        default: dev
 
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      GEO_RELEASE_CHANNEL: ${{ github.event.inputs.release_channel }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -47,6 +57,28 @@ jobs:
         env:
           CI: "1"
         run: build_windows_exe.bat
+
+      - name: Sign native application for stable release
+        if: ${{ github.event.inputs.release_channel == 'stable' }}
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_PASSWORD)) {
+            throw "Stable Windows releases require WINDOWS_SIGNING_CERT_BASE64 and WINDOWS_SIGNING_CERT_PASSWORD."
+          }
+          $certificate = Join-Path $env:RUNNER_TEMP "geo-sop-signing.pfx"
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (-not $signtool) { throw "signtool.exe was not found." }
+          & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $certificate /p $env:WINDOWS_SIGNING_CERT_PASSWORD "dist\GEO-SOP\GEO-SOP.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Native executable signing failed." }
+          & $signtool verify /pa /v "dist\GEO-SOP\GEO-SOP.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Native executable signature verification failed." }
+          "WINDOWS_SIGNING_READY=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WINDOWS_SIGNTOOL=$signtool" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WINDOWS_CERTIFICATE=$certificate" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Verify bundled browser
         shell: pwsh
@@ -134,6 +166,19 @@ jobs:
         env:
           CI: "1"
         run: build_windows_installer.bat
+
+      - name: Sign installer for stable release
+        if: ${{ github.event.inputs.release_channel == 'stable' }}
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        run: |
+          $installer = Get-ChildItem release\GEO-SOP-Setup-v*.exe | Select-Object -First 1
+          & $env:WINDOWS_SIGNTOOL sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $env:WINDOWS_CERTIFICATE /p $env:WINDOWS_SIGNING_CERT_PASSWORD $installer.FullName
+          if ($LASTEXITCODE -ne 0) { throw "Installer signing failed." }
+          & $env:WINDOWS_SIGNTOOL verify /pa /v $installer.FullName
+          if ($LASTEXITCODE -ne 0) { throw "Installer signature verification failed." }
+          Remove-Item $env:WINDOWS_CERTIFICATE -Force -ErrorAction SilentlyContinue
 
       - name: Verify installer
         shell: pwsh

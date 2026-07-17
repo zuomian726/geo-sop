@@ -247,8 +247,14 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
         self.assertIn("geo-sop\\shell\\open\\command", workflow)
         self.assertIn("ms-playwright", workflow)
+        self.assertIn("WINDOWS_SIGNING_CERT_BASE64", workflow)
+        self.assertIn("signtool sign", workflow)
+        self.assertIn("signtool verify", workflow)
         self.assertIn("ChineseSimplified.isl", installer)
         self.assertIn("PrivilegesRequired=lowest", installer)
+        installer_build = (ROOT / "build_windows_installer.bat").read_text(encoding="utf-8")
+        self.assertIn('GEO_RELEASE_CHANNEL%"=="stable', installer_build)
+        self.assertIn('WINDOWS_SIGNING_READY', installer_build)
 
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")

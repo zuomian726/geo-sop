@@ -4,6 +4,12 @@ cd /d "%~dp0" || exit /b 1
 
 if "%APP_VERSION%"=="" set APP_VERSION=0.3.44-dev
 
+if /I "%GEO_RELEASE_CHANNEL%"=="stable" if not "%WINDOWS_SIGNING_READY%"=="1" (
+  echo Stable Windows releases require a verified code-signing certificate.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
 if not exist "dist\GEO-SOP\GEO-SOP.exe" (
   echo Native GEO-SOP application was not found. Building it now...
   call build_windows_exe.bat
