@@ -241,6 +241,7 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("hide_input=True, confirmation_prompt=True", app_source)
 
     def test_public_site_keeps_stable_desktop_download_links(self):
+        styles = (ROOT / "server" / "geo.allgood.cn" / "public" / "assets" / "styles.css").read_text(encoding="utf-8")
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
             self.assertIn("/downloads/GEO-SOP-Setup.exe", source)
@@ -250,6 +251,15 @@ class SurfaceParityTests(unittest.TestCase):
             self.assertIn("if (release.channel === 'stable')", source)
             self.assertIn('id="release-security-title"', source)
             self.assertIn('id="release-security-copy"', source)
+            self.assertIn('id="release-windows-signing"', source)
+            self.assertIn("Authenticode-signed installer with bundled runtime", source)
+            self.assertIn("gatekeeper.hidden = true", source)
+            self.assertIn('<h4>v1.0</h4>', source)
+            self.assertNotIn('Try the v0.3 workspace', source)
+        roadmap_styles = styles[styles.index(".tool-roadmap-grid {"):styles.index(".tool-roadmap-grid article {")]
+        detail_styles = styles[styles.index(".tool-roadmap-detail-grid {"):styles.index(".tool-roadmap-detail-grid article {")]
+        self.assertIn("repeat(2, minmax(0, 1fr))", roadmap_styles)
+        self.assertIn("repeat(2, minmax(0, 1fr))", detail_styles)
 
     def test_macos_release_builds_are_architecture_specific(self):
         build_script = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")

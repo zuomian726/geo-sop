@@ -148,7 +148,7 @@
     <div class="container tool-demo-panel">
         <div class="tool-demo-copy">
             <span class="tool-kicker" data-en="Online demo" data-zh="在线 Demo">Online demo</span>
-            <h2 data-en="Try the v0.3 workspace before installing." data-zh="安装前，先体验 v0.3 工作台。">Try the v0.3 workspace before installing.</h2>
+            <h2 data-en="Try the GEO-SOP workspace before installing." data-zh="安装前，先体验 GEO-SOP 在线工作台。">Try the GEO-SOP workspace before installing.</h2>
             <p data-en="The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server." data-zh="在线 Demo 已预览商业版工作台：KPI 卡片、AI 分析配置、下一步动作建议、样例 GEO 任务、合成 AI 回答和可导出数据。它运行在只读安全模式，访客可以探索功能，但不会改动服务器数据。">The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server.</p>
             <div class="tool-demo-stats">
                 <article><strong>6</strong><span data-en="Demo tasks" data-zh="演示任务">Demo tasks</span></article>
@@ -302,7 +302,7 @@
                     <li data-en="Windows 10/11, 64-bit" data-zh="Windows 10/11，64 位">Windows 10/11, 64-bit</li>
                     <li data-en="Native desktop app; Python is not required" data-zh="原生桌面应用，无需安装 Python">Native desktop app; Python is not required</li>
                     <li data-en="Includes the application runtime and Chromium" data-zh="内置应用运行时和 Chromium 浏览器">Includes the application runtime and Chromium</li>
-                    <li data-en="Unsigned preview build may show SmartScreen" data-zh="未签名预览版可能触发 SmartScreen 提示">Unsigned preview build may show SmartScreen</li>
+                    <li id="release-windows-signing" data-en="Unsigned preview build may show SmartScreen" data-zh="未签名预览版可能触发 SmartScreen 提示">Unsigned preview build may show SmartScreen</li>
                 </ul>
                 <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span><small id="release-windows-card">v0.3.43-dev · 146 MB</small></a>
             </article>
@@ -320,28 +320,18 @@
             <div class="tool-roadmap-grid">
                 <article class="active">
                     <span data-en="Current" data-zh="当前版本">Current</span>
-                    <h4>v0.3-dev</h4>
-                    <p data-en="Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo." data-zh="桌面预览版：本地采集、截图留证、导出、KPI 看板、AI 分析配置和在线 Demo。">Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo.</p>
-                </article>
-                <article>
-                    <span data-en="v1.0 target" data-zh="v1.0 目标">v1.0 target</span>
                     <h4>v1.0</h4>
                     <p data-en="Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync." data-zh="实现检测和舆情分析：稳定采集、品牌曝光、引用来源、KPI 看板、导出，以及本地和云端数据同步。">Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync.</p>
                 </article>
                 <article>
-                    <span data-en="v2.0 target" data-zh="v2.0 目标">v2.0 target</span>
+                    <span data-en="Next" data-zh="下一阶段">Next</span>
                     <h4>v2.0</h4>
                     <p data-en="Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports." data-zh="实现全自动 GEO 任务：云端创建任务、本机执行采集、队列重试、登录态提醒、自动分析和自动报告。">Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports.</p>
                 </article>
             </div>
             <div class="tool-roadmap-detail-grid">
                 <article>
-                    <strong data-en="Current focus" data-zh="当前重点">Current focus</strong>
-                    <span data-en="Make analysis useful first" data-zh="先把分析做强">Make analysis useful first</span>
-                    <p data-en="Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations." data-zh="核心评分、图表洞察、AI 下一步动作、稳定导出和清晰的文件保存位置。">Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations.</p>
-                </article>
-                <article>
-                    <strong data-en="v1.0 focus" data-zh="v1.0 重点">v1.0 focus</strong>
+                    <strong data-en="v1.0 capabilities" data-zh="v1.0 能力">v1.0 capabilities</strong>
                     <span data-en="Detection and sentiment analysis" data-zh="检测与舆情分析">Detection and sentiment analysis</span>
                     <p data-en="Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations." data-zh="品牌曝光检测、引用来源提取、关键词舆情、AI 辅助舆情、证据导出和清晰的 KPI 解释。">Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations.</p>
                 </article>
@@ -378,17 +368,17 @@
                         <span>macOS</span>
                         <strong>Gatekeeper</strong>
                     </div>
-                    <p data-en="First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app." data-zh="请先把 GEO-SOP 拖入“应用程序”，再右键选择“打开”，或对已安装的 App 移除隔离属性。">First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app.</p>
+                    <p id="release-macos-security-guide" data-en="First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app." data-zh="请先把 GEO-SOP 拖入“应用程序”，再右键选择“打开”，或对已安装的 App 移除隔离属性。">First drag GEO-SOP into Applications. Then right-click the app and choose Open, or remove quarantine from the installed app.</p>
                     <code id="release-gatekeeper-command">xattr -dr com.apple.quarantine<br>"/Applications/GEO-SOP.app"</code>
-                    <p class="tool-security-action" data-en="Production fix: Apple Developer ID signing + notarization." data-zh="正式方案：Apple Developer ID 签名 + notarization 公证。">Production fix: Apple Developer ID signing + notarization.</p>
+                    <p id="release-macos-security-status" class="tool-security-action" data-en="Production fix: Apple Developer ID signing + notarization." data-zh="正式方案：Apple Developer ID 签名 + notarization 公证。">Production fix: Apple Developer ID signing + notarization.</p>
                 </article>
                 <article>
                     <div class="tool-security-card-head">
                         <span>Windows</span>
                         <strong>SmartScreen</strong>
                     </div>
-                    <p data-en="Testing workaround: click More info, then choose Run anyway when the warning appears." data-zh="测试版处理：出现提示时点击“更多信息”，再选择“仍要运行”。">Testing workaround: click More info, then choose Run anyway when the warning appears.</p>
-                    <p class="tool-security-action" data-en="Production fix: OV/EV code signing certificate + signed installer." data-zh="正式方案：OV/EV 代码签名证书 + 已签名安装包。">Production fix: OV/EV code signing certificate + signed installer.</p>
+                    <p id="release-windows-security-guide" data-en="Testing workaround: click More info, then choose Run anyway when the warning appears." data-zh="测试版处理：出现提示时点击“更多信息”，再选择“仍要运行”。">Testing workaround: click More info, then choose Run anyway when the warning appears.</p>
+                    <p id="release-windows-security-status" class="tool-security-action" data-en="Production fix: OV/EV code signing certificate + signed installer." data-zh="正式方案：OV/EV 代码签名证书 + 已签名安装包。">Production fix: OV/EV code signing certificate + signed installer.</p>
                 </article>
             </div>
         </div>
@@ -511,6 +501,12 @@
       const macIntelSize = String(macIntel.size || '');
       const windowsSize = String(windows.size || '');
       if (release.channel === 'stable') {
+        const setReleaseTranslation = (id, en, zh) => {
+          const element = document.getElementById(id);
+          if (!element) return;
+          element.dataset.en = en;
+          element.dataset.zh = zh;
+        };
         const securityTitle = document.getElementById('release-security-title');
         const securityCopy = document.getElementById('release-security-copy');
         if (securityTitle) {
@@ -521,6 +517,13 @@
           securityCopy.dataset.en = 'The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release.';
           securityCopy.dataset.zh = 'macOS DMG 已完成 Developer ID 签名与公证；Windows 安装包已完成 Authenticode 签名，并在发布前校验完整性。';
         }
+        setReleaseTranslation('release-windows-signing', 'Authenticode-signed installer with bundled runtime', '已完成 Authenticode 签名并内置运行环境');
+        setReleaseTranslation('release-macos-security-guide', 'Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release.', '把 GEO-SOP 拖入“应用程序”后即可正常打开；安装包已在发布前完成公证校验。');
+        setReleaseTranslation('release-macos-security-status', 'Developer ID signature and Apple notarization verified.', 'Developer ID 签名与 Apple 公证已验证。');
+        setReleaseTranslation('release-windows-security-guide', 'The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning.', '已签名安装包应显示 GEO-SOP 发布者；如 Windows 仍提示风险，请先核对数字签名再继续。');
+        setReleaseTranslation('release-windows-security-status', 'Authenticode signature and SHA-256 checksum verified.', 'Authenticode 签名与 SHA-256 完整性已验证。');
+        const gatekeeper = document.getElementById('release-gatekeeper-command');
+        if (gatekeeper) gatekeeper.hidden = true;
       }
 
       const setText = (id, value) => {

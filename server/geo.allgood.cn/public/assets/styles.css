@@ -9024,7 +9024,7 @@ h3 { font-size: var(--text-2xl); line-height: var(--leading-2xl); }
 }
 .tool-roadmap-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 20px;
 }
@@ -9060,7 +9060,7 @@ h3 { font-size: var(--text-2xl); line-height: var(--leading-2xl); }
 }
 .tool-roadmap-detail-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
 }

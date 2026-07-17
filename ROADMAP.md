@@ -10,7 +10,7 @@ This roadmap keeps the public release path simple. Detailed fixes can still be t
 
 ## v0.3-dev - Desktop Preview
 
-Status: active.
+Status: completed as the V1.0 foundation.
 
 Goal: make the core local desktop workflow useful and understandable.
 
@@ -30,9 +30,11 @@ Acceptance criteria:
 
 ## v1.0 - Detection and Sentiment Analysis
 
+Status: release candidate.
+
 Goal: make GEO-SOP reliable enough for commercial detection and sentiment-analysis workflows.
 
-Planned focus:
+Release focus:
 
 - Stable task creation, platform login checks, answer collection, screenshots, and exports.
 - Brand visibility detection, reference-source extraction, and source-domain summaries.
