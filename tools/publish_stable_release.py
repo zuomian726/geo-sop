@@ -45,11 +45,18 @@ def run_checked(command: list[str]) -> None:
     subprocess.run(command, check=True)
 
 
-def verify_macos(path: Path) -> None:
+def verify_macos(path: Path, expected_arch: str, version: str) -> None:
     if sys.platform != "darwin":
         fail("Stable macOS artifacts must be verified from macOS before publishing.")
     run_checked(["codesign", "--verify", "--verbose=2", str(path)])
     run_checked(["xcrun", "stapler", "validate", str(path)])
+    run_checked([
+        "bash",
+        str(ROOT / "tools" / "smoke_macos_dmg.sh"),
+        str(path),
+        expected_arch,
+        version,
+    ])
 
 
 def verify_windows_evidence(path: Path, installer_sha256: str, version: str) -> None:
@@ -138,8 +145,8 @@ def main() -> None:
             fail(f"{key} artifact is unexpectedly small ({size} bytes).")
         metadata[key] = {"size_bytes": size, "sha256": sha256(path)}
 
-    verify_macos(inputs["macos"])
-    verify_macos(inputs["macos_intel"])
+    verify_macos(inputs["macos"], "arm64", version)
+    verify_macos(inputs["macos_intel"], "x86_64", version)
     verify_windows_evidence(args.windows_evidence, metadata["windows"]["sha256"], version)
 
     output = args.output_dir or ROOT / "release" / f"publish-v{version}"

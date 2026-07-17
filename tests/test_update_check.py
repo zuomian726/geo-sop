@@ -224,6 +224,70 @@ class UpdateCheckTests(unittest.TestCase):
             self.assertIn("完整性校验失败", state["message"])
             self.assertEqual([], list(Path(downloads).iterdir()))
 
+    def test_stable_windows_update_requires_valid_authenticode_signature(self):
+        payload = b"signed windows installer"
+        digest = __import__("hashlib").sha256(payload).hexdigest()
+        update = {
+            "has_update": True,
+            "latest_version": "1.0.0",
+            "channel": "stable",
+            "update_url": "https://geo.allgood.cn/update.json",
+            "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup.exe",
+            "download_name": "GEO-SOP-Setup.exe",
+            "download_sha256": digest,
+            "platform": "windows",
+        }
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"Content-Length": str(len(payload))}
+        response.iter_content.return_value = [payload]
+        with tempfile.TemporaryDirectory() as downloads:
+            with (
+                patch.object(web_app, "_desktop_downloads_dir", return_value=downloads),
+                patch.object(web_app.requests, "get", return_value=response),
+                patch.object(web_app.platform, "system", return_value="Windows"),
+                patch.object(web_app.subprocess, "run") as signature_check,
+            ):
+                web_app._download_update_package(update)
+                state = web_app._get_update_download_state()
+
+            self.assertEqual("ready", state["status"])
+            command = signature_check.call_args.args[0]
+            self.assertEqual("powershell.exe", command[0])
+            self.assertIn("Get-AuthenticodeSignature", command[-1])
+
+    def test_failed_stable_signature_removes_downloaded_package(self):
+        payload = b"untrusted windows installer"
+        digest = __import__("hashlib").sha256(payload).hexdigest()
+        update = {
+            "has_update": True,
+            "latest_version": "1.0.0",
+            "channel": "stable",
+            "update_url": "https://geo.allgood.cn/update.json",
+            "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup.exe",
+            "download_name": "GEO-SOP-Setup.exe",
+            "download_sha256": digest,
+            "platform": "windows",
+        }
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"Content-Length": str(len(payload))}
+        response.iter_content.return_value = [payload]
+        signature_error = web_app.subprocess.CalledProcessError(1, ["powershell.exe"])
+        with tempfile.TemporaryDirectory() as downloads:
+            with (
+                patch.object(web_app, "_desktop_downloads_dir", return_value=downloads),
+                patch.object(web_app.requests, "get", return_value=response),
+                patch.object(web_app.platform, "system", return_value="Windows"),
+                patch.object(web_app.subprocess, "run", side_effect=signature_error),
+            ):
+                web_app._download_update_package(update)
+                state = web_app._get_update_download_state()
+
+            self.assertEqual("failed", state["status"])
+            self.assertIn("系统签名验证失败", state["message"])
+            self.assertEqual([], list(Path(downloads).iterdir()))
+
     def test_installer_is_reverified_before_launch(self):
         with tempfile.TemporaryDirectory() as downloads:
             package = Path(downloads) / "GEO-SOP.dmg"

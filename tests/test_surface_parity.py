@@ -328,6 +328,9 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("GEO-SOP-Windows-signature.json", workflow)
         self.assertIn("def verify_macos(", publisher)
         self.assertIn('"xcrun", "stapler", "validate"', publisher)
+        self.assertIn('ROOT / "tools" / "smoke_macos_dmg.sh"', publisher)
+        self.assertIn('verify_macos(inputs["macos"], "arm64", version)', publisher)
+        self.assertIn('verify_macos(inputs["macos_intel"], "x86_64", version)', publisher)
         self.assertIn("def verify_windows_evidence(", publisher)
         self.assertIn("Refusing to publish from a dirty Git worktree", publisher)
         alias_move = publisher.index("/downloads/." + "' + alias + '" + ".new")
@@ -355,6 +358,10 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("async checkForUpdates()", dashboard)
         self.assertIn("this.notifiedUpdateVersion === version", dashboard)
         self.assertIn("clearInterval(this.updateCheckTimer)", dashboard)
+        updater = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        self.assertIn("def _verify_stable_update_signature", updater)
+        self.assertIn("Get-AuthenticodeSignature", updater)
+        self.assertIn("['xcrun', 'stapler', 'validate', path]", updater)
 
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")

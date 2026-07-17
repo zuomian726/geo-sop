@@ -275,6 +275,39 @@ def _get_update_download_state():
         return dict(_update_download_state)
 
 
+def _verify_stable_update_signature(path, update):
+    if str(update.get('channel') or '').strip().lower() != 'stable':
+        return
+    system_name = platform.system().lower()
+    try:
+        if system_name.startswith('win'):
+            escaped_path = str(path).replace("'", "''")
+            script = (
+                f"$signature = Get-AuthenticodeSignature -LiteralPath '{escaped_path}'; "
+                "if ($signature.Status -ne 'Valid') { "
+                "Write-Error ('Invalid Authenticode status: ' + $signature.Status); exit 1 }"
+            )
+            subprocess.run(
+                ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+                check=True, capture_output=True, text=True, timeout=30,
+            )
+            return
+        if system_name == 'darwin':
+            subprocess.run(
+                ['codesign', '--verify', '--verbose=2', path],
+                check=True, capture_output=True, text=True, timeout=30,
+            )
+            subprocess.run(
+                ['xcrun', 'stapler', 'validate', path],
+                check=True, capture_output=True, text=True, timeout=60,
+            )
+            return
+        raise ValueError('当前系统不支持正式版安装包签名验证')
+    except (OSError, subprocess.SubprocessError) as error:
+        logger.warning('正式版安装包签名验证失败: %s', error)
+        raise ValueError('安装包系统签名验证失败，已停止安装') from error
+
+
 def _download_update_package(update):
     url, filename, expected_digest = _validated_update_package(update)
     target = os.path.join(_desktop_downloads_dir(), filename)
@@ -285,6 +318,7 @@ def _download_update_package(update):
         downloaded_bytes=0, total_bytes=0, progress=0, sha256=expected_digest,
         message='正在下载安装包',
     )
+    target_created = False
     try:
         response = requests.get(url, stream=True, timeout=(8, 60))
         response.raise_for_status()
@@ -309,6 +343,8 @@ def _download_update_package(update):
         if digest.hexdigest().lower() != expected_digest:
             raise ValueError('安装包完整性校验失败，请重新下载')
         os.replace(partial, target)
+        target_created = True
+        _verify_stable_update_signature(target, update)
         _set_update_download_state(
             status='ready', path=target, downloaded_bytes=downloaded,
             total_bytes=total or downloaded, progress=100,
@@ -318,6 +354,8 @@ def _download_update_package(update):
         try:
             if os.path.exists(partial):
                 os.remove(partial)
+            if target_created and os.path.exists(target):
+                os.remove(target)
         except OSError:
             pass
         logger.warning('更新安装包下载失败: %s', error)
