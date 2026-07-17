@@ -31,8 +31,10 @@ for path in (str(ROOT), str(WEB_APP)):
 from playwright.sync_api import sync_playwright  # noqa: E402
 from werkzeug.serving import make_server  # noqa: E402
 
-from app import app  # noqa: E402
+import app as web_app  # noqa: E402
 from models import MonitorTask, User, db  # noqa: E402
+
+app = web_app.app
 
 
 def seed_workspace() -> None:
@@ -77,6 +79,29 @@ def seed_workspace() -> None:
 
 def run() -> None:
     seed_workspace()
+    web_app._check_latest_update = lambda: {
+        "current_version": "0.3.44-dev",
+        "latest_version": "1.0.0",
+        "has_update": True,
+        "required": False,
+        "notes": ["统一桌面端与云端数据", "改进采集和分析可靠性"],
+        "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup.exe",
+        "download_name": "GEO-SOP-Setup.exe",
+        "download_size": "150 MB",
+        "download_sha256": "a" * 64,
+        "platform": "windows",
+    }
+    web_app._set_update_download_state(
+        status="ready",
+        version="1.0.0",
+        filename="GEO-SOP-Setup.exe",
+        path=str(DATA_DIR / "downloads" / "GEO-SOP-Setup.exe"),
+        downloaded_bytes=150_000_000,
+        total_bytes=150_000_000,
+        progress=100,
+        sha256="a" * 64,
+        message="安装包已下载并通过安全校验",
+    )
     server = make_server("127.0.0.1", 0, app, threaded=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -95,6 +120,7 @@ def run() -> None:
                 for width, height in ((1000, 700), (1440, 900)):
                     page = browser.new_page(viewport={"width": width, "height": height})
                     page.set_default_timeout(15_000)
+                    page.add_init_script("localStorage.setItem('onboardingShown:1', '1')")
                     errors = []
                     page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
                     page.goto(login_url, wait_until="domcontentloaded", timeout=30_000)
@@ -113,9 +139,14 @@ def run() -> None:
                 for width, height in ((1000, 700), (1440, 900)):
                     page = browser.new_page(viewport={"width": width, "height": height})
                     page.set_default_timeout(15_000)
+                    page.add_init_script("localStorage.setItem('onboardingShown:1', '1')")
                     errors = []
                     page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
                     page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+                    page.wait_for_timeout(700)
+                    platform_dialog = page.locator(".platform-login-dialog:visible")
+                    if platform_dialog.count():
+                        platform_dialog.locator("button", has_text="关闭").click()
                     page.locator(".el-tabs__item", has_text="任务管理").click()
                     warning = page.locator(".task-run-warning")
                     warning.wait_for(state="visible")
@@ -125,7 +156,7 @@ def run() -> None:
                     status.wait_for(state="visible")
                     assert "部分完成" in status.inner_text()
                     page.locator("button", has_text="创建任务").first.click()
-                    dialog = page.locator(".el-dialog:visible").first
+                    dialog = page.locator(".el-dialog.scrollable-form-dialog:visible").first
                     dialog.wait_for(state="visible")
                     assert dialog.locator('text="调度类型"').count() == 0
                     assert dialog.locator("button", has_text="创建任务").count() == 1
@@ -137,6 +168,20 @@ def run() -> None:
                         raise AssertionError(f"dialog exceeds viewport: {dialog_box} styles={details}")
                     assert dialog_box["y"] >= 0, f"dialog starts outside viewport: {dialog_box}"
                     dialog.locator("button", has_text="取消").click()
+                    page.locator("button", has_text="发现新版本").click()
+                    update_dialog = page.locator(".el-dialog:visible", has_text="GEO-SOP 有新版本").first
+                    update_dialog.wait_for(state="visible")
+                    page.wait_for_timeout(350)
+                    assert "安装包已下载并通过安全校验" in update_dialog.inner_text()
+                    assert update_dialog.locator("button", has_text="开始安装").count() == 1
+                    update_box = update_dialog.bounding_box()
+                    assert update_box, "update dialog has no visible bounds"
+                    assert update_box["y"] >= 0, f"update dialog starts outside viewport: {update_box}"
+                    assert update_box["y"] + update_box["height"] <= height + 1, f"update dialog exceeds viewport: {update_box}"
+                    update_screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-update-{width}x{height}.png"
+                    page.screenshot(path=str(update_screenshot), full_page=True)
+                    screenshots.append(str(update_screenshot))
+                    update_dialog.locator("button", has_text="稍后提醒").click()
                     overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     assert overflow <= 1, f"horizontal overflow at {width}x{height}: {overflow}px"
                     screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-dashboard-{width}x{height}.png"

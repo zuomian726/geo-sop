@@ -181,6 +181,7 @@ class SurfaceParityTests(unittest.TestCase):
 
     def test_desktop_minimum_window_uses_compact_toolbar_and_single_dashboard_load(self):
         dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        base = (ROOT / "web_app" / "templates" / "base.html").read_text(encoding="utf-8")
         mounted = dashboard.split("async mounted() {", 1)[1].split("beforeUnmount() {", 1)[0]
         self.assertNotIn("this.loadInsightsOverview()", mounted)
         self.assertNotIn("this.loadInsightScorecard()", mounted)
@@ -197,6 +198,7 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("header-action-label secondary", dashboard)
         self.assertIn("<switch-button />", dashboard)
         self.assertIn("platform-login-dialog", dashboard)
+        self.assertIn("ElMessageBox, ElNotification", base)
         self.assertNotIn('prop="url" label="登录地址"', dashboard)
         self.assertIn("首次登录只需三步", dashboard)
 
