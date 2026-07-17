@@ -2714,6 +2714,14 @@ const app = createApp({
                 this.activeTab = 'sentiment_settings';
                 return true;
             }
+            if (action === 'collection-settings') {
+                setTimeout(() => this.showLimitSettings(), 250);
+                return true;
+            }
+            if (action === 'browser-settings') {
+                setTimeout(() => this.showBrowserSettings(), 250);
+                return true;
+            }
             return false;
         },
 

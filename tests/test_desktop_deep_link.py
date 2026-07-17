@@ -22,6 +22,18 @@ class DesktopDeepLinkTests(unittest.TestCase):
             self.startup_path("geo-sop://open?target=ai-settings"),
         )
 
+    def test_collection_settings_link_opens_limit_dialog(self):
+        self.assertEqual(
+            "/dashboard?open=collection-settings",
+            self.startup_path("geo-sop://open?target=collection-settings"),
+        )
+
+    def test_browser_settings_link_opens_browser_dialog(self):
+        self.assertEqual(
+            "/dashboard?open=browser-settings",
+            self.startup_path("geo-sop://open?target=browser-settings"),
+        )
+
     def test_unknown_link_is_restricted_to_dashboard(self):
         self.assertEqual(
             "/dashboard",

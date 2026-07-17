@@ -301,7 +301,8 @@ $maxSourceCount = $sourceRows ? max($sourceRows) : 1;
         <span class="tag current-account">当前账号: <?=geo_h((string)($user['username'] ?? $user['email'] ?? $user['id']))?></span>
     </div>
     <div class="header-actions">
-        <a class="btn" href="#create-task"><span class="header-full-label">采集设置: 50条 30~120秒</span><span class="header-compact-label">采集设置</span></a>
+        <button class="btn" type="button" onclick="requestLocalApp('collection-settings', '本机采集设置')">本机采集设置</button>
+        <button class="btn" type="button" onclick="requestLocalApp('browser-settings', '本机浏览器设置')">浏览器设置</button>
         <button class="btn" onclick="requestLocalApp('login', '平台登录检测')">检测平台登录</button>
         <a class="btn" href="#ai-settings">智慧舆情设置</a>
         <a class="btn primary" href="#create-task">创建任务</a>

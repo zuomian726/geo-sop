@@ -104,11 +104,14 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 132 tests passing on 2026-07-17.
+- Unit and contract suite: 134 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
   pass at both sizes.
+- Cloud-to-desktop links now open platform login, AI settings, collection
+  limits, and browser settings in the matching desktop workflow. Collection
+  and browser setting dialogs pass real-browser checks at both release sizes.
 - Desktop and cloud GEO manuscript analysis now share multi-task manuscript
   filtering, date-range filters, title grouping, and URL/article-ID matching.
 - Fresh-schema staging Demo: 6 synthetic tasks, 144 synthetic results, 4 GEO

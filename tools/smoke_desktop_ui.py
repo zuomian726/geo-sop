@@ -194,6 +194,10 @@ def run() -> None:
                     page.get_by_role("combobox", name="结束日期", exact=True).wait_for(state="visible")
                     geo_overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     assert geo_overflow <= 1, f"GEO analysis horizontal overflow at {width}x{height}: {geo_overflow}px"
+                    page.goto(url + "?open=collection-settings", wait_until="domcontentloaded", timeout=30_000)
+                    page.locator(".el-dialog:visible", has_text="全局采集设置").first.wait_for(state="visible")
+                    page.goto(url + "?open=browser-settings", wait_until="domcontentloaded", timeout=30_000)
+                    page.locator(".el-dialog:visible", has_text="浏览器设置").first.wait_for(state="visible")
                     overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     assert overflow <= 1, f"horizontal overflow at {width}x{height}: {overflow}px"
                     screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-dashboard-{width}x{height}.png"

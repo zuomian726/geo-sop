@@ -155,6 +155,10 @@ def _startup_path_from_args() -> str:
             return "/dashboard"
         if target == "ai-settings":
             return "/dashboard?open=ai-settings#sentiment_settings"
+        if target == "collection-settings":
+            return "/dashboard?open=collection-settings"
+        if target == "browser-settings":
+            return "/dashboard?open=browser-settings"
         return "/dashboard"
     return "/"
 
