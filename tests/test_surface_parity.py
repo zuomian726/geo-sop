@@ -223,11 +223,18 @@ class SurfaceParityTests(unittest.TestCase):
 
     def test_macos_release_builds_are_architecture_specific(self):
         build_script = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
+        smoke_script = (ROOT / "tools" / "smoke_macos_dmg.sh").read_text(encoding="utf-8")
         self.assertIn('GEO_MACOS_ARCH', build_script)
         self.assertIn('macOS-Apple-Silicon', build_script)
         self.assertIn('macOS-Intel', build_script)
         self.assertIn('lipo -archs', build_script)
         self.assertIn('verify_macos_bundle.py', build_script)
+        self.assertIn('cn.allgood.geosop', build_script)
+        self.assertIn('APPLE_DEVELOPER_ID', build_script)
+        self.assertIn('APPLE_NOTARY_PROFILE', build_script)
+        self.assertIn('notarytool submit', build_script)
+        self.assertIn('GEO_REQUIRE_LOGIN=0', smoke_script)
+        self.assertNotIn('$base_url/register', smoke_script)
 
         manifest = json.loads((ROOT / "server" / "geo.allgood.cn" / "update.json").read_text(encoding="utf-8"))
         self.assertIn("macos", manifest["downloads"])

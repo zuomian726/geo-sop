@@ -47,6 +47,7 @@ ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
   env \
     GEO_DATA_DIR="$data_dir" \
+    GEO_REQUIRE_LOGIN=0 \
     GEO_FORCE_BROWSER=1 \
     BROWSER=/usr/bin/true \
     GEO_DEBUG_BOOT=1 \
@@ -75,9 +76,8 @@ ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
   base_url=${app_url%/}
   base_url=${base_url%/dashboard}
   curl -fsS --max-time 10 -c "$cookie_jar" \
-    -H 'Content-Type: application/json' \
-    -d '{"username":"package-smoke","email":"package-smoke@example.invalid","password":"smoke-test-only"}' \
-    "$base_url/register" >"$work_dir/register.json"
+    "$base_url/dashboard" >"$work_dir/dashboard.html"
+  grep -q 'AI 平台品牌可见度工作台' "$work_dir/dashboard.html"
   curl -fsS --max-time 10 -b "$cookie_jar" \
     "$base_url/api/app-info" >"$work_dir/app-info.json"
   curl -fsS --max-time 10 -b "$cookie_jar" \

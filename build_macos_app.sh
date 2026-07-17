@@ -10,6 +10,9 @@ PY
 )
 TARGET_ARCH="${GEO_MACOS_ARCH:-$(uname -m)}"
 APP_NAME="GEO-SOP"
+RELEASE_CHANNEL="${GEO_RELEASE_CHANNEL:-dev}"
+SIGNING_IDENTITY="${APPLE_DEVELOPER_ID:-}"
+NOTARY_PROFILE="${APPLE_NOTARY_PROFILE:-}"
 BUILD_DIR="build"
 DIST_DIR="dist"
 PACKAGE_DIR="release"
@@ -24,6 +27,11 @@ PYTHON_PACKAGE_PATH="${RUNTIME_CACHE}/${PYTHON_PACKAGE}"
 FRAMEWORK_ROOT="${RUNTIME_CACHE}/python-${PYTHON_VERSION}"
 PYTHON_BASE="${FRAMEWORK_ROOT}/Python.framework/Versions/${PYTHON_SERIES}/bin/python${PYTHON_SERIES}"
 RUNTIME_LIBRARY_DIR="${FRAMEWORK_ROOT}/Python.framework/Versions/${PYTHON_SERIES}/lib"
+
+if [ "${RELEASE_CHANNEL}" = "stable" ] && { [ -z "${SIGNING_IDENTITY}" ] || [ -z "${NOTARY_PROFILE}" ]; }; then
+  echo "Stable macOS releases require APPLE_DEVELOPER_ID and APPLE_NOTARY_PROFILE." >&2
+  exit 1
+fi
 
 mkdir -p "${RUNTIME_CACHE}"
 if [ ! -f "${PYTHON_PACKAGE_PATH}" ]; then
@@ -148,7 +156,7 @@ from version import BUILD_NUMBER
 print(BUILD_NUMBER)
 PY
 )" "${PLIST_PATH}"
-  plutil -replace CFBundleIdentifier -string "com.tukemarketing.geosop" "${PLIST_PATH}"
+  plutil -replace CFBundleIdentifier -string "cn.allgood.geosop" "${PLIST_PATH}"
   python3 - "${PLIST_PATH}" <<'PY'
 import plistlib
 import sys
@@ -165,7 +173,15 @@ plist["CFBundleURLTypes"] = [
 with open(path, "wb") as f:
     plistlib.dump(plist, f)
 PY
-  codesign --force --deep --sign - "${DIST_DIR}/${APP_NAME}.app"
+  if [ -n "${SIGNING_IDENTITY}" ]; then
+    codesign --force --deep --options runtime --timestamp --sign "${SIGNING_IDENTITY}" "${DIST_DIR}/${APP_NAME}.app"
+  else
+    if [ "${RELEASE_CHANNEL}" = "stable" ]; then
+      echo "APPLE_DEVELOPER_ID is required for a stable macOS release." >&2
+      exit 1
+    fi
+    codesign --force --deep --sign - "${DIST_DIR}/${APP_NAME}.app"
+  fi
 fi
 
 BUILT_ARCH=$(lipo -archs "${DIST_DIR}/${APP_NAME}.app/Contents/MacOS/${APP_NAME}")
@@ -204,6 +220,20 @@ hdiutil create \
   -ov \
   -format UDZO \
   "${DMG_PATH}"
+
+if [ -n "${SIGNING_IDENTITY}" ]; then
+  codesign --force --timestamp --sign "${SIGNING_IDENTITY}" "${DMG_PATH}"
+  codesign --verify --verbose=2 "${DMG_PATH}"
+fi
+
+if [ -n "${NOTARY_PROFILE}" ]; then
+  xcrun notarytool submit "${DMG_PATH}" --keychain-profile "${NOTARY_PROFILE}" --wait
+  xcrun stapler staple "${DMG_PATH}"
+  xcrun stapler validate "${DMG_PATH}"
+elif [ "${RELEASE_CHANNEL}" = "stable" ]; then
+  echo "APPLE_NOTARY_PROFILE is required for a stable macOS release." >&2
+  exit 1
+fi
 
 shasum -a 256 "${DMG_PATH}" > "${DMG_PATH}.sha256"
 echo "Built ${DMG_PATH} (${TARGET_ARCH})"
