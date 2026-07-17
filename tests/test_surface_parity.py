@@ -243,9 +243,13 @@ class SurfaceParityTests(unittest.TestCase):
     def test_public_site_keeps_stable_desktop_download_links(self):
         for relative_path in ("index.html", "tools/index.html"):
             source = (ROOT / "server" / "geo.allgood.cn" / relative_path).read_text(encoding="utf-8")
-            self.assertIn("/downloads/GEO-SOP-Setup-dev.exe", source)
-            self.assertIn("/downloads/GEO-SOP-macOS-dev.dmg", source)
-            self.assertIn("/downloads/GEO-SOP-macOS-Intel-dev.dmg", source)
+            self.assertIn("/downloads/GEO-SOP-Setup.exe", source)
+            self.assertIn("/downloads/GEO-SOP-macOS.dmg", source)
+            self.assertIn("/downloads/GEO-SOP-macOS-Intel.dmg", source)
+            self.assertNotIn('href="/downloads/GEO-SOP-Setup-dev.exe"', source)
+            self.assertIn("if (release.channel === 'stable')", source)
+            self.assertIn('id="release-security-title"', source)
+            self.assertIn('id="release-security-copy"', source)
 
     def test_macos_release_builds_are_architecture_specific(self):
         build_script = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
@@ -273,6 +277,21 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
         self.assertIn("geo-sop\\shell\\open\\command", workflow)
         self.assertIn("ms-playwright", workflow)
+
+    def test_stable_release_is_signed_and_manifest_is_published_last(self):
+        workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
+        installer = (ROOT / "installer" / "windows" / "GEO-SOP.iss").read_text(encoding="utf-8")
+        publisher = (ROOT / "tools" / "publish_stable_release.py").read_text(encoding="utf-8")
+        self.assertIn("Get-AuthenticodeSignature", workflow)
+        self.assertIn("GEO-SOP-Windows-signature.json", workflow)
+        self.assertIn("def verify_macos(", publisher)
+        self.assertIn('"xcrun", "stapler", "validate"', publisher)
+        self.assertIn("def verify_windows_evidence(", publisher)
+        self.assertIn("Refusing to publish from a dirty Git worktree", publisher)
+        alias_move = publisher.index("/downloads/." + "' + alias + '" + ".new")
+        manifest_move = publisher.index("/.update.json.new")
+        self.assertLess(alias_move, manifest_move)
+        self.assertIn("update.json was switched last", publisher)
         self.assertIn("WINDOWS_SIGNING_CERT_BASE64", workflow)
         self.assertIn("signtool sign", workflow)
         self.assertIn("signtool verify", workflow)

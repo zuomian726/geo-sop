@@ -178,6 +178,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Installer signing failed." }
           & $env:WINDOWS_SIGNTOOL verify /pa /v $installer.FullName
           if ($LASTEXITCODE -ne 0) { throw "Installer signature verification failed." }
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne "Valid") { throw "Installer Authenticode status is $($signature.Status)." }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          @{
+            version = $env:APP_VERSION
+            status = $signature.Status.ToString()
+            subject = $signature.SignerCertificate.Subject
+            thumbprint = $signature.SignerCertificate.Thumbprint
+            sha256 = $hash
+          } | ConvertTo-Json | Set-Content "release\GEO-SOP-Windows-signature.json" -Encoding utf8
           Remove-Item $env:WINDOWS_CERTIFICATE -Force -ErrorAction SilentlyContinue
 
       - name: Verify installer
@@ -213,4 +223,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: GEO-SOP-Windows-Setup
-          path: release/GEO-SOP-Setup-v*.exe
+          path: |
+            release/GEO-SOP-Setup-v*.exe
+            release/GEO-SOP-Windows-signature.json

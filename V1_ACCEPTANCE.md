@@ -104,7 +104,7 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 130 tests passing on 2026-07-17.
+- Unit and contract suite: 131 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
@@ -116,6 +116,10 @@ This section records development evidence without changing production packages.
 - The strengthened V1 cloud smoke now requires CSRF-protected registration and
   Demo login plus account-private screenshots. Current legacy production is
   intentionally rejected until the one-time V1 deployment.
+- Stable publishing is prepare-only by default and requires notarized macOS
+  DMGs, valid Windows Authenticode evidence, matching versions and hashes, and
+  a clean Git worktree. Versioned files and permanent aliases are staged before
+  `update.json` is switched last.
 - Tracked-file audit: no databases, browser profiles, screenshots, private
   configuration, certificates, private keys, or common live API Key formats.
 - Pending final release gates: staging deployment, disposable two-account V1
