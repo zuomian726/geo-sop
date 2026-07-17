@@ -160,6 +160,15 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("hasCollectedResults()", dashboard)
         self.assertIn("disposeInsightCharts()", dashboard)
 
+    def test_v1_task_dialog_only_exposes_manual_collection(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        app_source = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        self.assertNotIn('<el-radio label="daily">', dashboard)
+        self.assertNotIn('<el-radio label="weekly">', dashboard)
+        self.assertIn("schedule_type: 'manual'", dashboard)
+        self.assertIn("def _normalize_manual_task_payload", app_source)
+        self.assertIn("'schedule_type': 'manual'", app_source)
+
     def test_desktop_login_uses_shared_cloud_account_and_password_manager_fields(self):
         app_source = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
         login = (ROOT / "web_app" / "templates" / "login.html").read_text(encoding="utf-8")

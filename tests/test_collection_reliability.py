@@ -47,6 +47,10 @@ class CollectionReliabilityTests(unittest.TestCase):
         )
         db.session.add(self.task)
         db.session.commit()
+        self.client = web_app.app.test_client()
+        with self.client.session_transaction() as session:
+            session["_user_id"] = str(self.user.id)
+            session["_fresh"] = True
 
     def tearDown(self):
         db.session.remove()
@@ -97,6 +101,72 @@ class CollectionReliabilityTests(unittest.TestCase):
         self.assertEqual("failed", task.status)
         self.assertTrue(task.to_dict()["last_run_summary"]["interrupted"])
         self.assertIn("重新执行", task.to_dict()["last_run_summary"]["error"])
+
+    def test_task_creation_normalizes_v1_manual_collection_contract(self):
+        response = self.client.post(
+            "/api/tasks",
+            json={
+                "name": "  V1 baseline  ",
+                "brand_name": " GEO-SOP ",
+                "brand_keywords": ["GEO-SOP", "GEO-SOP"],
+                "competitor_brands": [],
+                "questions": ["How visible is GEO-SOP?", "How visible is GEO-SOP?"],
+                "platforms": ["doubao", "doubao"],
+                "max_parallel_platforms": 99,
+                "screenshot_config": {"doubao": False, "not-a-platform": True},
+                "schedule_type": "daily",
+                "schedule_enabled": True,
+                "schedule_config": {"run_times": ["09:00"]},
+            },
+        )
+
+        self.assertEqual(200, response.status_code, response.get_data(as_text=True))
+        created = MonitorTask.query.filter_by(name="V1 baseline").one()
+        self.assertEqual(["GEO-SOP"], json.loads(created.brand_keywords))
+        self.assertEqual(["How visible is GEO-SOP?"], json.loads(created.questions))
+        self.assertEqual(["doubao"], json.loads(created.platforms))
+        self.assertEqual({"doubao": False}, json.loads(created.screenshot_config))
+        self.assertEqual(1, created.max_parallel_platforms)
+        self.assertEqual("manual", created.schedule_type)
+        self.assertFalse(created.schedule_enabled)
+        self.assertEqual({}, json.loads(created.schedule_config))
+
+    def test_task_creation_rejects_unsupported_platform_before_collection(self):
+        response = self.client.post(
+            "/api/tasks",
+            json={
+                "name": "Invalid platform",
+                "brand_keywords": ["GEO-SOP"],
+                "questions": ["Question"],
+                "platforms": ["unknown-ai"],
+            },
+        )
+
+        self.assertEqual(400, response.status_code)
+        self.assertIn("不支持", response.get_json()["message"])
+        self.assertIsNone(MonitorTask.query.filter_by(name="Invalid platform").first())
+
+    def test_editing_legacy_scheduled_task_converts_it_to_manual(self):
+        self.task.schedule_type = "daily"
+        self.task.schedule_enabled = True
+        self.task.schedule_config = json.dumps({"run_times": ["09:00"]})
+        db.session.commit()
+        payload = self.task.to_dict()
+        payload["name"] = "Manual V1 task"
+
+        with (
+            patch.object(web_app, "SCHEDULER_AVAILABLE", True),
+            patch.object(web_app, "remove_task_job") as remove_job,
+        ):
+            response = self.client.put(f"/api/tasks/{self.task.id}", json=payload)
+
+        self.assertEqual(200, response.status_code, response.get_data(as_text=True))
+        remove_job.assert_called_once_with(self.task.id)
+        db.session.expire_all()
+        updated = db.session.get(MonitorTask, self.task.id)
+        self.assertEqual("manual", updated.schedule_type)
+        self.assertFalse(updated.schedule_enabled)
+        self.assertEqual({}, json.loads(updated.schedule_config))
 
 
 if __name__ == "__main__":

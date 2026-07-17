@@ -124,6 +124,19 @@ def run() -> None:
                     status = page.locator(".task-card .el-tag").first
                     status.wait_for(state="visible")
                     assert "部分完成" in status.inner_text()
+                    page.locator("button", has_text="创建任务").first.click()
+                    dialog = page.locator(".el-dialog:visible").first
+                    dialog.wait_for(state="visible")
+                    assert dialog.locator('text="调度类型"').count() == 0
+                    assert dialog.locator("button", has_text="创建任务").count() == 1
+                    page.wait_for_timeout(350)
+                    dialog_box = dialog.bounding_box()
+                    assert dialog_box, "create task dialog has no visible bounds"
+                    if dialog_box["y"] + dialog_box["height"] > height + 1:
+                        details = dialog.evaluate("e => ({className: e.className, parentClass: e.parentElement?.className, style: e.getAttribute('style'), margin: getComputedStyle(e).margin, maxHeight: getComputedStyle(e).maxHeight, boxSizing: getComputedStyle(e).boxSizing})")
+                        raise AssertionError(f"dialog exceeds viewport: {dialog_box} styles={details}")
+                    assert dialog_box["y"] >= 0, f"dialog starts outside viewport: {dialog_box}"
+                    dialog.locator("button", has_text="取消").click()
                     overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     assert overflow <= 1, f"horizontal overflow at {width}x{height}: {overflow}px"
                     screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-dashboard-{width}x{height}.png"

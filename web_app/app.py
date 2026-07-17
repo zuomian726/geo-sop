@@ -997,56 +997,118 @@ def get_tasks():
     })
 
 
+def _normalize_task_string_list(value, field_label, limit):
+    if not isinstance(value, list):
+        return None, f'{field_label}格式不正确'
+    if len(value) > limit:
+        return None, f'{field_label}最多支持 {limit} 项'
+    normalized = []
+    for item in value:
+        if not isinstance(item, (str, int, float)) or isinstance(item, bool):
+            return None, f'{field_label}包含无效内容'
+        text_value = str(item).strip()
+        if not text_value or text_value in normalized:
+            continue
+        if len(text_value) > 2000:
+            return None, f'{field_label}单项不能超过 2000 个字符'
+        normalized.append(text_value)
+    return normalized, None
+
+
+def _normalize_manual_task_payload(data):
+    """Validate the V1 manual collection contract shared by create and edit."""
+    if not isinstance(data, dict):
+        return None, '任务参数格式不正确'
+
+    name = str(data.get('name') or '').strip()
+    brand_name = str(data.get('brand_name') or '').strip()
+    if not name:
+        return None, '请输入任务名称'
+    if len(name) > 160 or len(brand_name) > 160:
+        return None, '任务名称和品牌名称不能超过 160 个字符'
+
+    brand_keywords, error = _normalize_task_string_list(data.get('brand_keywords'), '品牌曝光词', 100)
+    if error:
+        return None, error
+    competitor_brands, error = _normalize_task_string_list(data.get('competitor_brands', []), '竞品品牌', 100)
+    if error:
+        return None, error
+    questions, error = _normalize_task_string_list(data.get('questions'), '监测问题', 500)
+    if error:
+        return None, error
+    platforms, error = _normalize_task_string_list(data.get('platforms'), 'AI 平台', 20)
+    if error:
+        return None, error
+    if not brand_keywords or not questions or not platforms:
+        return None, '请添加品牌曝光词、监测问题，并至少选择一个 AI 平台'
+
+    supported = {item['id'] for item in Config.SUPPORTED_PLATFORMS}
+    unsupported = [platform_id for platform_id in platforms if platform_id not in supported]
+    if unsupported:
+        return None, f"包含不支持的 AI 平台：{'、'.join(unsupported)}"
+
+    try:
+        max_parallel = int(data.get('max_parallel_platforms') or 1)
+    except (TypeError, ValueError):
+        max_parallel = 1
+    max_parallel = max(1, min(len(platforms), max_parallel))
+
+    raw_screenshots = data.get('screenshot_config')
+    raw_screenshots = raw_screenshots if isinstance(raw_screenshots, dict) else {}
+    screenshot_config = {
+        platform_id: bool(raw_screenshots.get(platform_id, True))
+        for platform_id in platforms
+    }
+    return {
+        'name': name,
+        'brand_name': brand_name,
+        'brand_keywords': brand_keywords,
+        'competitor_brands': competitor_brands,
+        'questions': questions,
+        'platforms': platforms,
+        'max_parallel_platforms': max_parallel,
+        'screenshot_config': screenshot_config,
+        'schedule_type': 'manual',
+        'schedule_config': {},
+        'schedule_enabled': False,
+        'sentiment_config_id': data.get('sentiment_config_id') or None,
+    }, None
+
+
 @app.route('/api/tasks', methods=['POST'])
 @login_required
 def create_task():
     """创建新的监控任务"""
-    data = request.get_json()
-    
-    # 验证必填字段
-    required_fields = ['name', 'brand_keywords', 'questions', 'platforms']
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({'success': False, 'message': f'缺少必填字段: {field}'}), 400
-    
-    # 创建任务
-    schedule_enabled = data.get('schedule_enabled', False)
+    normalized, error = _normalize_manual_task_payload(request.get_json(silent=True))
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
     
     # 验证舆情配置ID（如果提供了）
-    sentiment_config_id = data.get('sentiment_config_id')
+    sentiment_config_id = normalized['sentiment_config_id']
     if sentiment_config_id:
         config = SentimentConfig.query.filter_by(id=sentiment_config_id, user_id=current_user.id).first()
         if not config:
             return jsonify({'success': False, 'message': '无效的舆情配置ID'}), 400
-    
-    # 验证并规范化 max_parallel_platforms
-    max_parallel = data.get('max_parallel_platforms', 3)
-    if max_parallel is None or not isinstance(max_parallel, int) or max_parallel < 1:
-        max_parallel = 3  # 默认值
-    
+
     task = MonitorTask(
         user_id=current_user.id,
-        name=data['name'],
-        brand_name=data.get('brand_name', ''),
-        brand_keywords=json.dumps(data['brand_keywords'], ensure_ascii=False),
-        competitor_brands=json.dumps(data.get('competitor_brands', []), ensure_ascii=False),
-        questions=json.dumps(data['questions'], ensure_ascii=False),
-        platforms=json.dumps(data['platforms'], ensure_ascii=False),
-        max_parallel_platforms=max_parallel,
-        screenshot_config=json.dumps(data.get('screenshot_config', {}), ensure_ascii=False),
-        schedule_type=data.get('schedule_type', 'manual'),
-        schedule_config=json.dumps(data.get('schedule_config', {}), ensure_ascii=False),
-        schedule_enabled=schedule_enabled,
+        name=normalized['name'],
+        brand_name=normalized['brand_name'],
+        brand_keywords=json.dumps(normalized['brand_keywords'], ensure_ascii=False),
+        competitor_brands=json.dumps(normalized['competitor_brands'], ensure_ascii=False),
+        questions=json.dumps(normalized['questions'], ensure_ascii=False),
+        platforms=json.dumps(normalized['platforms'], ensure_ascii=False),
+        max_parallel_platforms=normalized['max_parallel_platforms'],
+        screenshot_config=json.dumps(normalized['screenshot_config'], ensure_ascii=False),
+        schedule_type='manual',
+        schedule_config='{}',
+        schedule_enabled=False,
         sentiment_config_id=sentiment_config_id,
         status='pending'
     )
     
     db.session.add(task)
     db.session.commit()
-    
-    # 如果启用了定时调度，添加到调度器
-    if SCHEDULER_AVAILABLE and schedule_enabled and task.schedule_type in ['daily', 'weekly']:
-        add_task_job(app, task.id)
     
     return jsonify({
         'success': True,
@@ -1085,51 +1147,38 @@ def update_task(task_id):
     if not task or task.user_id != current_user.id:
         return jsonify({'success': False, 'message': '无权访问'}), 403
     
-    data = request.get_json()
-    
-    # 更新字段
-    if 'name' in data:
-        task.name = data['name']
-    if 'brand_name' in data:
-        task.brand_name = data['brand_name']
-    if 'brand_keywords' in data:
-        task.brand_keywords = json.dumps(data['brand_keywords'], ensure_ascii=False)
-    if 'competitor_brands' in data:
-        task.competitor_brands = json.dumps(data['competitor_brands'], ensure_ascii=False)
-    if 'questions' in data:
-        task.questions = json.dumps(data['questions'], ensure_ascii=False)
-    if 'platforms' in data:
-        task.platforms = json.dumps(data['platforms'], ensure_ascii=False)
-    if 'max_parallel_platforms' in data:
-        # 验证并规范化 max_parallel_platforms
-        max_parallel = data['max_parallel_platforms']
-        if max_parallel is None or not isinstance(max_parallel, int) or max_parallel < 1:
-            max_parallel = 3  # 默认值
-        task.max_parallel_platforms = max_parallel
-    if 'screenshot_config' in data:
-        task.screenshot_config = json.dumps(data['screenshot_config'], ensure_ascii=False)
-    if 'schedule_type' in data:
-        task.schedule_type = data['schedule_type']
-    if 'schedule_config' in data:
-        task.schedule_config = json.dumps(data['schedule_config'], ensure_ascii=False)
-    if 'schedule_enabled' in data:
-        task.schedule_enabled = data['schedule_enabled']
-    if 'sentiment_config_id' in data:
-        # 验证舆情配置ID
-        if data['sentiment_config_id']:
-            config = SentimentConfig.query.filter_by(id=data['sentiment_config_id'], user_id=current_user.id).first()
-            if not config:
-                return jsonify({'success': False, 'message': '无效的舆情配置ID'}), 400
-        task.sentiment_config_id = data['sentiment_config_id']
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'success': False, 'message': '任务参数格式不正确'}), 400
+    current_payload = task.to_dict()
+    current_payload.update(data)
+    normalized, error = _normalize_manual_task_payload(current_payload)
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
+    old_schedule_type = task.schedule_type
+    if normalized['sentiment_config_id']:
+        config = SentimentConfig.query.filter_by(id=normalized['sentiment_config_id'], user_id=current_user.id).first()
+        if not config:
+            return jsonify({'success': False, 'message': '无效的舆情配置ID'}), 400
+
+    task.name = normalized['name']
+    task.brand_name = normalized['brand_name']
+    task.brand_keywords = json.dumps(normalized['brand_keywords'], ensure_ascii=False)
+    task.competitor_brands = json.dumps(normalized['competitor_brands'], ensure_ascii=False)
+    task.questions = json.dumps(normalized['questions'], ensure_ascii=False)
+    task.platforms = json.dumps(normalized['platforms'], ensure_ascii=False)
+    task.max_parallel_platforms = normalized['max_parallel_platforms']
+    task.screenshot_config = json.dumps(normalized['screenshot_config'], ensure_ascii=False)
+    task.schedule_type = 'manual'
+    task.schedule_config = '{}'
+    task.schedule_enabled = False
+    task.sentiment_config_id = normalized['sentiment_config_id']
     
     db.session.commit()
     
-    # 更新调度器任务
-    if SCHEDULER_AVAILABLE and task.schedule_type in ['daily', 'weekly']:
-        if task.schedule_enabled:
-            add_task_job(app, task.id)
-        else:
-            remove_task_job(task.id)
+    if SCHEDULER_AVAILABLE and old_schedule_type in ['daily', 'weekly']:
+        remove_task_job(task.id)
     
     return jsonify({
         'success': True,

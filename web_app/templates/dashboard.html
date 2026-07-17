@@ -202,7 +202,8 @@ body {
     padding-top: 10px;
 }
 
-.scrollable-form-dialog {
+.el-dialog.scrollable-form-dialog,
+.scrollable-form-dialog .el-dialog {
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 32px);
@@ -1899,11 +1900,12 @@ body {
             <el-form-item label="并行AI平台数">
                 <el-input-number 
                     v-model="taskForm.max_parallel_platforms" 
-                    :min="1" 
+                    :min="1"
+                    :max="Math.max(1, taskForm.platforms.length)"
                     style="width: 150px;">
                 </el-input-number>
                 <div style="color: #999; font-size: 12px; margin-top: 5px;">
-                    设置同时执行的AI平台数量。设为1则串行执行（逐个完成），设为大于平台数则全部同时执行。
+                    建议设为 1；多平台并行会占用更多本机资源。
                 </div>
             </el-form-item>
             
@@ -1937,132 +1939,6 @@ body {
                 </div>
             </el-form-item>
             
-            <el-form-item label="调度类型">
-                <el-radio-group v-model="taskForm.schedule_type">
-                    <el-radio label="manual">手动执行</el-radio>
-                    <el-radio label="daily">每日执行</el-radio>
-                    <el-radio label="weekly">每周执行</el-radio>
-                </el-radio-group>
-            </el-form-item>
-            
-            <!-- 每日执行配置 -->
-            <el-form-item v-if="taskForm.schedule_type === 'daily'" label="执行时间">
-                <div style="margin-bottom: 10px;">
-                    <el-checkbox v-model="scheduleConfig.enable_schedule" @change="handleScheduleEnableChange">
-                        启用自动采集
-                    </el-checkbox>
-                </div>
-                <div v-if="scheduleConfig.enable_schedule" style="padding: 15px; background: #f5f7fa; border-radius: 4px;">
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">每日采集次数：</div>
-                        <el-radio-group v-model="scheduleConfig.frequency">
-                            <el-radio label="once">每日1次</el-radio>
-                            <el-radio label="twice">每日2次</el-radio>
-                            <el-radio label="three_times">每日3次</el-radio>
-                            <el-radio label="custom">自定义</el-radio>
-                        </el-radio-group>
-                    </div>
-                    
-                    <!-- 执行时间选择 -->
-                    <div v-if="scheduleConfig.frequency === 'once'" style="margin-bottom: 10px;">
-                        <span style="font-size: 13px; color: #666; margin-right: 10px;">执行时间：</span>
-                        <el-time-picker
-                            v-model="scheduleConfig.run_time_1"
-                            format="HH:mm"
-                            value-format="HH:mm"
-                            placeholder="选择时间"
-                            style="width: 150px;">
-                        </el-time-picker>
-                    </div>
-                    
-                    <div v-if="scheduleConfig.frequency === 'twice'" style="margin-bottom: 10px;">
-                        <div style="margin-bottom: 10px;">
-                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第一次：</span>
-                            <el-time-picker
-                                v-model="scheduleConfig.run_time_1"
-                                format="HH:mm"
-                                value-format="HH:mm"
-                                placeholder="选择时间"
-                                style="width: 150px;">
-                            </el-time-picker>
-                        </div>
-                        <div>
-                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第二次：</span>
-                            <el-time-picker
-                                v-model="scheduleConfig.run_time_2"
-                                format="HH:mm"
-                                value-format="HH:mm"
-                                placeholder="选择时间"
-                                style="width: 150px;">
-                            </el-time-picker>
-                        </div>
-                    </div>
-                    
-                    <div v-if="scheduleConfig.frequency === 'three_times'" style="margin-bottom: 10px;">
-                        <div v-for="i in 3" :key="i" style="margin-bottom: 10px;">
-                            <span style="font-size: 13px; color: #666; margin-right: 10px;">第[[i]]次：</span>
-                            <el-time-picker
-                                v-model="scheduleConfig['run_time_' + i]"
-                                format="HH:mm"
-                                value-format="HH:mm"
-                                placeholder="选择时间"
-                                style="width: 150px;">
-                            </el-time-picker>
-                        </div>
-                    </div>
-                    
-                    <div v-if="scheduleConfig.frequency === 'custom'" style="margin-bottom: 10px;">
-                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">自定义执行时间（每行一个）：</div>
-                        <el-input
-                            type="textarea"
-                            v-model="scheduleConfig.custom_times_text"
-                            :rows="4"
-                            placeholder="例如：&#10;09:00&#10;14:00&#10;20:00">
-                        </el-input>
-                    </div>
-                    
-                    <div style="margin-top: 15px; padding: 10px; background: #fff7e6; border-radius: 4px; border: 1px solid #ffd591;">
-                        <div style="font-size: 12px; color: #d46b08;">
-                            <el-icon style="vertical-align: middle;"><info-filled /></el-icon>
-                            <strong>提示：</strong>系统会在设定时间自动执行采集任务，请确保浏览器保持登录状态。
-                        </div>
-                    </div>
-                </div>
-            </el-form-item>
-            
-            <!-- 每周执行配置 -->
-            <el-form-item v-if="taskForm.schedule_type === 'weekly'" label="执行时间">
-                <div style="margin-bottom: 10px;">
-                    <el-checkbox v-model="scheduleConfig.enable_schedule" @change="handleScheduleEnableChange">
-                        启用自动采集
-                    </el-checkbox>
-                </div>
-                <div v-if="scheduleConfig.enable_schedule" style="padding: 15px; background: #f5f7fa; border-radius: 4px;">
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-size: 13px; color: #666; margin-bottom: 10px;">执行星期：</div>
-                        <el-checkbox-group v-model="scheduleConfig.run_weekdays">
-                            <el-checkbox :label="0">周一</el-checkbox>
-                            <el-checkbox :label="1">周二</el-checkbox>
-                            <el-checkbox :label="2">周三</el-checkbox>
-                            <el-checkbox :label="3">周四</el-checkbox>
-                            <el-checkbox :label="4">周五</el-checkbox>
-                            <el-checkbox :label="5">周六</el-checkbox>
-                            <el-checkbox :label="6">周日</el-checkbox>
-                        </el-checkbox-group>
-                    </div>
-                    <div>
-                        <span style="font-size: 13px; color: #666; margin-right: 10px;">执行时间：</span>
-                        <el-time-picker
-                            v-model="scheduleConfig.run_time"
-                            format="HH:mm"
-                            value-format="HH:mm"
-                            placeholder="选择时间"
-                            style="width: 150px;">
-                        </el-time-picker>
-                    </div>
-                </div>
-            </el-form-item>
-            
             <!-- 舆情配置选择 -->
             <el-form-item label="舆情配置">
                 <el-select 
@@ -2089,7 +1965,7 @@ body {
         <template #footer>
             <el-button @click="dialogVisible = false">取消</el-button>
             <el-button type="primary" @click="submitTask" :loading="submitting">
-                确定
+                [[ isEdit ? '保存修改' : '创建任务' ]]
             </el-button>
         </template>
     </el-dialog>
@@ -4229,9 +4105,6 @@ const app = createApp({
             // 检查全局截图状态
             this.updateGlobalScreenshotState();
             
-            // 加载调度配置
-            this.loadScheduleConfig(task);
-            
             this.questionsText = task.questions.join('\n');
             this.dialogVisible = true;
         },
@@ -4289,8 +4162,9 @@ const app = createApp({
                 // 构建提交数据
                 const submitData = {
                     ...this.taskForm,
-                    schedule_enabled: this.scheduleConfig.enable_schedule,
-                    schedule_config: this.buildScheduleConfig()
+                    schedule_type: 'manual',
+                    schedule_enabled: false,
+                    schedule_config: {}
                 };
                 
                 const response = await axios[method](url, submitData);
