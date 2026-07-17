@@ -281,6 +281,7 @@ class AiInsightPersistenceTests(unittest.TestCase):
     def test_desktop_logout_reports_offline_and_clears_cloud_token(self):
         with (
             patch.object(web_app, "report_client_heartbeat") as heartbeat,
+            patch.object(web_app, "revoke_cloud_token") as revoke_token,
             patch.object(web_app, "clear_cloud_account") as clear_account,
         ):
             response = self.client.get("/logout")
@@ -288,6 +289,7 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertEqual(302, response.status_code)
         self.assertTrue(response.headers["Location"].endswith("/login"))
         heartbeat.assert_called_once_with(self.user.id, "offline", "用户已在本机退出 GEO-SOP")
+        revoke_token.assert_called_once_with()
         clear_account.assert_called_once_with()
 
     def test_create_user_cli_validates_password_and_never_bootstraps_admin(self):

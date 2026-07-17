@@ -629,6 +629,24 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
 
 
 class AssetUploadPipelineTests(CloudPipelineTestCase):
+    def test_desktop_logout_revokes_the_current_cloud_device_token(self):
+        response = Mock(status_code=200)
+        response.json.return_value = {"success": True, "revoked": True}
+        with (
+            patch.object(cloud_sync, "cloud_sync_enabled", return_value=True),
+            patch.object(cloud_sync, "cloud_sync_url", return_value="https://geo.allgood.cn/api"),
+            patch.object(cloud_sync, "_headers", return_value={"Authorization": "Bearer test-token"}),
+            patch.object(cloud_sync.requests, "post", return_value=response) as post,
+        ):
+            result = cloud_sync.revoke_cloud_token()
+
+        self.assertTrue(result["revoked"])
+        post.assert_called_once_with(
+            "https://geo.allgood.cn/api/auth/logout/",
+            headers={"Authorization": "Bearer test-token"},
+            timeout=(5, 8),
+        )
+
     def test_one_click_upload_sends_stats_and_screenshot_metadata(self):
         task = self.create_remote_task(remote_id=103)
         screenshot = Path(self.temp_dir.name) / "evidence.png"

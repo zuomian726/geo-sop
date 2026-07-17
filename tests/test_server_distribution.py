@@ -12,6 +12,7 @@ class ServerDistributionTests(unittest.TestCase):
         required = {
             "api/common.php",
             "api/auth/login/index.php",
+            "api/auth/logout/index.php",
             "api/dashboard/index.php",
             "api/remote-tasks/index.php",
             "api/sync/index.php",

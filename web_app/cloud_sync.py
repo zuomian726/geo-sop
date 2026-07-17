@@ -143,6 +143,23 @@ def cloud_sync_enabled() -> bool:
     return (saved_account_enabled or env_enabled) and bool(cloud_sync_url()) and bool(cloud_sync_token())
 
 
+def revoke_cloud_token() -> dict:
+    """Revoke the current device token before removing the local credential."""
+    if not cloud_sync_enabled():
+        return {"enabled": False, "revoked": False}
+    response = requests.post(
+        f"{cloud_sync_url()}/auth/logout/",
+        headers=_headers(),
+        timeout=(5, 8),
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"cloud logout failed: HTTP {response.status_code}")
+    payload = response.json()
+    if not payload.get("success"):
+        raise RuntimeError("cloud logout failed")
+    return {"enabled": True, "revoked": bool(payload.get("revoked", True))}
+
+
 def should_sync_keys() -> bool:
     return _truthy(os.environ.get("GEO_CLOUD_SYNC_KEYS"))
 

@@ -65,6 +65,7 @@ try:
         cloud_sync_enabled,
         pull_remote_tasks,
         report_client_heartbeat,
+        revoke_cloud_token,
         restore_workspace_from_cloud,
         save_cloud_account,
         sync_status,
@@ -756,6 +757,10 @@ def logout():
             report_client_heartbeat(current_user.id, 'offline', '用户已在本机退出 GEO-SOP')
         except Exception as heartbeat_error:
             logger.warning("[CloudSync] 退出离线状态上报失败 user=%s: %s", current_user.id, heartbeat_error)
+        try:
+            revoke_cloud_token()
+        except Exception as revoke_error:
+            logger.warning("[CloudSync] 云端令牌撤销失败，将继续本机退出 user=%s: %s", current_user.id, revoke_error)
         clear_cloud_account()
         app.config['CLOUD_SYNC_ENABLED'] = False
         app.config['CLOUD_SYNC_TOKEN'] = ''
