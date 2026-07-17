@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-#define MyAppVersion "0.3.44-dev"
+#error MyAppVersion must be provided by build_windows_installer.bat
 #endif
 
 #define MyAppName "GEO-SOP"

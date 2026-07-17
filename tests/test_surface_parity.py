@@ -285,12 +285,19 @@ class SurfaceParityTests(unittest.TestCase):
     def test_windows_release_installs_native_runtime_and_supports_chinese(self):
         workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
         installer = (ROOT / "installer" / "windows" / "GEO-SOP.iss").read_text(encoding="utf-8")
+        exe_build = (ROOT / "build_windows_exe.bat").read_text(encoding="utf-8")
+        installer_build = (ROOT / "build_windows_installer.bat").read_text(encoding="utf-8")
         self.assertIn("Smoke test installer install and uninstall", workflow)
         self.assertIn("GEO_REQUIRE_LOGIN = \"1\"", workflow)
         self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
         self.assertIn("A clean Windows installation did not require", workflow)
         self.assertIn("geo-sop\\shell\\open\\command", workflow)
         self.assertIn("ms-playwright", workflow)
+        self.assertIn("does not match version.py", workflow)
+        self.assertIn("from version import APP_VERSION", exe_build)
+        self.assertIn("from version import APP_VERSION", installer_build)
+        self.assertIn("#error MyAppVersion must be provided", installer)
+        self.assertNotIn("0.3.44-dev", exe_build + installer_build + installer)
 
     def test_stable_release_is_signed_and_manifest_is_published_last(self):
         workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")

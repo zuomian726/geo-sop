@@ -2,11 +2,16 @@
 setlocal
 cd /d "%~dp0" || exit /b 1
 
-if "%APP_VERSION%"=="" set APP_VERSION=0.3.44-dev
-
 where python >nul 2>nul
 if errorlevel 1 (
   echo Python 3.10+ is required to build the Windows application.
+  if "%CI%"=="" pause
+  exit /b 1
+)
+
+if "%APP_VERSION%"=="" for /f "usebackq delims=" %%V in (`python -c "from version import APP_VERSION; print(APP_VERSION)"`) do set "APP_VERSION=%%V"
+if "%APP_VERSION%"=="" (
+  echo Application version could not be read from version.py.
   if "%CI%"=="" pause
   exit /b 1
 )

@@ -33,9 +33,12 @@ jobs:
       - name: Resolve application version
         shell: pwsh
         run: |
+          $sourceVersion = python -c "from version import APP_VERSION; print(APP_VERSION)"
           $requestedVersion = "${{ github.event.inputs.app_version }}"
           if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
-            $requestedVersion = python -c "from version import APP_VERSION; print(APP_VERSION)"
+            $requestedVersion = $sourceVersion
+          } elseif ($requestedVersion -ne $sourceVersion) {
+            throw "Requested version $requestedVersion does not match version.py ($sourceVersion)."
           }
           if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
             throw "Application version could not be resolved."

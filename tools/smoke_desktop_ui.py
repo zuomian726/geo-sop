@@ -33,6 +33,7 @@ from werkzeug.serving import make_server  # noqa: E402
 
 import app as web_app  # noqa: E402
 from models import MonitorTask, User, db  # noqa: E402
+from version import APP_VERSION  # noqa: E402
 
 app = web_app.app
 
@@ -80,7 +81,7 @@ def seed_workspace() -> None:
 def run() -> None:
     seed_workspace()
     web_app._check_latest_update = lambda: {
-        "current_version": "0.3.44-dev",
+        "current_version": APP_VERSION,
         "latest_version": "1.0.0",
         "has_update": True,
         "required": False,
