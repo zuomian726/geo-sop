@@ -495,7 +495,8 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
             if cleanup_errors:
                 raise AcceptanceError("; ".join(cleanup_errors))
 
-    print(f"Production desktop/cloud acceptance passed in {time.monotonic() - started:.1f}s; test data cleaned")
+    cleanup_state = "test data retained for inspection" if keep else "test data cleaned"
+    print(f"Desktop/cloud acceptance passed in {time.monotonic() - started:.1f}s; {cleanup_state}")
 
 
 def main() -> None:

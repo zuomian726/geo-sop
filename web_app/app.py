@@ -147,6 +147,51 @@ def _ai_api_mode(config):
     return 'anthropic' if mode == 'anthropic' else 'openai'
 
 
+def _request_ai_text(config, prompt, *, max_tokens=1200, temperature=0.2, timeout=(10, 50)):
+    """Call an OpenAI- or Anthropic-compatible text API without exposing credentials."""
+    mode = _ai_api_mode(config)
+    if mode == 'anthropic':
+        api_url = _normalize_anthropic_messages_url(config.ai_api_url)
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': config.ai_api_key,
+            'anthropic-version': '2023-06-01',
+        }
+        payload = {
+            'model': config.ai_model_name,
+            'max_tokens': max_tokens,
+            'temperature': temperature,
+            'messages': [{'role': 'user', 'content': prompt}],
+        }
+    else:
+        api_url = _normalize_openai_chat_url(config.ai_api_url)
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {config.ai_api_key}',
+        }
+        payload = {
+            'model': config.ai_model_name,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+        }
+
+    response = requests.post(api_url, headers=headers, json=payload, timeout=timeout)
+    response.raise_for_status()
+    data = response.json()
+    if mode == 'anthropic':
+        raw = ''.join(
+            block.get('text', '')
+            for block in data.get('content', [])
+            if isinstance(block, dict) and block.get('type') == 'text'
+        )
+    else:
+        raw = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError('AI 接口未返回可分析的文本内容')
+    return {'mode': mode, 'api_url': api_url, 'text': raw.strip()}
+
+
 def _version_key(version):
     """Return a comparable key for the release versions used by GEO-SOP."""
     text = str(version or '').strip().lower().lstrip('v')
@@ -4225,45 +4270,8 @@ def run_ai_insights_analysis():
 }}
 """
     try:
-        import requests
-        mode = _ai_api_mode(config)
-        if mode == 'anthropic':
-            api_url = _normalize_anthropic_messages_url(config.ai_api_url)
-            headers = {
-                'Content-Type': 'application/json',
-                'x-api-key': config.ai_api_key,
-                'anthropic-version': '2023-06-01',
-            }
-            payload = {
-                'model': config.ai_model_name,
-                'max_tokens': 1200,
-                'temperature': 0.2,
-                'messages': [{'role': 'user', 'content': prompt}],
-            }
-        else:
-            api_url = _normalize_openai_chat_url(config.ai_api_url)
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {config.ai_api_key}'
-            }
-            payload = {
-                'model': config.ai_model_name,
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.2,
-                'max_tokens': 1200
-            }
-        response = requests.post(api_url, headers=headers, json=payload, timeout=(10, 50))
-        response.raise_for_status()
-        data = response.json()
-        if mode == 'anthropic':
-            raw = ''.join(
-                block.get('text', '')
-                for block in data.get('content', [])
-                if isinstance(block, dict) and block.get('type') == 'text'
-            )
-        else:
-            raw = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-        parsed = json.loads(_extract_json_text(raw), strict=False)
+        ai_response = _request_ai_text(config, prompt, max_tokens=1200, temperature=0.2, timeout=(10, 50))
+        parsed = json.loads(_extract_json_text(ai_response['text']), strict=False)
         if not isinstance(parsed, dict):
             raise ValueError('AI 返回结果不是有效的 JSON 对象')
         config.latest_insight = json.dumps(parsed, ensure_ascii=False)
@@ -4274,7 +4282,7 @@ def run_ai_insights_analysis():
             'analysis': parsed,
             'generated_at': config.latest_insight_generated_at.strftime('%Y-%m-%dT%H:%M:%S+08:00'),
             'overview': overview,
-            'api_mode': mode,
+            'api_mode': ai_response['mode'],
         })
     except requests.exceptions.Timeout:
         logger.warning("AI看板分析失败: provider request timed out")
@@ -4312,6 +4320,55 @@ def run_ai_insights_analysis():
 
 # ==================== 舆情设置 API ====================
 
+def _validated_sentiment_config_fields(data, existing=None):
+    if not isinstance(data, dict):
+        return None, '配置数据格式不正确'
+
+    def value(name, default=''):
+        if name in data:
+            return data.get(name)
+        return getattr(existing, name, default) if existing is not None else default
+
+    name = str(value('name') or '').strip()
+    if not name:
+        return None, '请输入配置名称'
+
+    enabled = bool(value('enable_ai_sentiment', False))
+    raw_mode = str(value('ai_platform', 'openai') or 'openai').strip().lower()
+    mode = 'anthropic' if raw_mode == 'anthropic' else 'openai'
+    api_url = str(value('ai_api_url') or '').strip()
+    model_name = str(value('ai_model_name') or '').strip()
+    incoming_key = str(data.get('ai_api_key') or '').strip() if 'ai_api_key' in data else ''
+    saved_key = existing.ai_api_key if existing is not None else ''
+    api_key = incoming_key or saved_key
+
+    if enabled:
+        missing = []
+        if not api_url:
+            missing.append('base_url')
+        if not api_key:
+            missing.append('API Key')
+        if not model_name:
+            missing.append('模型名称')
+        if missing:
+            return None, f"启用 AI 分析时请填写：{'、'.join(missing)}"
+        parsed = urlparse(api_url)
+        local_http = parsed.scheme == 'http' and (parsed.hostname or '').lower() in {
+            'localhost', '127.0.0.1', '::1'
+        }
+        if not ((parsed.scheme == 'https' and parsed.netloc) or local_http):
+            return None, 'base_url 必须使用 HTTPS；仅本机 localhost 调试允许 HTTP'
+
+    return {
+        'name': name,
+        'enable_ai_sentiment': enabled,
+        'ai_platform': mode,
+        'ai_api_url': api_url or None,
+        'ai_api_key': incoming_key,
+        'ai_model_name': model_name or None,
+        'ai_prompt': str(value('ai_prompt') or '').strip() or None,
+    }, None
+
 @app.route('/api/sentiment/configs', methods=['GET'])
 @login_required
 def get_sentiment_configs():
@@ -4337,26 +4394,26 @@ def get_sentiment_config(config_id):
 @login_required
 def create_sentiment_config():
     """创建舆情配置"""
-    data = request.get_json()
-    
+    data = request.get_json(silent=True)
+    fields, error = _validated_sentiment_config_fields(data)
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
     # 如果设置为默认，取消其他默认配置
     if data.get('is_default'):
         SentimentConfig.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
-    
-    if data.get('enable_ai_sentiment') and not str(data.get('ai_api_key') or '').strip():
-        return jsonify({'success': False, 'message': '启用 AI 分析时需要填写 API Key'}), 400
 
     config = SentimentConfig(
         user_id=current_user.id,
-        name=data.get('name', ''),
+        name=fields['name'],
         positive_words=json.dumps(data.get('positive_words', [])),
         negative_words=json.dumps(data.get('negative_words', [])),
-        enable_ai_sentiment=data.get('enable_ai_sentiment', False),
-        ai_platform=data.get('ai_platform'),
-        ai_api_url=data.get('ai_api_url'),
-        ai_api_key=str(data.get('ai_api_key') or '').strip() or None,
-        ai_model_name=data.get('ai_model_name'),
-        ai_prompt=data.get('ai_prompt'),
+        enable_ai_sentiment=fields['enable_ai_sentiment'],
+        ai_platform=fields['ai_platform'],
+        ai_api_url=fields['ai_api_url'],
+        ai_api_key=fields['ai_api_key'] or None,
+        ai_model_name=fields['ai_model_name'],
+        ai_prompt=fields['ai_prompt'],
         is_default=data.get('is_default', False)
     )
     
@@ -4374,25 +4431,25 @@ def update_sentiment_config(config_id):
     if not config:
         return jsonify({'success': False, 'message': '配置不存在'}), 404
     
-    data = request.get_json()
-    
+    data = request.get_json(silent=True)
+    fields, error = _validated_sentiment_config_fields(data, config)
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
     # 如果设置为默认，取消其他默认配置
     if data.get('is_default') and not config.is_default:
         SentimentConfig.query.filter_by(user_id=current_user.id, is_default=True).update({'is_default': False})
-    
-    config.name = data.get('name', config.name)
+
+    config.name = fields['name']
     config.positive_words = json.dumps(data.get('positive_words', [])) if 'positive_words' in data else config.positive_words
     config.negative_words = json.dumps(data.get('negative_words', [])) if 'negative_words' in data else config.negative_words
-    config.enable_ai_sentiment = data.get('enable_ai_sentiment', config.enable_ai_sentiment)
-    config.ai_platform = data.get('ai_platform', config.ai_platform)
-    config.ai_api_url = data.get('ai_api_url', config.ai_api_url)
-    incoming_api_key = str(data.get('ai_api_key') or '').strip() if 'ai_api_key' in data else ''
-    if incoming_api_key:
-        config.ai_api_key = incoming_api_key
-    if data.get('enable_ai_sentiment', config.enable_ai_sentiment) and not config.ai_api_key:
-        return jsonify({'success': False, 'message': '启用 AI 分析时需要填写 API Key'}), 400
-    config.ai_model_name = data.get('ai_model_name', config.ai_model_name)
-    config.ai_prompt = data.get('ai_prompt', config.ai_prompt)
+    config.enable_ai_sentiment = fields['enable_ai_sentiment']
+    config.ai_platform = fields['ai_platform']
+    config.ai_api_url = fields['ai_api_url']
+    if fields['ai_api_key']:
+        config.ai_api_key = fields['ai_api_key']
+    config.ai_model_name = fields['ai_model_name']
+    config.ai_prompt = fields['ai_prompt']
     config.is_default = data.get('is_default', config.is_default)
     
     db.session.commit()
@@ -4545,114 +4602,75 @@ def analyze_sentiment_local(text, keyword, positive_words, negative_words):
 
 
 def analyze_sentiment_ai(text, keyword, config):
-    """智能舆情分析（调用第三方API）"""
+    """Analyze sentiment through the configured compatible AI provider."""
     try:
-        import requests
-        
-        # 构建prompt
         if not config.ai_prompt:
             prompt = f"""请分析以下文本中关于"{keyword if keyword else '内容'}"的舆情倾向：
-            
+
 文本：{text[:500]}
 
 请判断是正面、负面还是中性，并给出简短理由。
 输出格式：{{"sentiment": "positive|negative|neutral", "score": -1到1之间的数值, "label": "正面|负面|中性", "reason": "分析理由"}}
 """
         else:
-            # 转义输出格式中的大括号，避免format解析错误
-            escaped_prompt = config.ai_prompt.replace('{', '{{').replace('}', '}}')
-            # 然后恢复text和keyword的占位符
-            escaped_prompt = escaped_prompt.replace('{{text}}', '{text}').replace('{{keyword}}', '{keyword}')
-            prompt = escaped_prompt.format(text=text[:1000], keyword=keyword if keyword else '')
-        
-        # 调用API
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {config.ai_api_key}'
-        }
-        
-        payload = {
-            'model': config.ai_model_name,
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.3
-        }
-        
-        logger.info(f"调用AI舆情分析API: {config.ai_api_url}")
-        logger.info(f"使用模型: {config.ai_model_name}")
-        
-        response = requests.post(config.ai_api_url, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        
-        result = response.json()
-        ai_response = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-        
-        logger.info(f"AI返回内容: {ai_response[:300]}")
-        
-        # 解析AI返回结果
+            prompt = config.ai_prompt.replace('{text}', text[:1000]).replace('{keyword}', keyword or '')
+
+        ai_response = _request_ai_text(
+            config,
+            prompt,
+            max_tokens=500,
+            temperature=0.3,
+            timeout=(10, 30),
+        )
+        parsed = json.loads(_extract_json_text(ai_response['text']), strict=False)
+        if not isinstance(parsed, dict):
+            raise ValueError('AI 返回结果不是有效的 JSON 对象')
+        sentiment = str(parsed.get('sentiment') or '').strip().lower()
+        if sentiment not in {'positive', 'negative', 'neutral'}:
+            raise ValueError('AI 返回了无法识别的舆情类型')
         try:
-            # 尝试清理AI返回的内容（去除可能的markdown代码块标记）
-            cleaned_response = ai_response.strip()
-            if cleaned_response.startswith('```json'):
-                cleaned_response = cleaned_response[7:]
-            if cleaned_response.endswith('```'):
-                cleaned_response = cleaned_response[:-3]
-            cleaned_response = cleaned_response.strip()
-            
-            parsed = json.loads(cleaned_response)
-            return {
-                'sentiment': parsed.get('sentiment', 'neutral'),
-                'score': parsed.get('score', 0),
-                'label': parsed.get('label', '中性'),
-                'reason': parsed.get('reason', ''),
-                'raw_response': ai_response
-            }
-        except json.JSONDecodeError as e:
-            # JSON解析失败，记录详细错误信息
-            logger.error(f"AI舆情分析JSON解析失败: {str(e)}")
-            logger.error(f"原始响应: {ai_response[:500]}")
-            return {
-                'sentiment': 'neutral',
-                'score': 0,
-                'label': '中性',
-                'reason': f'分析失败: JSON解析错误',
-                'raw_response': ai_response
-            }
-        except Exception as e:
-            # 其他解析失败
-            logger.error(f"AI舆情分析解析失败: {str(e)}")
-            return {
-                'sentiment': 'neutral',
-                'score': 0,
-                'label': '中性',
-                'reason': f'分析失败: {str(e)}',
-                'raw_response': ai_response
-            }
-    
-    except Exception as e:
-        logger.error(f"智能舆情分析失败: {str(e)}")
-        logger.error(f"API URL: {config.ai_api_url}")
-        logger.error(f"模型: {config.ai_model_name}")
-        logger.error("API Key状态: %s", "已配置" if config.ai_api_key else "未配置")
-        
-        # 提供更友好的错误提示
-        error_msg = str(e)
-        if '403' in error_msg:
-            if 'balance' in error_msg.lower() or 'insufficient' in error_msg.lower():
-                error_msg = '账户余额不足，请充值后重试，或切换到更便宜的模型（如 Qwen/Qwen2-7B-Instruct）'
-            else:
-                error_msg = 'API鉴权失败，请检查API密钥是否正确、余额是否充足、模型是否有访问权限'
-        elif '404' in error_msg:
-            error_msg = 'API地址不存在，请检查API地址是否正确'
-        elif 'timeout' in error_msg.lower():
-            error_msg = 'API请求超时，请检查网络连接或稍后重试'
-        
+            score = max(-1.0, min(1.0, float(parsed.get('score', 0))))
+        except (TypeError, ValueError) as exc:
+            raise ValueError('AI 返回了无效的舆情分数') from exc
+        labels = {'positive': '正面', 'negative': '负面', 'neutral': '中性'}
         return {
-            'sentiment': 'neutral',
-            'score': 0,
-            'label': '中性',
-            'reason': f'分析失败: {error_msg}',
-            'error': str(e)
+            'sentiment': sentiment,
+            'score': score,
+            'label': labels[sentiment],
+            'reason': str(parsed.get('reason') or '').strip()[:1000],
+            'provider': ai_response['mode'],
         }
+    except requests.exceptions.Timeout:
+        error_msg = 'API 请求超时，请检查网络连接或稍后重试'
+    except requests.exceptions.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else 0
+        if status in {401, 403}:
+            error_msg = 'API 鉴权失败，请检查 API Key、模型权限和账户余额'
+        elif status == 404:
+            error_msg = 'API 地址或模型不存在，请检查接口模式、base_url 和模型名称'
+        elif status == 429:
+            error_msg = 'API 请求过于频繁或额度不足，请稍后重试'
+        else:
+            error_msg = f'AI 服务返回 HTTP {status or "错误"}'
+    except (json.JSONDecodeError, ValueError):
+        error_msg = 'AI 返回格式不符合要求，请重试或更换模型'
+    except requests.exceptions.RequestException:
+        error_msg = '无法连接 AI 服务，请检查网络和 base_url'
+    except Exception:
+        error_msg = 'AI 分析暂时不可用，请稍后重试'
+
+    logger.warning(
+        "智能舆情分析失败 mode=%s model=%s",
+        _ai_api_mode(config),
+        config.ai_model_name or 'unset',
+    )
+    return {
+        'sentiment': 'neutral',
+        'score': 0,
+        'label': '中性',
+        'reason': f'分析失败: {error_msg}',
+        'error': 'provider_request_failed',
+    }
 
 
 # ==================== 初始化数据库 ====================

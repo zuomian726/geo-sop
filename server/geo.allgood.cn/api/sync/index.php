@@ -232,6 +232,44 @@ function geo_sync_ensure_schema(PDO $pdo): void {
         geo_add_index($pdo, $table, $index, "UNIQUE KEY {$index} (cloud_user_id, install_id, local_id)");
     }
     });
+
+    // Existing installations may already have recorded the original migration
+    // before the V1 summary columns and composite query indexes were added.
+    geo_run_schema_migration($pdo, 'sync_workspace', 2026071701, function (PDO $pdo): void {
+        geo_add_column($pdo, 'geo_sync_results', 'result_at', 'DATETIME GENERATED ALWAYS AS (COALESCE(local_created_at, synced_at)) STORED');
+        geo_add_column($pdo, 'geo_sync_results', 'has_screenshot', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER has_brand_exposure');
+        geo_add_column($pdo, 'geo_sync_results', 'reference_count', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER has_screenshot');
+        geo_add_column($pdo, 'geo_sync_results', 'reference_domains', 'TEXT NULL AFTER reference_count');
+        geo_add_column($pdo, 'geo_sync_results', 'reference_items', 'TEXT NULL AFTER reference_domains');
+
+        $indexes = [
+            'idx_results_user_time' => 'cloud_user_id, result_at DESC, id DESC',
+            'idx_results_user_task_time' => 'cloud_user_id, local_task_id, result_at DESC, id DESC',
+            'idx_results_user_platform_time' => 'cloud_user_id, platform, result_at DESC, id DESC',
+            'idx_results_user_task_platform_time' => 'cloud_user_id, local_task_id, platform, result_at DESC, id DESC',
+            'idx_results_user_exposed_time' => 'cloud_user_id, has_brand_exposure, result_at DESC, id DESC',
+            'idx_results_user_daily' => 'cloud_user_id, result_at, has_brand_exposure',
+        ];
+        foreach ($indexes as $name => $columns) {
+            geo_add_index($pdo, 'geo_sync_results', $name, "KEY {$name} ({$columns})");
+        }
+
+        $uniqueKeys = [
+            'geo_sync_users' => 'uniq_install_user',
+            'geo_sync_tasks' => 'uniq_install_task',
+            'geo_sync_results' => 'uniq_install_result',
+            'geo_sync_manuscripts' => 'uniq_install_manuscript',
+            'geo_sync_sentiment_configs' => 'uniq_install_config',
+        ];
+        foreach ($uniqueKeys as $table => $index) {
+            $stmt = $pdo->prepare('SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index) AS columns FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=? AND index_name=? GROUP BY index_name');
+            $stmt->execute([$table, $index]);
+            $columns = strtolower((string)($stmt->fetchColumn() ?: ''));
+            if ($columns === 'cloud_user_id,install_id,local_id') continue;
+            geo_schema_exec($pdo, "ALTER TABLE {$table} DROP INDEX {$index}", [1091]);
+            geo_add_index($pdo, $table, $index, "UNIQUE KEY {$index} (cloud_user_id, install_id, local_id)");
+        }
+    });
 }
 
 function cloud_user_id_for_token(PDO $pdo, array $config, string $token): int {

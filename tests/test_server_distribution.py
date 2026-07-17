@@ -164,6 +164,20 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn('runpy.run_path(str(ROOT / "version.py"))', pipeline)
         self.assertNotIn('"app_version": "0.3.', pipeline)
 
+        fresh = (ROOT / "tools" / "smoke_fresh_cloud_deployment.py").read_text(encoding="utf-8")
+        for marker in (
+            "TemporaryDirectory",
+            "GEO_STORAGE_DIR",
+            "smoke_cloud_site.py",
+            "smoke_cloud_client_pipeline.py",
+        ):
+            self.assertIn(marker, fresh)
+
+        public = (ROOT / "tools" / "smoke_public_site.py").read_text(encoding="utf-8")
+        self.assertIn("1440, 900", public)
+        self.assertIn("390, 844", public)
+        self.assertIn("horizontal overflow", public)
+
     def test_demo_entry_is_one_click_and_read_only_identity_is_centralized(self):
         common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
         landing = (SERVER / "demo" / "index.php").read_text(encoding="utf-8")
@@ -199,6 +213,18 @@ class ServerDistributionTests(unittest.TestCase):
         for relative, component in components.items():
             source = (SERVER / relative).read_text(encoding="utf-8")
             self.assertIn(f"geo_run_schema_migration($pdo, '{component}'", source, relative)
+
+        sync = (SERVER / "api" / "sync" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("geo_run_schema_migration($pdo, 'sync_workspace', 2026071701", sync)
+        for index in (
+            "idx_results_user_time",
+            "idx_results_user_task_time",
+            "idx_results_user_platform_time",
+            "idx_results_user_task_platform_time",
+            "idx_results_user_exposed_time",
+            "idx_results_user_daily",
+        ):
+            self.assertGreaterEqual(sync.count(index), 2, index)
 
     def test_fresh_dashboard_initializes_the_complete_workspace_schema(self):
         schema = (SERVER / "api" / "workspace-schema.php").read_text(encoding="utf-8")

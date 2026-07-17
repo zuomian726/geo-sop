@@ -1731,8 +1731,6 @@ body {
                             <el-select v-model="sentimentConfigForm.ai_platform" @change="onPlatformChange" placeholder="请选择AI平台">
                                 <el-option label="base_url (OpenAI 兼容)" value="openai"></el-option>
                                 <el-option label="base_url (Anthropic)" value="anthropic"></el-option>
-                                <el-option label="SiliconFlow / OpenAI 兼容" value="siliconflow"></el-option>
-                                <el-option label="豆包 / OpenAI 兼容" value="doubao"></el-option>
                             </el-select>
                         </el-form-item>
                         <el-form-item v-if="sentimentConfigForm.enable_ai_sentiment" label="base_url">
@@ -4916,14 +4914,6 @@ const app = createApp({
                 'anthropic': {
                     api_url: 'https://api.anthropic.com',
                     model_name: 'claude-sonnet-4-5'
-                },
-                'siliconflow': {
-                    api_url: 'https://api.siliconflow.cn/v1',
-                    model_name: 'Qwen/Qwen2-7B-Instruct'
-                },
-                'doubao': {
-                    api_url: 'https://api.doubao.com/v1',
-                    model_name: 'doubao-3.5'
                 }
             };
             
@@ -4957,6 +4947,10 @@ const app = createApp({
             }
             if (data.enable_ai_sentiment && !apiKey && !this.sentimentConfigForm.api_key_configured) {
                 ElMessage.error('启用 AI 分析时需要填写 API Key');
+                return;
+            }
+            if (data.enable_ai_sentiment && (!data.ai_api_url || !data.ai_model_name)) {
+                ElMessage.error('启用 AI 分析时需要填写 base_url 和模型名称');
                 return;
             }
             

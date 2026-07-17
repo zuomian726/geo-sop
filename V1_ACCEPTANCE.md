@@ -104,7 +104,7 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 140 tests passing on 2026-07-17.
+- Unit and contract suite: 146 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
@@ -123,6 +123,13 @@ This section records development evidence without changing production packages.
   administrator pre-seeding, creates all workspace schemas, rejects invalid
   tasks without losing the form, creates tasks through the AJAX and fallback
   paths, and exposes the new queue through the account-private dashboard API.
+- The repeatable fresh-deployment smoke starts disposable MySQL and PHP
+  services, seeds the synthetic Demo, then verifies registration, heartbeat,
+  history restore, screenshots, cloud commands, cross-account isolation and
+  both exports before deleting every temporary file and account.
+- An old `2026071601` result schema upgrades to `2026071701` and restores all
+  six account-scoped result query indexes without manual SQL. Production was
+  inspected read-only and already contains the same six indexes.
 - Disposable two-account staging pipeline: registration, desktop login,
   heartbeat, workspace/history sync, private statistics and screenshots, cloud
   analysis, remote-task execution, cross-account isolation, and both export
@@ -142,6 +149,13 @@ This section records development evidence without changing production packages.
 - Stable-channel downloads additionally require a valid Windows Authenticode
   signature or macOS code signature plus stapled notarization ticket before the
   client marks them ready to install; failed packages are deleted.
+- OpenAI-compatible and Anthropic-compatible providers now share the same
+  bounded request adapter for both dashboard insights and per-answer sentiment.
+  Invalid or insecure configurations are rejected before save, provider errors
+  are sanitized, and raw model responses are not persisted with sentiment data.
+- Public download pages pass real Chrome rendering at 1440x900 and 390x844:
+  every lazy screenshot loads, permanent macOS/Windows links are present, and
+  neither viewport has horizontal overflow.
 - Windows release CI now launches the application from its installed directory,
   verifies the fresh account gate and preserved stable signature, then confirms
   uninstall removes the custom protocol. Stable macOS DMGs use notarized-release

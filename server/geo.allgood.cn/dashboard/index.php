@@ -83,7 +83,7 @@ function geo_dashboard_wants_json(): bool {
         || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch';
 }
 
-$taskForm = [
+$defaultTaskForm = [
     'name' => '云端下发任务',
     'brand_name' => '',
     'brand_keywords' => '',
@@ -91,6 +91,7 @@ $taskForm = [
     'questions' => '',
     'platforms' => ['doubao'],
 ];
+$taskForm = $defaultTaskForm;
 $messageType = 'success';
 if (isset($_GET['task_created'])) {
     $message = '远程任务已创建。桌面端登录同一账号后会自动拉取并执行。';
@@ -109,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($isDemoUser) {
         $message = '在线 Demo 为只读安全模式，不能创建或修改任务。';
         $messageType = 'error';
+        $taskForm = $defaultTaskForm;
     } else {
     $payload = [
         'name' => $taskForm['name'],

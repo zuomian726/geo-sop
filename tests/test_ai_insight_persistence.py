@@ -101,6 +101,88 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertIn("fallback", payload)
         self.assertNotIn("provider stalled", response.get_data(as_text=True))
 
+    def test_openai_compatible_sentiment_uses_normalized_base_url(self):
+        self.config.ai_platform = "openai"
+        self.config.ai_api_url = "https://api.deepseek.example/v1"
+        db.session.commit()
+        ai_response = Mock()
+        ai_response.raise_for_status.return_value = None
+        ai_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {"sentiment": "positive", "score": 0.82, "reason": "品牌评价积极"},
+                            ensure_ascii=False,
+                        )
+                    }
+                }
+            ]
+        }
+
+        with patch("requests.post", return_value=ai_response) as post:
+            result = web_app.analyze_sentiment_ai("用户认为品牌服务专业", "品牌", self.config)
+
+        self.assertEqual("positive", result["sentiment"])
+        self.assertEqual("正面", result["label"])
+        self.assertEqual("openai", result["provider"])
+        self.assertNotIn("raw_response", result)
+        args, kwargs = post.call_args
+        self.assertEqual("https://api.deepseek.example/v1/chat/completions", args[0])
+        self.assertEqual("Bearer local-secret-key", kwargs["headers"]["Authorization"])
+        self.assertEqual((10, 30), kwargs["timeout"])
+
+    def test_anthropic_compatible_sentiment_uses_messages_contract(self):
+        self.config.ai_platform = "anthropic"
+        self.config.ai_api_url = "https://anthropic.example"
+        self.config.ai_model_name = "claude-test"
+        db.session.commit()
+        ai_response = Mock()
+        ai_response.raise_for_status.return_value = None
+        ai_response.json.return_value = {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "```json\n"
+                    + json.dumps(
+                        {"sentiment": "negative", "score": -0.65, "reason": "用户明确表达不满"},
+                        ensure_ascii=False,
+                    )
+                    + "\n```",
+                }
+            ]
+        }
+
+        with patch("requests.post", return_value=ai_response) as post:
+            result = web_app.analyze_sentiment_ai("用户反馈体验很差", "品牌", self.config)
+
+        self.assertEqual("negative", result["sentiment"])
+        self.assertEqual("负面", result["label"])
+        self.assertEqual("anthropic", result["provider"])
+        args, kwargs = post.call_args
+        self.assertEqual("https://anthropic.example/v1/messages", args[0])
+        self.assertEqual("local-secret-key", kwargs["headers"]["x-api-key"])
+        self.assertEqual("2023-06-01", kwargs["headers"]["anthropic-version"])
+        self.assertNotIn("Authorization", kwargs["headers"])
+        self.assertEqual(500, kwargs["json"]["max_tokens"])
+
+    def test_sentiment_provider_failure_is_actionable_and_sanitized(self):
+        provider_response = Mock(status_code=403)
+        ai_response = Mock()
+        ai_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "private-provider.example rejected local-secret-key",
+            response=provider_response,
+        )
+
+        with patch("requests.post", return_value=ai_response):
+            result = web_app.analyze_sentiment_ai("待分析文本", "品牌", self.config)
+
+        serialized = json.dumps(result, ensure_ascii=False)
+        self.assertEqual("provider_request_failed", result["error"])
+        self.assertIn("鉴权失败", result["reason"])
+        self.assertNotIn("private-provider", serialized)
+        self.assertNotIn("local-secret-key", serialized)
+
     def test_cloud_payload_syncs_insight_but_never_api_key_by_default(self):
         insight = {"summary": "可同步分析", "actions": ["执行动作"]}
         self.config.latest_insight = json.dumps(insight, ensure_ascii=False)
@@ -167,6 +249,61 @@ class AiInsightPersistenceTests(unittest.TestCase):
         self.assertEqual("local-secret-key", stored.ai_api_key)
         self.assertEqual("Updated AI", stored.name)
         self.assertNotIn("local-secret-key", response.get_data(as_text=True))
+
+    def test_enabled_ai_config_requires_url_key_and_model_before_save(self):
+        response = self.client.post(
+            "/api/sentiment/configs",
+            json={
+                "name": "Incomplete AI",
+                "enable_ai_sentiment": True,
+                "ai_platform": "anthropic",
+                "ai_api_key": "candidate-key",
+                "ai_api_url": "",
+                "ai_model_name": "",
+            },
+        )
+
+        self.assertEqual(400, response.status_code)
+        message = response.get_json()["message"]
+        self.assertIn("base_url", message)
+        self.assertIn("模型名称", message)
+        self.assertIsNone(SentimentConfig.query.filter_by(name="Incomplete AI").first())
+
+    def test_invalid_ai_config_update_does_not_mutate_saved_values(self):
+        response = self.client.put(
+            f"/api/sentiment/configs/{self.config.id}",
+            json={
+                "name": "Should not persist",
+                "enable_ai_sentiment": True,
+                "ai_api_url": "http://provider.example/v1",
+                "ai_model_name": "example-model",
+                "ai_api_key": "",
+            },
+        )
+
+        self.assertEqual(400, response.status_code)
+        self.assertIn("HTTPS", response.get_json()["message"])
+        db.session.expire_all()
+        stored = db.session.get(SentimentConfig, self.config.id)
+        self.assertEqual("Default AI", stored.name)
+        self.assertEqual("https://api.example.com", stored.ai_api_url)
+
+    def test_local_http_ai_endpoint_is_allowed_for_private_development(self):
+        response = self.client.put(
+            f"/api/sentiment/configs/{self.config.id}",
+            json={
+                "enable_ai_sentiment": True,
+                "ai_platform": "openai",
+                "ai_api_url": "http://127.0.0.1:11434/v1",
+                "ai_model_name": "local-model",
+                "ai_api_key": "",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        stored = db.session.get(SentimentConfig, self.config.id)
+        self.assertEqual("http://127.0.0.1:11434/v1", stored.ai_api_url)
+        self.assertEqual("local-secret-key", stored.ai_api_key)
 
     def test_restored_config_keeps_cloud_identity_when_resynced(self):
         self.config.cloud_source_install_id = "original-device"
