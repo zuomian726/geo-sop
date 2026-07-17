@@ -662,6 +662,7 @@ class AssetUploadPipelineTests(CloudPipelineTestCase):
         self.assertEqual(result.id, metadata["local_result_id"])
         self.assertEqual(task.id, metadata["local_task_id"])
         self.assertEqual("doubao", metadata["platform"])
+        self.assertNotIn("original_path", metadata)
         self.assertEqual(1, uploaded["screenshots"]["uploaded"])
         self.assertEqual(screenshot.stat().st_size, uploaded["screenshots"]["bytes_uploaded"])
 

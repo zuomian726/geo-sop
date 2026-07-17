@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     geo_json(['success' => false, 'message' => 'method not allowed'], 405);
 }
+$requestSize = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+if ($requestSize > 32 * 1024 * 1024) {
+    geo_json(['success' => false, 'message' => 'request is larger than 32MB'], 413);
+}
 
 $pdo = geo_pdo();
 geo_ensure_schema($pdo);
@@ -75,6 +79,18 @@ function geo_assets_mark_result_screenshot(PDO $pdo, int $cloudUserId, string $i
     $stmt->execute([$cloudUserId, $installId, $localResultId]);
 }
 
+function geo_assets_require_result(PDO $pdo, int $cloudUserId, string $installId, int $localResultId): void {
+    $stmt = $pdo->prepare('SELECT id FROM geo_sync_results WHERE cloud_user_id=? AND install_id=? AND local_id=? LIMIT 1');
+    $stmt->execute([$cloudUserId, $installId, $localResultId]);
+    if (!$stmt->fetchColumn()) {
+        geo_json(['success' => false, 'message' => '同步结果不存在，请先同步统计数据后再上传截图'], 409);
+    }
+}
+
+function geo_assets_valid_install_id(string $value): bool {
+    return (bool)preg_match('/^[A-Za-z0-9_-]{8,64}$/', $value);
+}
+
 function geo_asset_safe_part(string $value): string {
     $value = preg_replace('/[^A-Za-z0-9._-]+/', '-', $value);
     $value = trim((string)$value, '.-');
@@ -103,50 +119,75 @@ try {
         if (!is_array($payload)) {
             geo_json(['success' => false, 'message' => 'invalid stats payload'], 400);
         }
-        $installId = (string)($payload['install_id'] ?? '');
-        $userKey = (string)($payload['user_key'] ?? '');
-        if ($installId === '' || $userKey === '') {
-            geo_json(['success' => false, 'message' => 'install_id and user_key are required'], 400);
+        $installId = trim((string)($payload['install_id'] ?? ''));
+        $userKey = (string)$user['username'];
+        if (!geo_assets_valid_install_id($installId)) {
+            geo_json(['success' => false, 'message' => 'install_id is invalid'], 400);
         }
+        $counts = is_array($payload['counts'] ?? null) ? $payload['counts'] : [];
+        $payload = [
+            'install_id' => $installId,
+            'user_key' => $userKey,
+            'generated_at' => mb_substr((string)($payload['generated_at'] ?? ''), 0, 40, 'UTF-8'),
+            'counts' => [
+                'tasks' => max(0, (int)($counts['tasks'] ?? 0)),
+                'results' => max(0, (int)($counts['results'] ?? 0)),
+                'brand_exposure_results' => max(0, (int)($counts['brand_exposure_results'] ?? 0)),
+                'screenshots' => max(0, (int)($counts['screenshots'] ?? 0)),
+                'platforms' => max(0, (int)($counts['platforms'] ?? 0)),
+            ],
+        ];
+        $encodedPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encodedPayload === false || strlen($encodedPayload) > 65536) {
+            geo_json(['success' => false, 'message' => 'stats payload is too large'], 413);
+        }
+        $pdo->prepare('DELETE FROM geo_sync_stats_snapshots WHERE cloud_user_id=? AND install_id=?')->execute([$cloudUserId, $installId]);
         $stmt = $pdo->prepare('INSERT INTO geo_sync_stats_snapshots (cloud_user_id,install_id,user_key,payload,created_at) VALUES (?,?,?,?,?)');
-        $stmt->execute([$cloudUserId, $installId, $userKey, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $now]);
+        $stmt->execute([$cloudUserId, $installId, $userKey, $encodedPayload, $now]);
         geo_json(['success' => true, 'stats' => $payload, 'id' => (int)$pdo->lastInsertId()]);
     }
 
     if ($kind !== 'screenshot') {
         geo_json(['success' => false, 'message' => 'unsupported asset kind'], 400);
     }
-    if (empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+    if (empty($_FILES['file']) || (int)($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES['file']['tmp_name'])) {
         geo_json(['success' => false, 'message' => 'file is required'], 400);
     }
 
-    $installId = (string)($body['install_id'] ?? '');
-    $userKey = (string)($body['user_key'] ?? '');
+    $installId = trim((string)($body['install_id'] ?? ''));
+    $userKey = (string)$user['username'];
     $localResultId = (int)($body['local_result_id'] ?? 0);
     $localTaskId = (int)($body['local_task_id'] ?? 0);
-    if ($installId === '' || $userKey === '' || $localResultId <= 0) {
-        geo_json(['success' => false, 'message' => 'install_id, user_key and local_result_id are required'], 400);
+    if (!geo_assets_valid_install_id($installId) || $localResultId <= 0) {
+        geo_json(['success' => false, 'message' => 'install_id and local_result_id are invalid'], 400);
     }
 
     $tmp = $_FILES['file']['tmp_name'];
-    $size = (int)($_FILES['file']['size'] ?? filesize($tmp));
+    $size = (int)(filesize($tmp) ?: 0);
     if ($size <= 0 || $size > 30 * 1024 * 1024) {
         geo_json(['success' => false, 'message' => 'file size is invalid or larger than 30MB'], 400);
     }
+    $imageInfo = @getimagesize($tmp);
+    $allowedMimes = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+    $detectedMime = is_array($imageInfo) ? (string)($imageInfo['mime'] ?? '') : '';
+    $width = is_array($imageInfo) ? (int)($imageInfo[0] ?? 0) : 0;
+    $height = is_array($imageInfo) ? (int)($imageInfo[1] ?? 0) : 0;
+    if (!isset($allowedMimes[$detectedMime]) || $width <= 0 || $height <= 0 || $width > 10000 || $height > 100000 || ($width * $height) > 120000000) {
+        geo_json(['success' => false, 'message' => 'file is not a supported screenshot image'], 415);
+    }
+    geo_assets_require_result($pdo, $cloudUserId, $installId, $localResultId);
     $sha = hash_file('sha256', $tmp);
     $stmt = $pdo->prepare('SELECT id,public_url,file_size FROM geo_sync_assets WHERE cloud_user_id=? AND install_id=? AND local_result_id=? AND kind=? AND sha256=? LIMIT 1');
     $stmt->execute([$cloudUserId, $installId, $localResultId, 'screenshot', $sha]);
     $existing = $stmt->fetch();
     if ($existing) {
         geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
-        geo_json(['success' => true, 'deduped' => true, 'id' => (int)$existing['id'], 'url' => $existing['public_url'], 'size' => (int)$existing['file_size']]);
+        $assetId = (int)$existing['id'];
+        geo_json(['success' => true, 'deduped' => true, 'id' => $assetId, 'url' => "/api/dashboard/?action=asset&asset_id={$assetId}", 'size' => (int)$existing['file_size']]);
     }
 
-    $original = (string)($_FILES['file']['name'] ?? 'screenshot.png');
-    $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-    if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
-        $ext = 'png';
-    }
+    $original = mb_substr(basename((string)($_FILES['file']['name'] ?? 'screenshot.png')), 0, 255, 'UTF-8');
+    $ext = $allowedMimes[$detectedMime];
     $date = date('Ymd');
     $dir = geo_storage_path("cloud-assets/{$cloudUserId}/{$date}");
     if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
@@ -161,9 +202,12 @@ try {
     $config = geo_config();
     $publicBaseUrl = rtrim((string)($config['public_base_url'] ?? 'https://geo.allgood.cn'), '/');
     $publicUrl = "{$publicBaseUrl}/storage/cloud-assets/{$cloudUserId}/{$date}/{$name}";
-    $mime = (string)($_FILES['file']['type'] ?? 'image/png');
+    $mime = $detectedMime;
     $payload = $body;
     unset($payload['kind']);
+    unset($payload['original_path'], $payload['user_key']);
+    $payload['platform'] = mb_substr((string)($payload['platform'] ?? ''), 0, 80, 'UTF-8');
+    $payload['question'] = mb_substr((string)($payload['question'] ?? ''), 0, 2000, 'UTF-8');
 
     $stmt = $pdo->prepare('INSERT INTO geo_sync_assets (cloud_user_id,install_id,user_key,local_result_id,local_task_id,kind,platform,question,original_name,storage_path,public_url,mime_type,file_size,sha256,payload,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     $stmt->execute([
@@ -173,8 +217,8 @@ try {
         $localResultId,
         $localTaskId ?: null,
         'screenshot',
-        (string)($body['platform'] ?? ''),
-        (string)($body['question'] ?? ''),
+        $payload['platform'],
+        $payload['question'],
         $original,
         $path,
         $publicUrl,
@@ -186,7 +230,8 @@ try {
         $now,
     ]);
     geo_assets_mark_result_screenshot($pdo, $cloudUserId, $installId, $localResultId);
-    geo_json(['success' => true, 'deduped' => false, 'id' => (int)$pdo->lastInsertId(), 'url' => $publicUrl, 'size' => $size, 'sha256' => $sha]);
+    $assetId = (int)$pdo->lastInsertId();
+    geo_json(['success' => true, 'deduped' => false, 'id' => $assetId, 'url' => "/api/dashboard/?action=asset&asset_id={$assetId}", 'size' => $size, 'sha256' => $sha]);
 } catch (Throwable $e) {
     geo_internal_error('asset_upload', $e, '截图上传失败，客户端将自动重试');
 }

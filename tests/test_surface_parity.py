@@ -297,6 +297,16 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("timeout=(10, 50)", app)
         self.assertIn("except requests.exceptions.Timeout", app)
 
+    def test_dashboard_exports_are_offline_and_desktop_path_aware(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        app = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        self.assertNotIn("cdn.sheetjs.com", dashboard)
+        self.assertIn("downloadDashboardFile(url, fallbackFilename)", dashboard)
+        self.assertIn("save_to_downloads", dashboard)
+        self.assertIn("/api/analysis/references/export", dashboard)
+        self.assertIn("def export_reference_analysis", app)
+        self.assertGreaterEqual(app.count("_maybe_save_desktop_download("), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

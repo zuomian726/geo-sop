@@ -143,6 +143,22 @@ function geo_dashboard_limit(): int {
     return max(1, min(500, $limit));
 }
 
+function geo_dashboard_offset(): int {
+    return max(0, min(100000, (int)($_GET['offset'] ?? 0)));
+}
+
+function geo_dashboard_text_param(string $name, int $maxLength): string {
+    return mb_substr(trim((string)($_GET[$name] ?? '')), 0, $maxLength, 'UTF-8');
+}
+
+function geo_dashboard_date_param(string $name, string $fallback = ''): string {
+    $value = geo_dashboard_text_param($name, 10);
+    if ($value === '' && $fallback !== '') $value = geo_dashboard_text_param($fallback, 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) return '';
+    [$year, $month, $day] = array_map('intval', explode('-', $value));
+    return checkdate($month, $day, $year) ? $value : '';
+}
+
 function geo_dashboard_stream_rows(PDO $pdo): void {
     if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
         $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
@@ -153,10 +169,10 @@ function geo_dashboard_reference_scan(PDO $pdo, int $cloudUserId, bool $deduplic
     $where = ['cloud_user_id=?'];
     $params = [$cloudUserId];
     $taskId = (int)($_GET['task_id'] ?? 0);
-    $installId = trim((string)($_GET['install_id'] ?? ''));
-    $platform = trim((string)($_GET['platform'] ?? ''));
-    $dateStart = trim((string)($_GET['date_start'] ?? $_GET['start_date'] ?? ''));
-    $dateEnd = trim((string)($_GET['date_end'] ?? $_GET['end_date'] ?? ''));
+    $installId = geo_dashboard_text_param('install_id', 64);
+    $platform = geo_dashboard_text_param('platform', 80);
+    $dateStart = geo_dashboard_date_param('date_start', 'start_date');
+    $dateEnd = geo_dashboard_date_param('date_end', 'end_date');
     if ($taskId > 0) {
         $where[] = 'local_task_id=?';
         $params[] = $taskId;
@@ -263,7 +279,7 @@ function geo_dashboard_asset_map(PDO $pdo, int $cloudUserId, array $pairs): arra
             $params[] = (string)$pair['install_id'];
             $params[] = (int)$pair['local_result_id'];
         }
-        $sql = 'SELECT install_id,local_result_id,storage_path,public_url,file_size,updated_at FROM geo_sync_assets WHERE cloud_user_id=? AND kind="screenshot" AND (' . implode(' OR ', $clauses) . ') ORDER BY updated_at DESC';
+        $sql = 'SELECT id,install_id,local_result_id,storage_path,file_size,updated_at FROM geo_sync_assets WHERE cloud_user_id=? AND kind="screenshot" AND (' . implode(' OR ', $clauses) . ') ORDER BY updated_at DESC';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         foreach ($stmt->fetchAll() ?: [] as $row) {
@@ -271,7 +287,7 @@ function geo_dashboard_asset_map(PDO $pdo, int $cloudUserId, array $pairs): arra
             if (!isset($assets[$key])) {
                 $assets[$key] = [
                     'storage_path' => $row['storage_path'],
-                    'url' => $row['public_url'],
+                    'url' => '/api/dashboard/?action=asset&asset_id=' . (int)$row['id'],
                     'file_size' => (int)$row['file_size'],
                     'updated_at' => $row['updated_at'],
                 ];
@@ -325,7 +341,7 @@ function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 50
     $where = ['cloud_user_id=?'];
     $params = [$cloudUserId];
     $taskId = trim((string)($_GET['task_id'] ?? ''));
-    $installId = trim((string)($_GET['install_id'] ?? ''));
+    $installId = geo_dashboard_text_param('install_id', 64);
     if ($taskId !== '') {
         $where[] = 'local_task_id=?';
         $params[] = (int)$taskId;
@@ -334,12 +350,12 @@ function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 50
         $where[] = 'install_id=?';
         $params[] = $installId;
     }
-    $platform = trim((string)($_GET['platform'] ?? ''));
+    $platform = geo_dashboard_text_param('platform', 80);
     if ($platform !== '') {
         $where[] = 'platform=?';
         $params[] = $platform;
     }
-    $keyword = trim((string)($_GET['keyword'] ?? ''));
+    $keyword = geo_dashboard_text_param('keyword', 120);
     if ($keyword !== '') {
         $where[] = '(question LIKE ? OR payload LIKE ?)';
         $params[] = '%' . $keyword . '%';
@@ -350,12 +366,12 @@ function geo_dashboard_filtered_rows(PDO $pdo, int $cloudUserId, int $limit = 50
         $where[] = 'has_brand_exposure=?';
         $params[] = (int)$exposed;
     }
-    $start = trim((string)($_GET['start_date'] ?? ''));
+    $start = geo_dashboard_date_param('start_date');
     if ($start !== '') {
         $where[] = 'result_at >= ?';
         $params[] = $start . ' 00:00:00';
     }
-    $end = trim((string)($_GET['end_date'] ?? ''));
+    $end = geo_dashboard_date_param('end_date');
     if ($end !== '') {
         $where[] = 'result_at <= ?';
         $params[] = $end . ' 23:59:59';
@@ -370,7 +386,7 @@ function geo_dashboard_filtered_stmt(PDO $pdo, int $cloudUserId, int $limit = 50
     $where = ['cloud_user_id=?'];
     $params = [$cloudUserId];
     $taskId = trim((string)($_GET['task_id'] ?? ''));
-    $installId = trim((string)($_GET['install_id'] ?? ''));
+    $installId = geo_dashboard_text_param('install_id', 64);
     if ($taskId !== '') {
         $where[] = 'local_task_id=?';
         $params[] = (int)$taskId;
@@ -379,12 +395,12 @@ function geo_dashboard_filtered_stmt(PDO $pdo, int $cloudUserId, int $limit = 50
         $where[] = 'install_id=?';
         $params[] = $installId;
     }
-    $platform = trim((string)($_GET['platform'] ?? ''));
+    $platform = geo_dashboard_text_param('platform', 80);
     if ($platform !== '') {
         $where[] = 'platform=?';
         $params[] = $platform;
     }
-    $keyword = trim((string)($_GET['keyword'] ?? ''));
+    $keyword = geo_dashboard_text_param('keyword', 120);
     if ($keyword !== '') {
         $where[] = '(question LIKE ? OR payload LIKE ?)';
         $params[] = '%' . $keyword . '%';
@@ -395,12 +411,12 @@ function geo_dashboard_filtered_stmt(PDO $pdo, int $cloudUserId, int $limit = 50
         $where[] = 'has_brand_exposure=?';
         $params[] = (int)$exposed;
     }
-    $start = trim((string)($_GET['start_date'] ?? ''));
+    $start = geo_dashboard_date_param('start_date');
     if ($start !== '') {
         $where[] = 'result_at >= ?';
         $params[] = $start . ' 00:00:00';
     }
-    $end = trim((string)($_GET['end_date'] ?? ''));
+    $end = geo_dashboard_date_param('end_date');
     if ($end !== '') {
         $where[] = 'result_at <= ?';
         $params[] = $end . ' 23:59:59';
@@ -562,6 +578,42 @@ $isDemoUser = geo_is_demo_user($user);
 $action = (string)($_GET['action'] ?? 'overview');
 
 try {
+    if ($action === 'asset') {
+        $assetId = (int)($_GET['asset_id'] ?? 0);
+        if ($assetId <= 0) geo_json(['success' => false, 'message' => 'asset_id is required'], 400);
+        $stmt = $pdo->prepare('SELECT storage_path,mime_type,original_name,file_size FROM geo_sync_assets WHERE id=? AND cloud_user_id=? AND kind="screenshot" LIMIT 1');
+        $stmt->execute([$assetId, $cloudUserId]);
+        $asset = $stmt->fetch();
+        if (!$asset) geo_json(['success' => false, 'message' => 'asset not found'], 404);
+        $path = realpath((string)$asset['storage_path']);
+        $allowedRoots = array_filter([realpath(geo_storage_path('cloud-assets'))]);
+        if ($isDemoUser) $allowedRoots[] = realpath(dirname(__DIR__, 2) . '/demo/assets');
+        $insideAllowedRoot = false;
+        foreach (array_filter($allowedRoots) as $root) {
+            if ($path && str_starts_with($path, $root . DIRECTORY_SEPARATOR)) {
+                $insideAllowedRoot = true;
+                break;
+            }
+        }
+        if (!$path || !$insideAllowedRoot || !is_file($path)) {
+            geo_json(['success' => false, 'message' => 'asset file not found'], 404);
+        }
+        $allowedMimes = ['image/png', 'image/jpeg', 'image/webp'];
+        if ($isDemoUser) $allowedMimes[] = 'image/svg+xml';
+        $mime = in_array((string)$asset['mime_type'], $allowedMimes, true) ? (string)$asset['mime_type'] : 'application/octet-stream';
+        $originalBase = pathinfo((string)($asset['original_name'] ?? 'screenshot'), PATHINFO_FILENAME);
+        $filename = geo_dashboard_safe_filename($originalBase) . '.' . pathinfo($path, PATHINFO_EXTENSION);
+        header_remove('Content-Type');
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . rawurlencode($filename) . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        if ($mime === 'image/svg+xml') header("Content-Security-Policy: sandbox; default-src 'none'; style-src 'unsafe-inline'");
+        readfile($path);
+        exit;
+    }
+
     if ($action === 'remote_status') {
         $latestVersion = geo_dashboard_release_version();
         $offlineStmt = $pdo->prepare("UPDATE geo_desktop_clients
@@ -968,7 +1020,7 @@ try {
         $where = ['cloud_user_id=?'];
         $params = [$cloudUserId];
         $taskId = trim((string)($_GET['task_id'] ?? ''));
-        $installId = trim((string)($_GET['install_id'] ?? ''));
+        $installId = geo_dashboard_text_param('install_id', 64);
         if ($taskId !== '') {
             $where[] = 'local_task_id=?';
             $params[] = (int)$taskId;
@@ -977,12 +1029,12 @@ try {
             $where[] = 'install_id=?';
             $params[] = $installId;
         }
-        $platform = trim((string)($_GET['platform'] ?? ''));
+        $platform = geo_dashboard_text_param('platform', 80);
         if ($platform !== '') {
             $where[] = 'platform=?';
             $params[] = $platform;
         }
-        $keyword = trim((string)($_GET['keyword'] ?? ''));
+        $keyword = geo_dashboard_text_param('keyword', 120);
         if ($keyword !== '') {
             $where[] = '(question LIKE ? OR payload LIKE ?)';
             $params[] = '%' . $keyword . '%';
@@ -993,18 +1045,18 @@ try {
             $where[] = 'has_brand_exposure=?';
             $params[] = (int)$exposed;
         }
-        $start = trim((string)($_GET['start_date'] ?? ''));
+        $start = geo_dashboard_date_param('start_date');
         if ($start !== '') {
             $where[] = 'result_at >= ?';
             $params[] = $start . ' 00:00:00';
         }
-        $end = trim((string)($_GET['end_date'] ?? ''));
+        $end = geo_dashboard_date_param('end_date');
         if ($end !== '') {
             $where[] = 'result_at <= ?';
             $params[] = $end . ' 23:59:59';
         }
         $limit = geo_dashboard_limit();
-        $offset = max(0, (int)($_GET['offset'] ?? 0));
+        $offset = geo_dashboard_offset();
 
         $countStmt = $pdo->prepare('SELECT COUNT(*) c FROM geo_sync_results WHERE ' . implode(' AND ', $where));
         $countStmt->execute($params);

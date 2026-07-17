@@ -22,7 +22,7 @@ for path in (str(ROOT), str(WEB_APP)):
         sys.path.insert(0, path)
 
 import app as web_app  # noqa: E402
-from models import CollectionResult, MonitorTask, User, db  # noqa: E402
+from models import CollectionResult, GeoManuscript, MonitorTask, User, db  # noqa: E402
 
 
 class ExportDownloadTests(unittest.TestCase):
@@ -127,6 +127,39 @@ class ExportDownloadTests(unittest.TestCase):
         payload = response.get_json()
         self.assertFalse(payload["success"])
         self.assertIn("截图文件已丢失", payload["message"])
+
+    def test_reference_ranking_export_saves_to_visible_desktop_path(self):
+        self.add_result()
+        with patch.object(web_app, "_desktop_downloads_dir", return_value=self.temp_dir.name):
+            response = self.client.get("/api/analysis/references/export?level=top&save_to_downloads=1")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()
+        saved = Path(payload["path"])
+        self.assertTrue(saved.is_file())
+        workbook = load_workbook(saved)
+        self.assertEqual("顶级域名分布", workbook.active.title)
+        self.assertEqual("example.com", workbook.active["B2"].value)
+
+    def test_geo_coverage_export_saves_to_visible_desktop_path(self):
+        self.add_result()
+        db.session.add(GeoManuscript(
+            user_id=self.user.id,
+            task_id=self.task.id,
+            task_ids=f"[{self.task.id}]",
+            title="GEO guide",
+            url="https://example.com/geo",
+        ))
+        db.session.commit()
+        with patch.object(web_app, "_desktop_downloads_dir", return_value=self.temp_dir.name):
+            response = self.client.get("/api/analysis/geo-coverage/export?save_to_downloads=1")
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()
+        saved = Path(payload["path"])
+        self.assertTrue(saved.is_file())
+        workbook = load_workbook(saved)
+        self.assertIn("GEO稿件被引用分析", workbook.sheetnames)
 
 
 if __name__ == "__main__":

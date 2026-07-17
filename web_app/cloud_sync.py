@@ -441,7 +441,6 @@ def upload_workspace_assets(user_id: int, resolve_path=None, task_ids: list[int]
             "platform": result.platform,
             "question": result.question,
             "created_at": _dt(result.created_at),
-            "original_path": result.screenshot_path,
         }
         mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
         try:

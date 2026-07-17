@@ -26,6 +26,14 @@ class ServerDistributionTests(unittest.TestCase):
         missing = {relative for relative in required if not (SERVER / relative).is_file()}
         self.assertFalse(missing, missing)
 
+    def test_dashboard_query_inputs_have_bounded_limits_and_valid_dates(self):
+        source = (SERVER / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("min(500, $limit)", source)
+        self.assertIn("min(100000, (int)($_GET['offset']", source)
+        self.assertIn("geo_dashboard_text_param('keyword', 120)", source)
+        self.assertIn("checkdate($month, $day, $year)", source)
+        self.assertNotIn("$offset = max(0, (int)($_GET['offset']", source)
+
     def test_php_sources_do_not_hardcode_the_production_document_root(self):
         offenders = []
         for path in SERVER.rglob("*.php"):
@@ -144,6 +152,30 @@ class ServerDistributionTests(unittest.TestCase):
         self.assertIn("cloud_user_id, install_id, local_result_id, kind, sha256", source)
         self.assertIn("function geo_assets_mark_result_screenshot", source)
         self.assertIn("UPDATE geo_sync_results SET has_screenshot=1", source)
+
+    def test_screenshot_upload_and_download_enforce_account_and_file_boundaries(self):
+        upload = (SERVER / "api" / "sync" / "assets" / "index.php").read_text(encoding="utf-8")
+        dashboard = (SERVER / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        nginx = (SERVER / "deploy" / "nginx" / "geo.allgood.cn.conf").read_text(encoding="utf-8")
+
+        for marker in (
+            "CONTENT_LENGTH",
+            "UPLOAD_ERR_OK",
+            "getimagesize($tmp)",
+            "geo_assets_require_result",
+            '"/api/dashboard/?action=asset&asset_id={$assetId}"',
+            "file is not a supported screenshot image",
+            "unset($payload['original_path'], $payload['user_key'])",
+        ):
+            self.assertIn(marker, upload)
+        self.assertNotIn('$_FILES[\'file\'][\'type\']', upload)
+        self.assertIn("WHERE id=? AND cloud_user_id=?", dashboard)
+        self.assertIn("Cache-Control: private, no-store", dashboard)
+        self.assertIn("/api/dashboard/?action=asset&asset_id=", dashboard)
+        self.assertIn("if ($isDemoUser) $allowedRoots[]", dashboard)
+        self.assertIn("Content-Security-Policy: sandbox", dashboard)
+        self.assertIn("location ^~ /storage/cloud-assets/", nginx)
+        self.assertLess(nginx.index("location ^~ /storage/cloud-assets/"), nginx.rindex("}"))
 
     def test_nginx_preserves_json_404_responses_for_api_routes(self):
         source = (SERVER / "deploy" / "nginx" / "geo.allgood.cn.conf").read_text(encoding="utf-8")

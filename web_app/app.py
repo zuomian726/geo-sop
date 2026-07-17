@@ -3107,7 +3107,15 @@ def export_geo_coverage_analysis():
     buf.seek(0)
     
     filename = f"GEO稿件被引用分析_{date_str or '全部'}_{platform or '全部平台'}.xlsx"
-    
+    saved_path = _maybe_save_desktop_download(buf, filename)
+    if saved_path:
+        return jsonify({
+            'success': True,
+            'message': '导出成功',
+            'filename': os.path.basename(saved_path),
+            'path': saved_path,
+        })
+
     return send_file(
         buf,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -3344,6 +3352,56 @@ def get_reference_analysis():
         'total_results': len(results),
         'total_references': sum(full_media_counts.values())
     })
+
+
+@app.route('/api/analysis/references/export', methods=['GET'])
+@login_required
+def export_reference_analysis():
+    """Export the same filtered reference ranking shown in the dashboard."""
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from flask import send_file
+
+    response = get_reference_analysis()
+    payload = response.get_json() if hasattr(response, 'get_json') else {}
+    if not payload or not payload.get('success'):
+        return jsonify({'success': False, 'message': '引用来源数据生成失败'}), 500
+
+    level = 'full' if request.args.get('level') == 'full' else 'top'
+    rows = payload['full_data'] if level == 'full' else payload['top_data']
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '媒体引用排行' if level == 'full' else '顶级域名分布'
+    ws.append(['排名', '域名/媒体', '引用次数'])
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='1769FF')
+    for index, row in enumerate(rows, 1):
+        ws.append([index, row.get('name') or '未知来源', max(0, int(row.get('count') or 0))])
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 48
+    ws.column_dimensions['C'].width = 14
+    ws.freeze_panes = 'A2'
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    filename = ('媒体引用排行' if level == 'full' else '顶级域名分布') + '_' + now_cst().strftime('%Y%m%d_%H%M%S') + '.xlsx'
+    saved_path = _maybe_save_desktop_download(buffer, filename)
+    if saved_path:
+        return jsonify({
+            'success': True,
+            'message': '导出成功',
+            'filename': os.path.basename(saved_path),
+            'path': saved_path,
+        })
+    return send_file(
+        buffer,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @app.route('/api/analysis/domains', methods=['GET'])

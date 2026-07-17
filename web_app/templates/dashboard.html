@@ -3214,23 +3214,11 @@ const app = createApp({
                 if (this.geoFilter.platform) params.append('platform', this.geoFilter.platform);
                 if (this.geoFilter.date) params.append('date', this.geoFilter.date);
                 
-                const url = `/api/analysis/geo-coverage/export?${params.toString()}`;
-                const response = await axios.get(url, {
-                    responseType: 'blob'
-                });
-                
-                // 创建下载链接
-                const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = `GEO稿件被引用分析_${new Date().toISOString().split('T')[0]}.xlsx`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(downloadUrl);
-                
-                ElMessage.success('导出成功');
+                if (this.desktopMode) params.append('save_to_downloads', '1');
+                await this.downloadDashboardFile(
+                    `/api/analysis/geo-coverage/export?${params.toString()}`,
+                    `GEO稿件被引用分析_${new Date().toISOString().split('T')[0]}.xlsx`
+                );
             } catch (error) {
                 console.error('导出失败:', error);
                 ElMessage.error('导出失败');
@@ -4067,53 +4055,69 @@ const app = createApp({
         async exportTopDomainData() {
             if (this.topAnalysisData.length === 0) return;
             try {
-                if (typeof XLSX === 'undefined') {
-                    const script = document.createElement('script');
-                    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
-                    document.head.appendChild(script);
-                    await new Promise(resolve => script.onload = resolve);
-                }
-                const task = this.tasks.find(t => t.id === this.analysisFilter.task_id);
-                const taskName = task ? task.name : '全部任务';
-                const platformName = this.availablePlatforms.find(p => p.id === this.analysisFilter.platform)?.name || '全部平台';
-                const domainData = this.topAnalysisData.map(item => ({
-                    '顶级域名': item.name,
-                    '引用次数': item.count
-                }));
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(domainData);
-                XLSX.utils.book_append_sheet(wb, ws, "顶级域名分布");
-                XLSX.writeFile(wb, `顶级域名分布_${taskName}_${platformName}.xlsx`);
-                ElMessage.success('导出成功');
+                const params = this.referenceExportParams('top');
+                await this.downloadDashboardFile(`/api/analysis/references/export?${params.toString()}`, '顶级域名分布.xlsx');
             } catch (error) {
-                ElMessage.error('导出失败');
+                ElMessage.error(error.message || '导出失败');
             }
         },
 
         async exportMediaRankingData() {
             if (this.analysisData.length === 0) return;
             try {
-                if (typeof XLSX === 'undefined') {
-                    const script = document.createElement('script');
-                    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
-                    document.head.appendChild(script);
-                    await new Promise(resolve => script.onload = resolve);
-                }
-                const task = this.tasks.find(t => t.id === this.analysisFilter.task_id);
-                const taskName = task ? task.name : '全部任务';
-                const platformName = this.availablePlatforms.find(p => p.id === this.analysisFilter.platform)?.name || '全部平台';
-                const rankingData = this.analysisData.map(item => ({
-                    '域名/媒体': item.name,
-                    '引用次数': item.count
-                }));
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(rankingData);
-                XLSX.utils.book_append_sheet(wb, ws, "媒体引用排行");
-                XLSX.writeFile(wb, `媒体引用排行_${taskName}_${platformName}.xlsx`);
-                ElMessage.success('导出成功');
+                const params = this.referenceExportParams('full');
+                await this.downloadDashboardFile(`/api/analysis/references/export?${params.toString()}`, '媒体引用排行.xlsx');
             } catch (error) {
-                ElMessage.error('导出失败');
+                ElMessage.error(error.message || '导出失败');
             }
+        },
+
+        referenceExportParams(level) {
+            const params = new URLSearchParams({ level, deduplicate: String(this.analysisFilter.deduplicate) });
+            if (this.analysisFilter.platform) params.append('platform', this.analysisFilter.platform);
+            if (this.analysisFilter.task_id) params.append('task_id', this.analysisFilter.task_id);
+            if (this.analysisFilter.dateRange?.length === 2) {
+                params.append('date_start', this.analysisFilter.dateRange[0]);
+                params.append('date_end', this.analysisFilter.dateRange[1]);
+            }
+            if (this.desktopMode) params.append('save_to_downloads', '1');
+            return params;
+        },
+
+        async downloadDashboardFile(url, fallbackFilename) {
+            const response = await fetch(url, { credentials: 'include' });
+            if (!response.ok) {
+                let message = '导出失败';
+                try {
+                    const data = await response.json();
+                    message = data.message || data.error || message;
+                } catch (error) {}
+                throw new Error(message);
+            }
+            const contentType = response.headers.get('Content-Type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                if (!data.success) throw new Error(data.message || '导出失败');
+                if (data.path) {
+                    ElMessage.success('导出成功');
+                    await ElMessageBox.alert(`文件已保存到：\n${data.path}`, '导出成功', { confirmButtonText: '知道了' });
+                }
+                return;
+            }
+            const disposition = response.headers.get('Content-Disposition') || '';
+            const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+            const plain = /filename="?([^";]+)"?/i.exec(disposition);
+            const filename = utf8?.[1] ? decodeURIComponent(utf8[1]) : (plain?.[1] || fallbackFilename);
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            ElMessage.success('导出成功');
         },
         
         async openLoginPage(platformId) {
