@@ -20,14 +20,18 @@ geo_record_login_attempt($pdo, $account, true);
 $token = geo_random_token(32);
 $hash = hash('sha256', $token);
 $now = geo_now();
+$expiresEpoch = time() + 30 * 86400;
+$expiresAt = date('Y-m-d H:i:s', $expiresEpoch);
 $device = trim($data['device_name'] ?? 'GEO-SOP Desktop');
-$pdo->prepare('INSERT INTO geo_cloud_tokens (cloud_user_id, token_hash, token_last4, device_name, created_at, last_used_at) VALUES (?,?,?,?,?,?)')->execute([(int)$user['id'], $hash, substr($hash, -4), $device, $now, $now]);
+$pdo->prepare('INSERT INTO geo_cloud_tokens (cloud_user_id, token_hash, token_last4, device_name, created_at, last_used_at, expires_at) VALUES (?,?,?,?,?,?,?)')->execute([(int)$user['id'], $hash, substr($hash, -4), $device, $now, $now, $expiresAt]);
 $pdo->prepare('UPDATE geo_cloud_users SET last_login_at=?, updated_at=? WHERE id=?')->execute([$now, $now, (int)$user['id']]);
 geo_json([
     'success' => true,
     'message' => '登录成功',
     'cloud_sync_url' => 'https://geo.allgood.cn/api',
     'token' => $token,
+    'expires_at' => $expiresAt,
+    'expires_at_epoch' => $expiresEpoch,
     'user' => [
         'id' => (int)$user['id'],
         'username' => $user['username'],

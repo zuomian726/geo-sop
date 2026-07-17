@@ -90,6 +90,21 @@ class ServerDistributionTests(unittest.TestCase):
         bootstrap = common.split("function geo_bootstrap", 1)[1].split("function geo_current_web_user", 1)[0]
         self.assertNotIn("INSERT INTO", bootstrap)
 
+    def test_desktop_device_tokens_expire_and_can_be_revoked(self):
+        common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
+        login = (SERVER / "api" / "auth" / "login" / "index.php").read_text(encoding="utf-8")
+        logout = (SERVER / "api" / "auth" / "logout" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("expires_at DATETIME", common)
+        self.assertIn("t.expires_at>?", common)
+        self.assertNotIn("SELECT * FROM geo_cloud_users WHERE api_token_hash", common)
+        self.assertIn("30 * 86400", login)
+        self.assertIn("expires_at_epoch", login)
+        self.assertIn("revoked_at=?", logout)
+        sync = (SERVER / "api" / "sync" / "index.php").read_text(encoding="utf-8")
+        token_lookup = sync.split("function cloud_user_id_for_token", 1)[1].split("function cloud_user_is_demo", 1)[0]
+        self.assertIn("expires_at>?", token_lookup)
+        self.assertEqual(1, token_lookup.count("api_token_hash"))
+
     def test_web_mutations_use_csrf_tokens_and_logins_are_rate_limited(self):
         common = (SERVER / "api" / "common.php").read_text(encoding="utf-8")
         self.assertIn("function geo_csrf_token()", common)

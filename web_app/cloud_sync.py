@@ -136,11 +136,20 @@ def cloud_sync_token() -> str | None:
     return account.get("token") or os.environ.get("GEO_CLOUD_SYNC_TOKEN") or os.environ.get("CLOUD_SYNC_TOKEN")
 
 
+def cloud_token_expired() -> bool:
+    account = load_cloud_account()
+    try:
+        expires_at = int(account.get("expires_at_epoch") or 0)
+    except (TypeError, ValueError):
+        expires_at = 0
+    return bool(expires_at and expires_at <= int(datetime.now().timestamp()))
+
+
 def cloud_sync_enabled() -> bool:
     account = load_cloud_account()
     saved_account_enabled = bool(account.get("cloud_sync_url") and account.get("token"))
     env_enabled = _truthy(os.environ.get("GEO_CLOUD_SYNC_ENABLED"))
-    return (saved_account_enabled or env_enabled) and bool(cloud_sync_url()) and bool(cloud_sync_token())
+    return (saved_account_enabled or env_enabled) and not cloud_token_expired() and bool(cloud_sync_url()) and bool(cloud_sync_token())
 
 
 def revoke_cloud_token() -> dict:
@@ -896,7 +905,10 @@ def sync_status(user_id: int | None = None, include_remote: bool = True) -> dict
         "token_configured": bool(cloud_sync_token()),
         "install_id": get_install_id(),
         "sync_keys": should_sync_keys(),
+        "token_expired": cloud_token_expired(),
     }
+    if status["token_expired"]:
+        status["error"] = "云端登录已过期，请退出后重新登录"
     if not cloud_sync_enabled() or not user_id or not include_remote:
         return status
 

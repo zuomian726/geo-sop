@@ -794,6 +794,8 @@ def login():
                 save_cloud_account({
                     'cloud_sync_url': cloud_sync_url_value,
                     'token': cloud_sync_token_value,
+                    'expires_at': payload.get('expires_at'),
+                    'expires_at_epoch': payload.get('expires_at_epoch'),
                     'user': cloud_user,
                     'logged_in_at': now_cst().strftime('%Y-%m-%d %H:%M:%S')
                 })

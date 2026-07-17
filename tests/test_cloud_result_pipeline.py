@@ -629,6 +629,22 @@ class RemoteWorkerPipelineTests(CloudPipelineTestCase):
 
 
 class AssetUploadPipelineTests(CloudPipelineTestCase):
+    def test_expired_device_token_disables_sync_with_actionable_status(self):
+        account = {
+            "cloud_sync_url": "https://geo.allgood.cn/api",
+            "token": "expired-token",
+            "expires_at_epoch": 1,
+        }
+        with (
+            patch.object(cloud_sync, "load_cloud_account", return_value=account),
+            patch.dict(cloud_sync.os.environ, {"GEO_CLOUD_SYNC_ENABLED": "0"}, clear=False),
+        ):
+            status = cloud_sync.sync_status(self.user.id)
+
+        self.assertFalse(status["enabled"])
+        self.assertTrue(status["token_expired"])
+        self.assertIn("重新登录", status["error"])
+
     def test_desktop_logout_revokes_the_current_cloud_device_token(self):
         response = Mock(status_code=200)
         response.json.return_value = {"success": True, "revoked": True}

@@ -232,15 +232,12 @@ function ensure_schema(PDO $pdo): void {
 
 function cloud_user_id_for_token(PDO $pdo, array $config, string $token): int {
     $hash = hash('sha256', $token);
-    $stmt = $pdo->prepare('SELECT id FROM geo_cloud_users WHERE api_token_hash = ? LIMIT 1');
-    $stmt->execute([$hash]);
-    $user = $stmt->fetch();
-    if ($user) return (int)$user['id'];
-    $stmt = $pdo->prepare('SELECT cloud_user_id FROM geo_cloud_tokens WHERE token_hash = ? AND revoked_at IS NULL LIMIT 1');
-    $stmt->execute([$hash]);
+    $now = geo_now();
+    $stmt = $pdo->prepare('SELECT cloud_user_id FROM geo_cloud_tokens WHERE token_hash = ? AND revoked_at IS NULL AND expires_at>? LIMIT 1');
+    $stmt->execute([$hash, $now]);
     $tokenRow = $stmt->fetch();
     if ($tokenRow) {
-        $pdo->prepare('UPDATE geo_cloud_tokens SET last_used_at=? WHERE token_hash=?')->execute([date('Y-m-d H:i:s'), $hash]);
+        $pdo->prepare('UPDATE geo_cloud_tokens SET last_used_at=? WHERE token_hash=?')->execute([$now, $hash]);
         return (int)$tokenRow['cloud_user_id'];
     }
     if (hash_equals($config['token_sha256'], $hash)) {

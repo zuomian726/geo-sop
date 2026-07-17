@@ -140,7 +140,7 @@ function geo_run_schema_migration(PDO $pdo, string $component, int $targetVersio
 }
 
 function geo_ensure_schema(PDO $pdo): void {
-    geo_run_schema_migration($pdo, 'core', 2026071701, function (PDO $pdo): void {
+    geo_run_schema_migration($pdo, 'core', 2026071702, function (PDO $pdo): void {
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_cloud_users (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, username VARCHAR(120) NOT NULL UNIQUE, email VARCHAR(255) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, api_token_hash CHAR(64) NOT NULL UNIQUE, api_token_last4 VARCHAR(8) NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         geo_add_column($pdo, 'geo_cloud_users', 'mobile', "VARCHAR(20) NULL");
         geo_add_column($pdo, 'geo_cloud_users', 'mobile_verified', "TINYINT(1) NOT NULL DEFAULT 0");
@@ -151,7 +151,10 @@ function geo_ensure_schema(PDO $pdo): void {
         geo_add_column($pdo, 'geo_cloud_users', 'last_login_at', "DATETIME NULL");
         geo_add_index($pdo, 'geo_cloud_users', 'uniq_geo_cloud_mobile', "UNIQUE KEY uniq_geo_cloud_mobile (mobile)");
         geo_add_index($pdo, 'geo_cloud_users', 'uniq_geo_cloud_wechat_openid', "UNIQUE KEY uniq_geo_cloud_wechat_openid (wechat_openid)");
-        $pdo->exec("CREATE TABLE IF NOT EXISTS geo_cloud_tokens (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, cloud_user_id BIGINT UNSIGNED NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE, token_last4 VARCHAR(8) NULL, device_name VARCHAR(120) NULL, created_at DATETIME NOT NULL, last_used_at DATETIME NULL, revoked_at DATETIME NULL, KEY idx_geo_cloud_tokens_user (cloud_user_id), KEY idx_geo_cloud_tokens_hash (token_hash)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS geo_cloud_tokens (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, cloud_user_id BIGINT UNSIGNED NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE, token_last4 VARCHAR(8) NULL, device_name VARCHAR(120) NULL, created_at DATETIME NOT NULL, last_used_at DATETIME NULL, expires_at DATETIME NOT NULL, revoked_at DATETIME NULL, KEY idx_geo_cloud_tokens_user (cloud_user_id), KEY idx_geo_cloud_tokens_hash (token_hash), KEY idx_geo_cloud_tokens_expiry (expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        geo_add_column($pdo, 'geo_cloud_tokens', 'expires_at', "DATETIME NULL AFTER last_used_at");
+        $pdo->exec("UPDATE geo_cloud_tokens SET expires_at=DATE_ADD(NOW(), INTERVAL 30 DAY) WHERE expires_at IS NULL");
+        geo_add_index($pdo, 'geo_cloud_tokens', 'idx_geo_cloud_tokens_expiry', "KEY idx_geo_cloud_tokens_expiry (expires_at)");
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_phone_codes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, mobile VARCHAR(20) NOT NULL, scene VARCHAR(40) NOT NULL, code_hash CHAR(64) NOT NULL, ip VARCHAR(80) NULL, attempts INT NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL, used_at DATETIME NULL, created_at DATETIME NOT NULL, KEY idx_geo_phone_mobile_scene (mobile, scene), KEY idx_geo_phone_ip_time (ip, created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_wechat_states (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, state VARCHAR(80) NOT NULL UNIQUE, scene VARCHAR(40) NOT NULL, created_at DATETIME NOT NULL, expires_at DATETIME NOT NULL, used_at DATETIME NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $pdo->exec("CREATE TABLE IF NOT EXISTS geo_remote_tasks (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, cloud_user_id BIGINT UNSIGNED NOT NULL, name VARCHAR(255) NOT NULL, payload LONGTEXT NOT NULL, status VARCHAR(40) NOT NULL DEFAULT 'pending', assigned_install_id VARCHAR(64) NULL, assigned_user_key VARCHAR(255) NULL, local_task_id INT NULL, created_at DATETIME NOT NULL, pulled_at DATETIME NULL, updated_at DATETIME NOT NULL, KEY idx_remote_user_status (cloud_user_id, status), KEY idx_remote_assigned (assigned_install_id, assigned_user_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -190,7 +193,7 @@ function geo_record_login_attempt(PDO $pdo, string $account, bool $success): voi
     geo_record_auth_event($pdo, 'login_ip', $ip, $success);
 }
 
-function geo_auth_user(PDO $pdo): ?array { $token = geo_token(); if ($token === '') return null; $hash = hash('sha256', $token); $stmt = $pdo->prepare('SELECT * FROM geo_cloud_users WHERE api_token_hash = ? LIMIT 1'); $stmt->execute([$hash]); $u = $stmt->fetch(); if ($u) return $u; $stmt = $pdo->prepare('SELECT u.* FROM geo_cloud_tokens t JOIN geo_cloud_users u ON u.id=t.cloud_user_id WHERE t.token_hash=? AND t.revoked_at IS NULL LIMIT 1'); $stmt->execute([$hash]); $u = $stmt->fetch(); if ($u) { $pdo->prepare('UPDATE geo_cloud_tokens SET last_used_at=? WHERE token_hash=?')->execute([geo_now(), $hash]); return $u; } return null; }
+function geo_auth_user(PDO $pdo): ?array { $token = geo_token(); if ($token === '') return null; $hash = hash('sha256', $token); $now = geo_now(); $stmt = $pdo->prepare('SELECT u.* FROM geo_cloud_tokens t JOIN geo_cloud_users u ON u.id=t.cloud_user_id WHERE t.token_hash=? AND t.revoked_at IS NULL AND t.expires_at>? LIMIT 1'); $stmt->execute([$hash, $now]); $u = $stmt->fetch(); if ($u) { $pdo->prepare('UPDATE geo_cloud_tokens SET last_used_at=? WHERE token_hash=?')->execute([$now, $hash]); return $u; } return null; }
 function geo_bootstrap(PDO $pdo): void {
     // Kept as a compatibility hook; accounts are created only through registration.
 }
