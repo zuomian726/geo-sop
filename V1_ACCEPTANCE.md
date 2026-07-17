@@ -99,3 +99,18 @@ is online.
 7. Scan Git and all packages for secrets and local/customer data.
 8. Build once, publish V1.0 once, update permanent links once, then repeat the
    production smoke and update checks.
+
+## Current Local Verification
+
+This section records development evidence without changing production packages.
+
+- Unit and contract suite: 129 tests passing on 2026-07-17.
+- Real-browser desktop UI: login, task recovery, task creation, and verified
+  update dialogs pass at 1000x700 and 1440x900.
+- Existing production Demo baseline: 6 synthetic tasks, 144 synthetic results,
+  and 6 platforms; read-only smoke passed.
+- Tracked-file audit: no databases, browser profiles, screenshots, private
+  configuration, certificates, private keys, or common live API Key formats.
+- Pending final release gates: staging deployment, disposable two-account V1
+  pipeline, native Windows install, both native macOS installs, Apple
+  notarization, and Windows Authenticode signing.

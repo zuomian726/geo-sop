@@ -116,6 +116,9 @@ def register_and_login(base_url: str, username: str, password: str) -> tuple[req
     login = expect_json(response)
     if not login.get("success") or not login.get("token"):
         raise AcceptanceError(f"desktop login failed: {login}")
+    expires_at = int(login.get("expires_at_epoch") or 0)
+    if expires_at < int(time.time()) + 86400:
+        raise AcceptanceError("desktop login did not return a valid expiring device token")
     return session, login
 
 
