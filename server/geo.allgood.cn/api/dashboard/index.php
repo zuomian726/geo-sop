@@ -63,16 +63,26 @@ function geo_dashboard_url_key(string $url, bool $stripQuery = false): string {
 }
 
 function geo_dashboard_url_match_keys(string $url): array {
-    return array_values(array_unique(array_filter([
+    $keys = [
         geo_dashboard_url_key($url, false),
         geo_dashboard_url_key($url, true),
-    ])));
+    ];
+    $domain = geo_dashboard_main_domain_from_url($url);
+    if ($domain !== '' && preg_match_all('/\d{4,}/', geo_dashboard_url_key($url, true), $matches)) {
+        foreach (array_unique($matches[0]) as $id) $keys[] = 'article-id:' . $domain . ':' . $id;
+    }
+    return array_values(array_unique(array_filter($keys)));
 }
 
 function geo_dashboard_url_keys_match(array $targetKeys, array $referenceKeys): bool {
     foreach ($targetKeys as $targetKey) {
+        if (str_starts_with((string)$targetKey, 'article-id:')) {
+            if (in_array($targetKey, $referenceKeys, true)) return true;
+            continue;
+        }
         if (mb_strlen((string)$targetKey, 'UTF-8') < 6) continue;
         foreach ($referenceKeys as $referenceKey) {
+            if (str_starts_with((string)$referenceKey, 'article-id:')) continue;
             if ($referenceKey === '') continue;
             if ($targetKey === $referenceKey || str_contains((string)$referenceKey, (string)$targetKey) || str_contains((string)$targetKey, (string)$referenceKey)) {
                 return true;
@@ -853,9 +863,9 @@ try {
         $taskIdFilter = (int)($_GET['task_id'] ?? 0);
         $installIdFilter = trim((string)($_GET['install_id'] ?? ''));
         $platformFilter = trim((string)($_GET['platform'] ?? ''));
-        $dateFilter = trim((string)($_GET['date'] ?? ''));
-        $startDate = $dateFilter !== '' ? $dateFilter : trim((string)($_GET['start_date'] ?? ''));
-        $endDate = $dateFilter !== '' ? $dateFilter : trim((string)($_GET['end_date'] ?? ''));
+        $dateFilter = geo_dashboard_date_param('date');
+        $startDate = $dateFilter !== '' ? $dateFilter : geo_dashboard_date_param('start_date');
+        $endDate = $dateFilter !== '' ? $dateFilter : geo_dashboard_date_param('end_date');
 
         $manuscriptWhere = ['cloud_user_id=?'];
         $manuscriptParams = [$cloudUserId];

@@ -72,6 +72,30 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("online_outdated_clients", source)
         self.assertIn("if ($outdated) $outdatedClients++", source)
 
+    def test_geo_coverage_filters_and_deep_link_match_across_surfaces(self):
+        app = (ROOT / "web_app" / "app.py").read_text(encoding="utf-8")
+        desktop = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        cloud = (ROOT / "server" / "geo.allgood.cn" / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("def _geo_manuscript_task_ids(", app)
+        self.assertIn("def _apply_geo_date_range(", app)
+        self.assertGreaterEqual(app.count("_apply_geo_date_range(query, start_date, end_date)"), 2)
+        self.assertIn("geoFilter.start_date", desktop)
+        self.assertIn("geoFilter.end_date", desktop)
+        self.assertIn('placeholder="全部平台" clearable', desktop)
+        self.assertIn("'geo': 'geo_analysis'", desktop)
+        self.assertIn("'geo-coverage': 'geo_analysis'", desktop)
+        self.assertIn("window.addEventListener('hashchange', this.hashChangeHandler)", desktop)
+        self.assertIn("window.removeEventListener('hashchange', this.hashChangeHandler)", desktop)
+        self.assertIn("article-id:", cloud)
+        cloud_dashboard = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
+        self.assertIn("geoStart.value = referenceDateValue(30)", cloud_dashboard)
+        self.assertIn("geoEnd.value = referenceDateValue(0)", cloud_dashboard)
+        smoke = (ROOT / "tools" / "smoke_desktop_ui.py").read_text(encoding="utf-8")
+        self.assertIn('page.goto(url + "#geo"', smoke)
+        self.assertIn('has_text="GEO稿件被引用分析"', smoke)
+        self.assertIn('get_by_role("combobox", name="开始日期"', smoke)
+        self.assertIn('get_by_role("combobox", name="结束日期"', smoke)
+
     def test_cloud_reference_analysis_has_lazy_ui_and_api_renderers(self):
         source = (ROOT / "server" / "geo.allgood.cn" / "dashboard" / "index.php").read_text(encoding="utf-8")
         expected_markers = {

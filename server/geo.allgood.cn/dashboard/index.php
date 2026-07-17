@@ -1269,6 +1269,10 @@ document.addEventListener('DOMContentLoaded', function(){
     initCollapsibleSections();
     initDashboardNavigation();
     initReferenceAnalysis();
+    var geoStart = document.getElementById('geoStart');
+    var geoEnd = document.getElementById('geoEnd');
+    if (geoStart && !geoStart.value) geoStart.value = referenceDateValue(30);
+    if (geoEnd && !geoEnd.value) geoEnd.value = referenceDateValue(0);
     updateQueryPagination();
     loadRemoteStatus();
     window.setInterval(loadRemoteStatus, 15000);

@@ -182,6 +182,17 @@ def run() -> None:
                     page.screenshot(path=str(update_screenshot), full_page=True)
                     screenshots.append(str(update_screenshot))
                     update_dialog.locator("button", has_text="稍后提醒").click()
+                    page.goto(url + "#geo", wait_until="domcontentloaded", timeout=30_000)
+                    page.wait_for_timeout(700)
+                    reopened_update_dialog = page.locator(".el-dialog:visible", has_text="GEO-SOP 有新版本").first
+                    if reopened_update_dialog.count():
+                        reopened_update_dialog.locator("button", has_text="稍后提醒").click(force=True)
+                    geo_tab = page.locator(".el-tabs__item.is-active", has_text="GEO稿件被引用分析")
+                    geo_tab.wait_for(state="visible")
+                    page.get_by_role("combobox", name="开始日期", exact=True).wait_for(state="visible")
+                    page.get_by_role("combobox", name="结束日期", exact=True).wait_for(state="visible")
+                    geo_overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+                    assert geo_overflow <= 1, f"GEO analysis horizontal overflow at {width}x{height}: {geo_overflow}px"
                     overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
                     assert overflow <= 1, f"horizontal overflow at {width}x{height}: {overflow}px"
                     screenshot = Path(tempfile.gettempdir()) / f"geo-sop-v1-dashboard-{width}x{height}.png"

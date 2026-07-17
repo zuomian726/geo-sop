@@ -671,6 +671,47 @@ body {
     gap: 10px;
 }
 
+.geo-toolbar {
+    margin-bottom: 20px;
+}
+.geo-filter-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+.geo-filter-form .el-form-item {
+    display: block;
+    margin: 0;
+}
+.geo-filter-form .el-form-item__label {
+    display: block;
+    width: auto !important;
+    height: 26px;
+    padding: 0;
+    text-align: left;
+    line-height: 26px;
+}
+.geo-filter-form .el-form-item__content,
+.geo-filter-form .el-select,
+.geo-filter-form .el-date-editor {
+    width: 100% !important;
+}
+.geo-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.geo-analysis-hint {
+    margin-top: 14px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    background: #f5f7fa;
+    color: #667085;
+    font-size: 13px;
+}
+
 @media (max-width: 980px) {
     .workspace-hero,
     .analysis-summary,
@@ -711,6 +752,9 @@ body {
         width: 36px;
         padding: 0;
     }
+    .geo-filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 640px) {
@@ -726,6 +770,9 @@ body {
     .quick-ai-form .form-row {
         grid-template-columns: 1fr;
         gap: 6px;
+    }
+    .geo-filter-form {
+        grid-template-columns: 1fr;
     }
 }
 {% endblock %}
@@ -1447,12 +1494,11 @@ body {
             <el-tab-pane name="geo_analysis" label="GEO稿件被引用分析">
                 <div style="padding: 20px;">
                     <!-- 操作栏 -->
-                    <div style="margin-bottom: 20px;">
+                    <div class="geo-toolbar">
                         <!-- 筛选条件行 -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
-                            <el-form :inline="true" :model="geoFilter" class="analysis-filter" style="margin-bottom: 0; flex-wrap: wrap; gap: 10px;">
-                                <el-form-item label="任务筛选" label-width="70px">
-                                    <el-select v-model="geoFilter.task_id" placeholder="全部任务" clearable @change="loadGeoCoverageData" style="width: 180px;">
+                        <el-form :model="geoFilter" class="analysis-filter geo-filter-form">
+                                <el-form-item label="任务筛选">
+                                    <el-select v-model="geoFilter.task_id" placeholder="全部任务" clearable @change="loadGeoCoverageData">
                                         <el-option 
                                             v-for="task in tasks" 
                                             :key="task.id" 
@@ -1461,8 +1507,8 @@ body {
                                         </el-option>
                                     </el-select>
                                 </el-form-item>
-                                <el-form-item label="AI平台" label-width="60px">
-                                    <el-select v-model="geoFilter.platform" placeholder="选择平台" @change="loadGeoCoverageData" style="width: 120px;">
+                                <el-form-item label="AI平台">
+                                    <el-select v-model="geoFilter.platform" placeholder="全部平台" clearable @change="loadGeoCoverageData">
                                         <el-option 
                                             v-for="platform in availablePlatforms" 
                                             :key="platform.id" 
@@ -1471,37 +1517,42 @@ body {
                                         </el-option>
                                     </el-select>
                                 </el-form-item>
-                                <el-form-item label="日期" label-width="40px">
+                                <el-form-item label="开始日期">
                                     <el-date-picker
-                                        v-model="geoFilter.date"
+                                        v-model="geoFilter.start_date"
                                         type="date"
-                                        placeholder="选择日期"
+                                        placeholder="开始日期"
                                         value-format="YYYY-MM-DD"
-                                        @change="loadGeoCoverageData"
-                                        style="width: 150px;">
+                                        @change="loadGeoCoverageData">
                                     </el-date-picker>
                                 </el-form-item>
-                                <el-form-item>
-                                    <el-button type="primary" @click="loadGeoCoverageData" :loading="geoLoading">
-                                        <el-icon><Refresh /></el-icon> 刷新分析
-                                    </el-button>
+                                <el-form-item label="结束日期">
+                                    <el-date-picker
+                                        v-model="geoFilter.end_date"
+                                        type="date"
+                                        placeholder="结束日期"
+                                        value-format="YYYY-MM-DD"
+                                        @change="loadGeoCoverageData">
+                                    </el-date-picker>
                                 </el-form-item>
-                            </el-form>
-                            
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <el-button type="success" @click="showAddGeoManuscript">
-                                    <el-icon><Plus /></el-icon> 添加GEO稿件
-                                </el-button>
-                                <el-button type="primary" @click="exportGeoAnalysis">
-                                    <el-icon><Download /></el-icon> 导出分析
-                                </el-button>
-                            </div>
+                        </el-form>
+
+                        <div class="geo-action-row">
+                            <el-button type="primary" @click="loadGeoCoverageData" :loading="geoLoading">
+                                <el-icon><Refresh /></el-icon> 刷新分析
+                            </el-button>
+                            <el-button type="success" @click="showAddGeoManuscript">
+                                <el-icon><Plus /></el-icon> 添加GEO稿件
+                            </el-button>
+                            <el-button @click="exportGeoAnalysis">
+                                <el-icon><Download /></el-icon> 导出分析
+                            </el-button>
                         </div>
                         
                         <!-- 提示信息行 -->
-                        <div style="padding: 10px 15px; background: #f5f7fa; border-radius: 4px; font-size: 13px; color: #909399;">
+                        <div class="geo-analysis-hint">
                             <el-icon style="margin-right: 5px;"><info-filled /></el-icon>
-                            * 默认展示今日最新一次的数据
+                            * 默认展示最近 30 天；同标题的多个 URL 会聚合展示，展开后可查看引用明细。
                         </div>
                     </div>
 
@@ -2407,8 +2458,9 @@ const app = createApp({
             geoLoading: false,
             geoFilter: {
                 task_id: null,
-                platform: 'doubao',
-                date: ''
+                platform: '',
+                start_date: '',
+                end_date: ''
             },
             geoCoverageData: [],
             geoCoverageLoaded: false,
@@ -2428,6 +2480,7 @@ const app = createApp({
             currentGeoDetails: [],
             taskPollers: {},
             taskCommanding: {},
+            hashChangeHandler: null,
             
             // 舆情配置
             sentimentConfigs: [],
@@ -2596,6 +2649,8 @@ const app = createApp({
     },
     async mounted() {
         this.applyDashboardHash();
+        this.hashChangeHandler = () => this.applyDashboardHash();
+        window.addEventListener('hashchange', this.hashChangeHandler);
         await this.loadCurrentUser();
         this.loadCloudSyncStatus();
         this.cloudStatusTimer = setInterval(() => this.loadCloudSyncStatus(true), 15000);
@@ -2616,6 +2671,9 @@ const app = createApp({
         this.updateCurrentStep();
     },
     beforeUnmount() {
+        if (this.hashChangeHandler) {
+            window.removeEventListener('hashchange', this.hashChangeHandler);
+        }
         if (this.cloudStatusTimer) {
             clearInterval(this.cloudStatusTimer);
         }
@@ -2637,8 +2695,8 @@ const app = createApp({
                 'tasks': 'tasks',
                 'analysis': 'analysis',
                 'trend': 'trend',
-                'geo': 'geo',
-                'geo-coverage': 'geo_coverage',
+                'geo': 'geo_analysis',
+                'geo-coverage': 'geo_analysis',
                 'sentiment-settings': 'sentiment_settings'
             };
             if (tabMap[hash]) {
@@ -3127,7 +3185,8 @@ const app = createApp({
                 const params = {};
                 if (this.geoFilter.task_id) params.task_id = this.geoFilter.task_id;
                 if (this.geoFilter.platform) params.platform = this.geoFilter.platform;
-                if (this.geoFilter.date) params.date = this.geoFilter.date;
+                if (this.geoFilter.start_date) params.start_date = this.geoFilter.start_date;
+                if (this.geoFilter.end_date) params.end_date = this.geoFilter.end_date;
                 
                 const response = await axios.get('/api/analysis/geo-coverage', { params });
                 if (response.data.success) {
@@ -3152,7 +3211,8 @@ const app = createApp({
                 const params = new URLSearchParams();
                 if (this.geoFilter.task_id) params.append('task_id', this.geoFilter.task_id);
                 if (this.geoFilter.platform) params.append('platform', this.geoFilter.platform);
-                if (this.geoFilter.date) params.append('date', this.geoFilter.date);
+                if (this.geoFilter.start_date) params.append('start_date', this.geoFilter.start_date);
+                if (this.geoFilter.end_date) params.append('end_date', this.geoFilter.end_date);
                 
                 if (this.desktopMode) params.append('save_to_downloads', '1');
                 await this.downloadDashboardFile(
@@ -3166,8 +3226,10 @@ const app = createApp({
         },
 
         initGeoFilter() {
-             // 默认展示今日
+             // 默认展示最近 30 天，和云端看板保持一致。
              const today = new Date();
+             const start = new Date(today);
+             start.setDate(start.getDate() - 30);
              
              const formatDate = (date) => {
                  const y = date.getFullYear();
@@ -3176,8 +3238,9 @@ const app = createApp({
                  return `${y}-${m}-${d}`;
              };
              
-             this.geoFilter.date = formatDate(today);
-             this.geoFilter.platform = 'doubao';
+             this.geoFilter.start_date = formatDate(start);
+             this.geoFilter.end_date = formatDate(today);
+             this.geoFilter.platform = '';
          },
         
         showAddGeoManuscript() {

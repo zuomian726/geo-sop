@@ -3063,13 +3063,15 @@ def get_geo_coverage_analysis():
     """获取GEO稿件覆盖率分析（是否被引用）"""
     task_id = request.args.get('task_id', type=int)
     platform = request.args.get('platform', '')
-    date_str = request.args.get('date', '') # YYYY-MM-DD
+    date_str = request.args.get('date', '')
+    start_date = date_str or request.args.get('start_date', '')
+    end_date = date_str or request.args.get('end_date', '')
     
     # 1. 获取所有相关的 GEO 稿件
     m_query = GeoManuscript.query.filter_by(user_id=current_user.id)
-    if task_id:
-        m_query = m_query.filter_by(task_id=task_id)
     manuscripts = m_query.all()
+    if task_id:
+        manuscripts = [m for m in manuscripts if task_id in _geo_manuscript_task_ids(m)]
     
     # 2. 获取相关任务的所有采集结果
     query = CollectionResult.query.join(MonitorTask).filter(MonitorTask.user_id == current_user.id)
@@ -3078,13 +3080,7 @@ def get_geo_coverage_analysis():
         query = query.filter(CollectionResult.task_id == task_id)
     if platform:
         query = query.filter(CollectionResult.platform == platform)
-    if date_str:
-        try:
-            start_dt = datetime.strptime(date_str, '%Y-%m-%d')
-            end_dt = start_dt + timedelta(days=1)
-            query = query.filter(CollectionResult.created_at >= start_dt, CollectionResult.created_at < end_dt)
-        except ValueError:
-            pass
+    query = _apply_geo_date_range(query, start_date, end_date)
             
     # 按时间倒序，以便在匹配时优先匹配最新的结果
     results = query.order_by(CollectionResult.created_at.desc()).all()
@@ -3096,6 +3092,32 @@ def get_geo_coverage_analysis():
         'success': True,
         'data': coverage_data
     })
+
+
+def _geo_manuscript_task_ids(manuscript):
+    """Read both current multi-task links and the legacy single-task field."""
+    task_ids = []
+    if manuscript.task_ids:
+        try:
+            value = json.loads(manuscript.task_ids)
+            if isinstance(value, list):
+                task_ids = [int(item) for item in value if str(item).isdigit() and int(item) > 0]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            task_ids = []
+    if not task_ids and manuscript.task_id:
+        task_ids = [int(manuscript.task_id)]
+    return list(dict.fromkeys(task_ids))
+
+
+def _apply_geo_date_range(query, start_date, end_date):
+    try:
+        if start_date:
+            query = query.filter(CollectionResult.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+        if end_date:
+            query = query.filter(CollectionResult.created_at < datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1))
+    except ValueError:
+        return query
+    return query
 
 
 def _analyze_geo_coverage(manuscripts, results):
@@ -3133,25 +3155,6 @@ def _analyze_geo_coverage(manuscripts, results):
             return '.'.join(parts[-2:])
         return domain
 
-    def get_task_ids_for_manuscript(m):
-        """获取稿件关联的所有任务ID（支持新旧字段）"""
-        task_ids = []
-        
-        # 优先使用新字段 task_ids（JSON数组）
-        if m.task_ids:
-            try:
-                task_ids = json.loads(m.task_ids)
-                if not isinstance(task_ids, list):
-                    task_ids = []
-            except:
-                task_ids = []
-        
-        # 如果新字段为空，使用旧字段 task_id
-        if not task_ids and m.task_id:
-            task_ids = [m.task_id]
-        
-        return task_ids
-
     for m in manuscripts:
         m_core = get_core_url(m.url)
         if not m_core: continue
@@ -3160,7 +3163,7 @@ def _analyze_geo_coverage(manuscripts, results):
         m_main_domain = get_main_domain(m_core)
         
         # 获取稿件关联的所有任务ID
-        m_task_ids = get_task_ids_for_manuscript(m)
+        m_task_ids = _geo_manuscript_task_ids(m)
         
         cited_in = []
         for r in results:
@@ -3234,12 +3237,14 @@ def export_geo_coverage_analysis():
     task_id = request.args.get('task_id', type=int)
     platform = request.args.get('platform', '')
     date_str = request.args.get('date', '')
+    start_date = date_str or request.args.get('start_date', '')
+    end_date = date_str or request.args.get('end_date', '')
     
     # 1. 获取所有相关的 GEO 稿件
     m_query = GeoManuscript.query.filter_by(user_id=current_user.id)
-    if task_id:
-        m_query = m_query.filter_by(task_id=task_id)
     manuscripts = m_query.all()
+    if task_id:
+        manuscripts = [m for m in manuscripts if task_id in _geo_manuscript_task_ids(m)]
     
     # 2. 获取相关任务的所有采集结果
     query = CollectionResult.query.join(MonitorTask).filter(MonitorTask.user_id == current_user.id)
@@ -3248,13 +3253,7 @@ def export_geo_coverage_analysis():
         query = query.filter(CollectionResult.task_id == task_id)
     if platform:
         query = query.filter(CollectionResult.platform == platform)
-    if date_str:
-        try:
-            start_dt = datetime.strptime(date_str, '%Y-%m-%d')
-            end_dt = start_dt + timedelta(days=1)
-            query = query.filter(CollectionResult.created_at >= start_dt, CollectionResult.created_at < end_dt)
-        except ValueError:
-            pass
+    query = _apply_geo_date_range(query, start_date, end_date)
             
     results = query.order_by(CollectionResult.created_at.desc()).all()
     
