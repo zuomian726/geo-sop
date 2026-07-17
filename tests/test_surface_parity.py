@@ -309,6 +309,9 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("GEO_REQUIRE_LOGIN = \"1\"", workflow)
         self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
         self.assertIn("A clean Windows installation did not require", workflow)
+        self.assertIn("Installed application did not require the shared cloud account login", workflow)
+        self.assertIn("Installed executable lost its Authenticode signature", workflow)
+        self.assertIn("Uninstaller left the geo-sop protocol registration behind", workflow)
         self.assertIn("geo-sop\\shell\\open\\command", workflow)
         self.assertIn("ms-playwright", workflow)
         self.assertIn("does not match version.py", workflow)
@@ -339,6 +342,19 @@ class SurfaceParityTests(unittest.TestCase):
         installer_build = (ROOT / "build_windows_installer.bat").read_text(encoding="utf-8")
         self.assertIn('GEO_RELEASE_CHANNEL%"=="stable', installer_build)
         self.assertIn('WINDOWS_SIGNING_READY', installer_build)
+        mac_build = (ROOT / "build_macos_app.sh").read_text(encoding="utf-8")
+        self.assertIn('if [ "${RELEASE_CHANNEL}" = "stable" ]; then', mac_build)
+        self.assertIn("此正式版已使用 Apple Developer ID 签名并通过 Apple 公证", mac_build)
+        self.assertIn("请只从 https://geo.allgood.cn 下载正式安装包", mac_build)
+
+    def test_desktop_periodically_checks_for_updates_without_duplicate_notices(self):
+        dashboard = (ROOT / "web_app" / "templates" / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn("updateCheckTimer: null", dashboard)
+        self.assertIn("notifiedUpdateVersion: ''", dashboard)
+        self.assertIn("setInterval(() => this.checkForUpdates(), 30 * 60 * 1000)", dashboard)
+        self.assertIn("async checkForUpdates()", dashboard)
+        self.assertIn("this.notifiedUpdateVersion === version", dashboard)
+        self.assertIn("clearInterval(this.updateCheckTimer)", dashboard)
 
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")

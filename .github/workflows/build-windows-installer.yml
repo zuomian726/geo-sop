@@ -246,10 +246,55 @@ jobs:
           if (-not $browser) { throw "Installed application is missing bundled Chromium." }
           $protocol = Get-ItemProperty "HKCU:\Software\Classes\geo-sop\shell\open\command" -ErrorAction Stop
           if ($protocol.'(default)' -notmatch "GEO-SOP.exe") { throw "geo-sop protocol registration is invalid." }
+          if ($env:GEO_RELEASE_CHANNEL -eq "stable") {
+            $installedSignature = Get-AuthenticodeSignature "$installDir\GEO-SOP.exe"
+            if ($installedSignature.Status -ne "Valid") {
+              throw "Installed executable lost its Authenticode signature: $($installedSignature.Status)."
+            }
+          }
+
+          $installedBootLog = Join-Path $env:RUNNER_TEMP "geo-sop-installed-boot.log"
+          $installedData = Join-Path $env:RUNNER_TEMP "geo-sop-installed-data"
+          Remove-Item $installedBootLog -Force -ErrorAction SilentlyContinue
+          Remove-Item $installedData -Recurse -Force -ErrorAction SilentlyContinue
+          $env:GEO_DEBUG_BOOT = "1"
+          $env:GEO_BOOT_LOG_PATH = $installedBootLog
+          $env:GEO_DATA_DIR = $installedData
+          $env:GEO_DESKTOP_MODE = "1"
+          $env:GEO_REQUIRE_LOGIN = "1"
+          $installedProcess = Start-Process "$installDir\GEO-SOP.exe" -WorkingDirectory $installDir -PassThru
+          try {
+            $installedPort = $null
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              if ($installedProcess.HasExited) {
+                $log = if (Test-Path $installedBootLog) { Get-Content $installedBootLog -Raw } else { "boot log missing" }
+                throw "Installed application exited during first launch. $log"
+              }
+              if (Test-Path $installedBootLog) {
+                $log = Get-Content $installedBootLog -Raw
+                if ($log -match "creating wsgi server 127\.0\.0\.1:(\d+)") {
+                  $installedPort = [int]$Matches[1]
+                  break
+                }
+              }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $installedPort) { throw "Installed application did not report its first-launch port." }
+            $installedLogin = Invoke-WebRequest "http://127.0.0.1:$installedPort/dashboard" -UseBasicParsing -TimeoutSec 10
+            if ($installedLogin.Content -notmatch "登录 GEO-SOP") {
+              throw "Installed application did not require the shared cloud account login."
+            }
+          } finally {
+            if (-not $installedProcess.HasExited) { Stop-Process -Id $installedProcess.Id -Force }
+          }
+
           $uninstaller = Join-Path $installDir "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Installer did not create an uninstaller." }
           $uninstall = Start-Process $uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with code $($uninstall.ExitCode)." }
+          if (Test-Path "HKCU:\Software\Classes\geo-sop") {
+            throw "Uninstaller left the geo-sop protocol registration behind."
+          }
           Write-Host "Windows installer install/uninstall smoke test passed."
 
       - name: Upload artifact

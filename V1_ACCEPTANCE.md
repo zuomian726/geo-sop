@@ -104,7 +104,7 @@ is online.
 
 This section records development evidence without changing production packages.
 
-- Unit and contract suite: 136 tests passing on 2026-07-17.
+- Unit and contract suite: 137 tests passing on 2026-07-17.
 - Real-browser desktop UI: login, task recovery, task creation, and verified
   update dialogs pass at 1000x700 and 1440x900. Cloud-to-desktop GEO deep
   links, 30-day date filters, responsive controls, and zero horizontal overflow
@@ -136,6 +136,13 @@ This section records development evidence without changing production packages.
   DMGs, valid Windows Authenticode evidence, matching versions and hashes, and
   a clean Git worktree. Versioned files and permanent aliases are staged before
   `update.json` is switched last.
+- Desktop clients check the signed release manifest every 30 minutes, notify
+  once per available version, require unsupported clients to upgrade, and only
+  launch packages that pass same-host HTTPS and SHA-256 verification.
+- Windows release CI now launches the application from its installed directory,
+  verifies the fresh account gate and preserved stable signature, then confirms
+  uninstall removes the custom protocol. Stable macOS DMGs use notarized-release
+  instructions without development quarantine bypasses.
 - Tracked-file audit: no databases, browser profiles, screenshots, private
   configuration, certificates, private keys, or common live API Key formats.
 - Pending final release gates: native Windows install, both native macOS

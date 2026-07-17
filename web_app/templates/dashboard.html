@@ -2285,6 +2285,8 @@ const app = createApp({
                 message: ''
             },
             updateDownloadTimer: null,
+            updateCheckTimer: null,
+            notifiedUpdateVersion: '',
             dataDir: '',
             activeTab: 'insights',
             tasks: [],
@@ -2652,6 +2654,9 @@ const app = createApp({
         this.hashChangeHandler = () => this.applyDashboardHash();
         window.addEventListener('hashchange', this.hashChangeHandler);
         await this.loadCurrentUser();
+        if (this.desktopMode) {
+            this.updateCheckTimer = setInterval(() => this.checkForUpdates(), 30 * 60 * 1000);
+        }
         this.loadCloudSyncStatus();
         this.cloudStatusTimer = setInterval(() => this.loadCloudSyncStatus(true), 15000);
         this.loadTasks();
@@ -2679,6 +2684,9 @@ const app = createApp({
         }
         if (this.updateDownloadTimer) {
             clearTimeout(this.updateDownloadTimer);
+        }
+        if (this.updateCheckTimer) {
+            clearInterval(this.updateCheckTimer);
         }
         Object.keys(this.taskPollers).forEach(taskId => {
             this.clearTaskPolling(taskId);
@@ -2735,23 +2743,42 @@ const app = createApp({
                     this.appInfo = response.data.app || this.appInfo;
                     this.updateInfo = response.data.update || this.updateInfo;
                     this.dataDir = response.data.data_dir || '';
-                    if (this.updateInfo.has_update) {
-                        this.loadUpdateDownloadStatus();
-                        if (this.updateInfo.required) {
-                            this.updateDialogVisible = true;
-                            return;
-                        }
-                        const notes = Array.isArray(this.updateInfo.notes) ? this.updateInfo.notes.slice(0, 2).join('；') : '';
-                        ElNotification({
-                            title: `发现新版本 ${this.updateInfo.latest_version}`,
-                            message: notes || '可以下载新版安装包更新本地客户端。',
-                            type: 'warning',
-                            duration: 9000
-                        });
-                    }
+                    this.handleAvailableUpdate();
                 }
             } catch (error) {
                 console.error('获取当前用户失败:', error);
+            }
+        },
+
+        handleAvailableUpdate() {
+            if (!this.updateInfo.has_update) return;
+            this.loadUpdateDownloadStatus();
+            if (this.updateInfo.required) {
+                this.updateDialogVisible = true;
+                return;
+            }
+            const version = this.updateInfo.latest_version || '';
+            if (version && this.notifiedUpdateVersion === version) return;
+            this.notifiedUpdateVersion = version;
+            const notes = Array.isArray(this.updateInfo.notes) ? this.updateInfo.notes.slice(0, 2).join('；') : '';
+            ElNotification({
+                title: `发现新版本 ${version}`,
+                message: notes || '可以下载新版安装包更新本地客户端。',
+                type: 'warning',
+                duration: 9000
+            });
+        },
+
+        async checkForUpdates() {
+            if (!this.desktopMode) return;
+            try {
+                const response = await axios.get('/api/app-info');
+                if (!response.data.success) return;
+                this.appInfo = response.data.app || this.appInfo;
+                this.updateInfo = response.data.update || this.updateInfo;
+                this.handleAvailableUpdate();
+            } catch (error) {
+                console.warn('后台检查更新失败:', error);
             }
         },
 

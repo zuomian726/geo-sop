@@ -198,6 +198,25 @@ rm -rf "${DMG_STAGE}"
 mkdir -p "${DMG_STAGE}"
 cp -R "${DIST_DIR}/${APP_NAME}.app" "${DMG_STAGE}/${APP_NAME}.app"
 ln -s /Applications "${DMG_STAGE}/Applications"
+if [ "${RELEASE_CHANNEL}" = "stable" ]; then
+cat > "${DMG_STAGE}/安装说明.txt" <<TXT
+GEO-SOP macOS 安装说明
+
+1. 将 GEO-SOP.app 拖到右侧 Applications 文件夹。
+2. 打开“应用程序”文件夹里的 GEO-SOP。
+3. 使用你的 GEO-SOP 云端账号登录，历史任务会自动同步。
+
+安全说明：
+- 此正式版已使用 Apple Developer ID 签名并通过 Apple 公证。
+- 如果系统仍阻止打开，请进入“系统设置 -> 隐私与安全性”查看系统提示。
+- 请只从 https://geo.allgood.cn 下载正式安装包。
+
+提示：
+- 请不要直接在 DMG 窗口中长期运行 App。
+- 平台登录、浏览器采集和截图会在本机完成。
+- 云端账号用于同步任务和分析结果。
+TXT
+else
 cat > "${DMG_STAGE}/安装说明.txt" <<TXT
 GEO-SOP macOS 安装说明
 
@@ -214,6 +233,7 @@ xattr -dr com.apple.quarantine "/Applications/GEO-SOP.app"
 - 平台登录、浏览器采集和截图会在本机完成。
 - 云端账号用于同步任务和分析结果。
 TXT
+fi
 hdiutil create \
   -volname "${APP_NAME} ${VOLUME_ARCH} v${VERSION}" \
   -srcfolder "${DMG_STAGE}" \
