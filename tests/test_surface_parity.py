@@ -263,7 +263,9 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn('APPLE_DEVELOPER_ID', build_script)
         self.assertIn('APPLE_NOTARY_PROFILE', build_script)
         self.assertIn('notarytool submit', build_script)
+        self.assertIn('GEO_REQUIRE_LOGIN=1', smoke_script)
         self.assertIn('GEO_REQUIRE_LOGIN=0', smoke_script)
+        self.assertIn('登录 GEO-SOP', smoke_script)
         self.assertNotIn('$base_url/register', smoke_script)
 
         manifest = json.loads((ROOT / "server" / "geo.allgood.cn" / "update.json").read_text(encoding="utf-8"))
@@ -274,7 +276,9 @@ class SurfaceParityTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
         installer = (ROOT / "installer" / "windows" / "GEO-SOP.iss").read_text(encoding="utf-8")
         self.assertIn("Smoke test installer install and uninstall", workflow)
+        self.assertIn("GEO_REQUIRE_LOGIN = \"1\"", workflow)
         self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
+        self.assertIn("A clean Windows installation did not require", workflow)
         self.assertIn("geo-sop\\shell\\open\\command", workflow)
         self.assertIn("ms-playwright", workflow)
 

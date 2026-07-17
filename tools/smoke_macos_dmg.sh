@@ -17,6 +17,7 @@ ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
   install_dir="$work_dir/Applications"
   data_dir="$work_dir/data"
   app_log="$work_dir/app.log"
+  login_log="$work_dir/login.log"
   cookie_jar="$work_dir/cookies"
   app_pid=""
 
@@ -44,6 +45,41 @@ ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
   fi
   codesign --verify --deep --strict "$app"
   python3 "$ROOT_DIR/tools/verify_macos_bundle.py" "$app" "$EXPECTED_ARCH" 12.0
+
+  env \
+    GEO_DATA_DIR="$data_dir" \
+    GEO_REQUIRE_LOGIN=1 \
+    GEO_FORCE_BROWSER=1 \
+    BROWSER=/usr/bin/true \
+    GEO_DEBUG_BOOT=1 \
+    GEO_BOOT_LOG_PATH="$work_dir/login-boot.log" \
+    "$app/Contents/MacOS/GEO-SOP" >"$login_log" 2>&1 &
+  app_pid=$!
+
+  login_url=""
+  for _ in $(seq 1 120); do
+    login_url=$(sed -n 's/.*desktop server: \(http[^ ]*\).*/\1/p' "$login_log" | tail -1)
+    if [ -n "$login_url" ]; then
+      break
+    fi
+    if ! kill -0 "$app_pid" >/dev/null 2>&1; then
+      cat "$login_log" >&2
+      exit 1
+    fi
+    sleep 0.25
+  done
+  if [ -z "$login_url" ]; then
+    echo "Packaged application did not expose its first-launch URL" >&2
+    cat "$login_log" >&2
+    exit 1
+  fi
+  login_base_url=${login_url%/}
+  login_base_url=${login_base_url%/dashboard}
+  curl -fsSL --max-time 10 "$login_base_url/dashboard" >"$work_dir/first-launch.html"
+  grep -q '登录 GEO-SOP' "$work_dir/first-launch.html"
+  kill "$app_pid" >/dev/null 2>&1 || true
+  wait "$app_pid" >/dev/null 2>&1 || true
+  app_pid=""
 
   env \
     GEO_DATA_DIR="$data_dir" \

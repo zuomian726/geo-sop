@@ -104,8 +104,38 @@ jobs:
           $env:GEO_FORCE_BROWSER = "1"
           $env:GEO_DATA_DIR = $smokeData
           $env:GEO_DESKTOP_MODE = "1"
-          $env:GEO_REQUIRE_LOGIN = "0"
           $env:PYTHONPATH = "$pwd;$pwd\web_app"
+
+          $env:GEO_REQUIRE_LOGIN = "1"
+          $loginProcess = Start-Process "dist\GEO-SOP\GEO-SOP.exe" -PassThru
+          try {
+            $loginPort = $null
+            for ($attempt = 0; $attempt -lt 120; $attempt++) {
+              if ($loginProcess.HasExited) {
+                $log = if (Test-Path $bootLog) { Get-Content $bootLog -Raw } else { "boot log missing" }
+                throw "Native application exited during first-launch startup. $log"
+              }
+              if (Test-Path $bootLog) {
+                $log = Get-Content $bootLog -Raw
+                if ($log -match "creating wsgi server 127\.0\.0\.1:(\d+)") {
+                  $loginPort = [int]$Matches[1]
+                  break
+                }
+              }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $loginPort) { throw "Native application did not report its first-launch port." }
+            $loginPage = Invoke-WebRequest "http://127.0.0.1:$loginPort/dashboard" -UseBasicParsing -TimeoutSec 10
+            if ($loginPage.Content -notmatch "登录 GEO-SOP") {
+              throw "A clean Windows installation did not require the shared cloud account login."
+            }
+          } finally {
+            if (-not $loginProcess.HasExited) { Stop-Process -Id $loginProcess.Id -Force }
+          }
+
+          Remove-Item $bootLog -Force -ErrorAction SilentlyContinue
+          Remove-Item $smokeData -Recurse -Force -ErrorAction SilentlyContinue
+          $env:GEO_REQUIRE_LOGIN = "0"
           $process = Start-Process "dist\GEO-SOP\GEO-SOP.exe" -PassThru
           try {
             $port = $null
