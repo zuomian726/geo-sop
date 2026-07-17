@@ -49,6 +49,15 @@ class SurfaceParityTests(unittest.TestCase):
 
         self.assertTrue(expected <= desktop_labels, expected - desktop_labels)
         self.assertTrue(expected <= cloud_labels, expected - cloud_labels)
+        for marker in (
+            'id="resultDetailModal"',
+            "openResultDetail(this.dataset.installId,this.dataset.localId)",
+            "完整回答",
+            "品牌命中",
+            "引用来源（",
+            "查看截图留证",
+        ):
+            self.assertIn(marker, cloud)
 
     def test_cloud_api_keeps_query_export_and_remote_status_contract(self):
         source = (ROOT / "server" / "geo.allgood.cn" / "api" / "dashboard" / "index.php").read_text(encoding="utf-8")

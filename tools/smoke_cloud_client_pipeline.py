@@ -341,8 +341,15 @@ def run_pipeline(base_url: str, ssh_host: str, server_root: str, keep: bool = Fa
         coverage = dashboard("geo_coverage")
         if len(tasks.get("tasks", [])) != 1 or results.get("total") != 1:
             raise AcceptanceError("dashboard task/result queries did not return synced data")
-        if detail.get("result", {}).get("screenshot_url") != screenshot_url:
+        detail_result = detail.get("result", {})
+        if detail_result.get("screenshot_url") != screenshot_url:
             raise AcceptanceError("dashboard result did not resolve its uploaded screenshot")
+        if (
+            "synthetic production acceptance answer" not in str(detail_result.get("answer") or "")
+            or detail_result.get("exposed_keywords") != ["GEO-SOP Acceptance"]
+            or len(detail_result.get("references") or []) != 1
+        ):
+            raise AcceptanceError("dashboard result detail did not preserve full answer evidence")
         if references.get("total_references") != 1 or coverage.get("cited_urls") != 1:
             raise AcceptanceError("reference and GEO manuscript analysis did not match synced data")
         print("[5/8] cloud dashboard metrics, detail and GEO analysis passed")

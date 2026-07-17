@@ -114,6 +114,9 @@ This section records development evidence without changing production packages.
   and browser setting dialogs pass real-browser checks at both release sizes.
 - Desktop and cloud GEO manuscript analysis now share multi-task manuscript
   filtering, date-range filters, title grouping, and URL/article-ID matching.
+- Cloud result queries now open account-private full-answer details with brand
+  matches, reference URLs, sentiment summaries, and screenshot evidence instead
+  of limiting users to a short table excerpt.
 - Fresh-schema staging Demo: 6 synthetic tasks, 144 synthetic results, 4 GEO
   manuscripts, and 6 platforms; query/export and read-only smoke passed.
 - Disposable two-account staging pipeline: registration, desktop login,
