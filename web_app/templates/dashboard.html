@@ -2163,9 +2163,34 @@ body {
             <span v-if="updateInfo.download_size"> · [[ updateInfo.download_size ]]</span><br>
             安装新版不会删除本地任务、登录状态和历史采集数据。
         </div>
+        <div v-if="['starting', 'downloading', 'ready', 'failed'].includes(updateDownload.status)" style="margin-top: 16px;">
+            <el-progress
+                v-if="['starting', 'downloading'].includes(updateDownload.status)"
+                :percentage="updateDownload.progress || 0"
+                :indeterminate="!updateDownload.total_bytes"
+                :duration="2">
+            </el-progress>
+            <el-alert
+                :title="updateDownload.message"
+                :type="updateDownload.status === 'failed' ? 'error' : (updateDownload.status === 'ready' ? 'success' : 'info')"
+                :closable="false"
+                show-icon>
+            </el-alert>
+            <div v-if="updateDownload.status === 'ready'" style="font-size: 12px; color: #7a879d; margin-top: 8px; word-break: break-all;">
+                已保存到：[[ updateDownload.path ]]
+            </div>
+        </div>
         <template #footer>
             <el-button v-if="!updateInfo.required" @click="updateDialogVisible = false">稍后提醒</el-button>
-            <el-button type="primary" @click="openUpdateDownload">下载安装包</el-button>
+            <el-button
+                v-if="updateDownload.status !== 'ready'"
+                type="primary"
+                :loading="['starting', 'downloading'].includes(updateDownload.status)"
+                :disabled="['starting', 'downloading'].includes(updateDownload.status)"
+                @click="startUpdateDownload">
+                [[ updateDownload.status === 'failed' ? '重新下载' : '下载更新' ]]
+            </el-button>
+            <el-button v-else type="primary" @click="installUpdate">开始安装</el-button>
         </template>
     </el-dialog>
 </div>
@@ -2201,6 +2226,14 @@ const app = createApp({
                 notes: []
             },
             updateDialogVisible: false,
+            updateDownload: {
+                status: 'idle',
+                progress: 0,
+                total_bytes: 0,
+                path: '',
+                message: ''
+            },
+            updateDownloadTimer: null,
             dataDir: '',
             activeTab: 'insights',
             tasks: [],
@@ -2586,6 +2619,9 @@ const app = createApp({
         if (this.cloudStatusTimer) {
             clearInterval(this.cloudStatusTimer);
         }
+        if (this.updateDownloadTimer) {
+            clearTimeout(this.updateDownloadTimer);
+        }
         Object.keys(this.taskPollers).forEach(taskId => {
             this.clearTaskPolling(taskId);
         });
@@ -2634,6 +2670,7 @@ const app = createApp({
                     this.updateInfo = response.data.update || this.updateInfo;
                     this.dataDir = response.data.data_dir || '';
                     if (this.updateInfo.has_update) {
+                        this.loadUpdateDownloadStatus();
                         if (this.updateInfo.required) {
                             this.updateDialogVisible = true;
                             return;
@@ -2707,21 +2744,48 @@ const app = createApp({
             done();
         },
 
-        async openUpdateDownload() {
+        async loadUpdateDownloadStatus() {
+            try {
+                const response = await axios.get('/api/app-info/update-download');
+                if (response.data.success) {
+                    const download = response.data.download || this.updateDownload;
+                    this.updateDownload = download.version && download.version !== this.updateInfo.latest_version
+                        ? {status: 'idle', progress: 0, total_bytes: 0, path: '', message: ''}
+                        : download;
+                }
+            } catch (error) {
+                console.warn('读取更新下载状态失败:', error);
+            }
+            if (['starting', 'downloading'].includes(this.updateDownload.status)) {
+                this.updateDownloadTimer = window.setTimeout(() => this.loadUpdateDownloadStatus(), 700);
+            }
+        },
+
+        async startUpdateDownload() {
             if (!this.updateInfo.download_url) {
                 ElMessage.warning('暂时没有可用的更新下载链接');
                 return;
             }
             try {
-                const response = await axios.post('/api/app-info/open-update');
+                const response = await axios.post('/api/app-info/update-download');
                 if (response.data.success) {
-                    ElMessage.success('已在系统浏览器中打开安装包下载');
+                    this.updateDownload = response.data.download || this.updateDownload;
+                    this.loadUpdateDownloadStatus();
                     return;
                 }
             } catch (error) {
-                console.warn('系统浏览器打开更新失败，使用页面下载兜底:', error);
+                ElMessage.error(error.response?.data?.message || '更新下载启动失败');
             }
-            window.open(this.updateInfo.download_url, '_blank');
+        },
+
+        async installUpdate() {
+            try {
+                const response = await axios.post('/api/app-info/install-update');
+                if (!response.data.success) throw new Error(response.data.message || '安装包打开失败');
+                ElMessage.success(response.data.message);
+            } catch (error) {
+                ElMessage.error(error.response?.data?.message || error.message || '安装包打开失败');
+            }
         },
 
         async uploadCloudAssets() {

@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -146,6 +147,9 @@ class UpdateCheckTests(unittest.TestCase):
             "has_update": True,
             "update_url": "https://geo.allgood.cn/update.json",
             "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup-dev.exe",
+            "download_name": "GEO-SOP-Setup-dev.exe",
+            "download_sha256": "a" * 64,
+            "platform": "windows",
         }
         with patch.object(web_app.webbrowser, "open", return_value=True) as open_browser:
             url = web_app._open_update_download(update)
@@ -158,9 +162,82 @@ class UpdateCheckTests(unittest.TestCase):
             "has_update": True,
             "update_url": "https://geo.allgood.cn/update.json",
             "download_url": "https://example.com/fake.exe",
+            "download_name": "fake.exe",
+            "download_sha256": "a" * 64,
+            "platform": "windows",
         }
         with self.assertRaisesRegex(ValueError, "官方更新服务器"):
             web_app._open_update_download(update)
+
+    def test_update_package_download_is_verified_and_saved_atomically(self):
+        payload = b"verified installer"
+        digest = __import__("hashlib").sha256(payload).hexdigest()
+        update = {
+            "has_update": True,
+            "latest_version": "1.0.0",
+            "update_url": "https://geo.allgood.cn/update.json",
+            "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup.exe",
+            "download_name": "GEO-SOP-Setup.exe",
+            "download_sha256": digest,
+            "platform": "windows",
+        }
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"Content-Length": str(len(payload))}
+        response.iter_content.return_value = [payload]
+        with tempfile.TemporaryDirectory() as downloads:
+            with (
+                patch.object(web_app, "_desktop_downloads_dir", return_value=downloads),
+                patch.object(web_app.requests, "get", return_value=response),
+            ):
+                web_app._download_update_package(update)
+                state = web_app._get_update_download_state()
+
+            self.assertEqual("ready", state["status"])
+            self.assertEqual(100, state["progress"])
+            self.assertEqual(payload, Path(state["path"]).read_bytes())
+            self.assertFalse(Path(f'{state["path"]}.part').exists())
+
+    def test_update_package_rejects_failed_checksum(self):
+        update = {
+            "has_update": True,
+            "latest_version": "1.0.0",
+            "update_url": "https://geo.allgood.cn/update.json",
+            "download_url": "https://geo.allgood.cn/downloads/GEO-SOP-Setup.exe",
+            "download_name": "GEO-SOP-Setup.exe",
+            "download_sha256": "a" * 64,
+            "platform": "windows",
+        }
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"Content-Length": "7"}
+        response.iter_content.return_value = [b"invalid"]
+        with tempfile.TemporaryDirectory() as downloads:
+            with (
+                patch.object(web_app, "_desktop_downloads_dir", return_value=downloads),
+                patch.object(web_app.requests, "get", return_value=response),
+            ):
+                web_app._download_update_package(update)
+                state = web_app._get_update_download_state()
+
+            self.assertEqual("failed", state["status"])
+            self.assertIn("完整性校验失败", state["message"])
+            self.assertEqual([], list(Path(downloads).iterdir()))
+
+    def test_installer_is_reverified_before_launch(self):
+        with tempfile.TemporaryDirectory() as downloads:
+            package = Path(downloads) / "GEO-SOP.dmg"
+            package.write_bytes(b"changed after download")
+            web_app._set_update_download_state(
+                status="ready",
+                path=str(package),
+                sha256="a" * 64,
+            )
+            with patch.object(web_app, "_desktop_downloads_dir", return_value=downloads):
+                with self.assertRaisesRegex(ValueError, "校验失效"):
+                    web_app._launch_verified_update()
+
+            self.assertEqual("failed", web_app._get_update_download_state()["status"])
 
 
 if __name__ == "__main__":

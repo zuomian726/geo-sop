@@ -28,7 +28,9 @@ from flask_cors import CORS
 from datetime import datetime, timezone, timedelta
 import json
 import click
+import hashlib
 import secrets
+import subprocess
 import threading
 import logging
 import time
@@ -220,7 +222,7 @@ def _check_latest_update():
     return status
 
 
-def _open_update_download(update):
+def _validated_update_package(update):
     url = str(update.get('download_url') or '').strip()
     update_url = str(update.get('update_url') or '').strip()
     parsed = urlparse(url)
@@ -231,9 +233,140 @@ def _open_update_download(update):
         raise ValueError('更新下载地址与官方更新服务器不一致')
     if not update.get('has_update'):
         raise ValueError('当前已是最新版本')
+    digest = str(update.get('download_sha256') or '').strip().lower()
+    if len(digest) != 64 or any(char not in '0123456789abcdef' for char in digest):
+        raise ValueError('发布清单缺少有效的安装包校验码')
+    filename = _safe_download_filename(str(update.get('download_name') or os.path.basename(parsed.path)))
+    expected_extension = '.exe' if update.get('platform') == 'windows' else '.dmg'
+    if not filename.lower().endswith(expected_extension):
+        raise ValueError('安装包格式与当前系统不匹配')
+    return url, filename, digest
+
+
+def _open_update_download(update):
+    url, _, _ = _validated_update_package(update)
     if not webbrowser.open(url, new=2):
         raise RuntimeError('系统没有成功打开下载页面')
     return url
+
+
+_update_download_lock = threading.Lock()
+_update_download_state = {
+    'status': 'idle',
+    'version': '',
+    'filename': '',
+    'path': '',
+    'downloaded_bytes': 0,
+    'total_bytes': 0,
+    'progress': 0,
+    'sha256': '',
+    'message': '',
+}
+
+
+def _set_update_download_state(**changes):
+    with _update_download_lock:
+        _update_download_state.update(changes)
+        return dict(_update_download_state)
+
+
+def _get_update_download_state():
+    with _update_download_lock:
+        return dict(_update_download_state)
+
+
+def _download_update_package(update):
+    url, filename, expected_digest = _validated_update_package(update)
+    target = os.path.join(_desktop_downloads_dir(), filename)
+    partial = f'{target}.part'
+    version = str(update.get('latest_version') or '')
+    _set_update_download_state(
+        status='downloading', version=version, filename=filename, path='',
+        downloaded_bytes=0, total_bytes=0, progress=0, sha256=expected_digest,
+        message='正在下载安装包',
+    )
+    try:
+        response = requests.get(url, stream=True, timeout=(8, 60))
+        response.raise_for_status()
+        total = int(response.headers.get('Content-Length') or 0)
+        if total > 1024 * 1024 * 1024:
+            raise ValueError('安装包大小异常，已停止下载')
+        digest = hashlib.sha256()
+        downloaded = 0
+        with open(partial, 'wb') as handle:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if not chunk:
+                    continue
+                downloaded += len(chunk)
+                if downloaded > 1024 * 1024 * 1024:
+                    raise ValueError('安装包大小异常，已停止下载')
+                handle.write(chunk)
+                digest.update(chunk)
+                progress = min(99, int(downloaded * 100 / total)) if total else 0
+                _set_update_download_state(
+                    downloaded_bytes=downloaded, total_bytes=total, progress=progress,
+                )
+        if digest.hexdigest().lower() != expected_digest:
+            raise ValueError('安装包完整性校验失败，请重新下载')
+        os.replace(partial, target)
+        _set_update_download_state(
+            status='ready', path=target, downloaded_bytes=downloaded,
+            total_bytes=total or downloaded, progress=100,
+            message='安装包已下载并通过安全校验',
+        )
+    except Exception as error:
+        try:
+            if os.path.exists(partial):
+                os.remove(partial)
+        except OSError:
+            pass
+        logger.warning('更新安装包下载失败: %s', error)
+        public_message = str(error) if isinstance(error, ValueError) else '下载失败，请检查网络后重试'
+        _set_update_download_state(status='failed', path='', message=public_message)
+
+
+def _start_update_download(update):
+    _validated_update_package(update)
+    current = _get_update_download_state()
+    if current.get('status') in {'starting', 'downloading'}:
+        return current
+    starting = _set_update_download_state(
+        status='starting', version=str(update.get('latest_version') or ''),
+        filename=str(update.get('download_name') or ''), path='',
+        downloaded_bytes=0, total_bytes=0, progress=0,
+        sha256=str(update.get('download_sha256') or '').strip().lower(), message='正在准备下载',
+    )
+    thread = threading.Thread(
+        target=_download_update_package,
+        args=(dict(update),),
+        daemon=True,
+        name='geo-sop-update-download',
+    )
+    thread.start()
+    return starting
+
+
+def _launch_verified_update():
+    state = _get_update_download_state()
+    path = os.path.realpath(str(state.get('path') or ''))
+    allowed_root = os.path.realpath(_desktop_downloads_dir()) + os.sep
+    if state.get('status') != 'ready' or not path.startswith(allowed_root) or not os.path.isfile(path):
+        raise ValueError('安装包尚未下载完成')
+    digest = hashlib.sha256()
+    with open(path, 'rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    if digest.hexdigest().lower() != str(state.get('sha256') or '').lower():
+        _set_update_download_state(status='failed', path='', message='安装包校验失效，请重新下载')
+        raise ValueError('安装包校验失效，请重新下载')
+    system_name = platform.system().lower()
+    if system_name.startswith('win'):
+        os.startfile(path)
+    elif system_name == 'darwin':
+        subprocess.Popen(['open', path], close_fds=True)
+    else:
+        raise ValueError('当前系统暂不支持自动打开安装包')
+    return path
 
 
 def _extract_json_text(text):
@@ -871,6 +1004,35 @@ def open_app_update():
             'download_url': update.get('download_url'),
         }), 400
     return jsonify({'success': True, 'message': '已在系统浏览器中打开安装包下载', 'download_url': url})
+
+
+@app.route('/api/app-info/update-download', methods=['GET', 'POST'])
+@login_required
+def app_update_download():
+    if not app.config.get('DESKTOP_MODE', False):
+        return jsonify({'success': False, 'message': '该操作只能在本机客户端使用'}), 400
+    if request.method == 'GET':
+        return jsonify({'success': True, 'download': _get_update_download_state()})
+    update = _check_latest_update()
+    try:
+        state = _start_update_download(update)
+    except Exception as error:
+        logger.warning('启动更新下载失败: %s', error)
+        return jsonify({'success': False, 'message': str(error)}), 400
+    return jsonify({'success': True, 'download': state})
+
+
+@app.route('/api/app-info/install-update', methods=['POST'])
+@login_required
+def install_app_update():
+    if not app.config.get('DESKTOP_MODE', False):
+        return jsonify({'success': False, 'message': '该操作只能在本机客户端使用'}), 400
+    try:
+        path = _launch_verified_update()
+    except Exception as error:
+        logger.warning('打开更新安装包失败: %s', error)
+        return jsonify({'success': False, 'message': str(error)}), 400
+    return jsonify({'success': True, 'message': '安装包已打开，请按系统提示完成升级', 'path': path})
 
 
 @app.route('/api/cloud-sync/status', methods=['GET'])
