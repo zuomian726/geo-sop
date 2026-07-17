@@ -27,9 +27,10 @@ ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "创建桌面快捷方式 / Create a desktop shortcut"; GroupDescription: "快捷方式 / Shortcuts:"; Flags: unchecked
 
 [Files]
 Source: "..\..\dist\GEO-SOP\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -45,4 +46,4 @@ Root: HKCU; Subkey: "Software\Classes\geo-sop"; ValueType: string; ValueName: "U
 Root: HKCU; Subkey: "Software\Classes\geo-sop\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExe}"" ""%1"""
 
 [Run]
-Filename: "{app}\{#MyAppExe}"; WorkingDir: "{app}"; Description: "Launch GEO-SOP"; Flags: postinstall skipifsilent nowait
+Filename: "{app}\{#MyAppExe}"; WorkingDir: "{app}"; Description: "启动 GEO-SOP / Launch GEO-SOP"; Flags: postinstall skipifsilent nowait

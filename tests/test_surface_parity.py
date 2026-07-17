@@ -233,6 +233,16 @@ class SurfaceParityTests(unittest.TestCase):
         self.assertIn("macos", manifest["downloads"])
         self.assertIn("macos_intel", manifest["downloads"])
 
+    def test_windows_release_installs_native_runtime_and_supports_chinese(self):
+        workflow = (ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
+        installer = (ROOT / "installer" / "windows" / "GEO-SOP.iss").read_text(encoding="utf-8")
+        self.assertIn("Smoke test installer install and uninstall", workflow)
+        self.assertIn("GEO_REQUIRE_LOGIN = \"0\"", workflow)
+        self.assertIn("geo-sop\\shell\\open\\command", workflow)
+        self.assertIn("ms-playwright", workflow)
+        self.assertIn("ChineseSimplified.isl", installer)
+        self.assertIn("PrivilegesRequired=lowest", installer)
+
     def test_demo_seed_is_account_safe_and_matches_public_sample_counts(self):
         seed = (ROOT / "server" / "geo.allgood.cn" / "demo" / "seed.php").read_text(encoding="utf-8")
         self.assertIn("PHP_SAPI !== 'cli'", seed)
