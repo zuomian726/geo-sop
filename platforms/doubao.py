@@ -212,52 +212,63 @@ def _verify_and_send(page: Page, editor, question: str):
         """, question_json)
         _random_wait(500, 800)
 
-    # 尝试发送
-    sent = False
-    
-    # 方法1：点击发送按钮
+    # 只匹配明确的发送控件。豆包页面里有很多 SVG 图标按钮，匹配任意
+    # button:has(svg) 会在页面改版后误点侧栏或工具按钮。
     send_selectors = [
         "button[aria-label*='发送']",
         "button[type='submit']",
-        "[class*='send']",
-        "[class*='submit']",
-        "button:has(svg)",
-        "[data-testid*='send']",
-        ".send-btn",
+        "button[data-testid*='send']",
+        "[data-testid*='send'] button",
+        "button[class*='send']",
+        "button[class*='submit']",
     ]
-    
+
+    sent = False
     for sel in send_selectors:
         try:
             btn = page.locator(sel).first
             if btn.is_visible(timeout=1500) and btn.is_enabled(timeout=1500):
                 print(f"    找到发送按钮: {sel}")
                 btn.click()
-                sent = True
-                break
-        except PWTimeout:
+                _random_wait(500, 800)
+                if not _read_editor_content(editor).strip():
+                    sent = True
+                    break
+                print(f"    点击 {sel} 后问题仍在输入框，继续尝试...")
+        except Exception:
             continue
 
-    # 方法2：按Enter键发送
+    # 豆包通常支持 Enter 发送；按钮未命中或点击无效时回退键盘发送。
     if not sent:
-        print("    未找到发送按钮，尝试按Enter键...")
+        print("    未找到可用发送按钮，尝试按Enter键...")
         editor.click()
         _random_wait(200, 300)
-        # 有些页面需要Ctrl+Enter发送
         try:
             page.keyboard.press("Enter")
-            sent = True
+            _random_wait(500, 800)
+            sent = not _read_editor_content(editor).strip()
         except Exception as e:
             print(f"    Enter键发送失败: {e}")
-            try:
-                page.keyboard.press("Control+Enter")
-                sent = True
-            except Exception as e2:
-                print(f"    Ctrl+Enter发送失败: {e2}")
 
     if sent:
         print("    ✓ 消息已发送")
-    else:
-        print("    ✗ 发送失败")
+        return
+
+    raise RuntimeError(
+        "豆包问题未成功发送。请在浏览器设置中重新登录豆包，"
+        "完成可能出现的验证码后重试。"
+    )
+
+
+def _read_editor_content(editor) -> str:
+    """读取 textarea 或 contenteditable 内容，并屏蔽控件切换时的瞬时异常。"""
+    try:
+        return editor.input_value(timeout=1000) or ""
+    except Exception:
+        try:
+            return editor.inner_text(timeout=1000) or ""
+        except Exception:
+            return ""
 
 
 def _wait_for_answer(page: Page):
