@@ -105,7 +105,6 @@
         <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
             <a href="#features" data-en="Features" data-zh="功能">Features</a>
             <a href="#demo" data-en="Demo" data-zh="在线 Demo">Demo</a>
-            <a href="#download" data-en="Download" data-zh="下载">Download</a>
             <a href="#roadmap" data-en="Roadmap" data-zh="路线图">Roadmap</a>
             <a href="#faq" data-en="FAQ" data-zh="常见问题">FAQ</a>
             <a href="#about" data-en="About" data-zh="关于">About</a>
@@ -121,7 +120,7 @@
         <div class="tool-copy-stack">
             <div class="tool-lang-row">
                 <span class="tool-kicker" data-en="GEO desktop tool" data-zh="GEO 桌面工具">GEO desktop tool</span>
-                <span class="tool-version-badge" id="release-badge">v1.0.0</span>
+                <span class="tool-version-badge" id="release-badge">v0.3.43-dev</span>
                 <button class="tool-lang-toggle" type="button" data-lang-toggle aria-label="Switch language">中文</button>
             </div>
             <img class="tool-app-icon" src="/public/assets/tools/geo-sop-icon.svg" alt="GEO-SOP icon" width="96" height="96">
@@ -131,12 +130,8 @@
             <div class="tool-download-actions">
                 <a class="tool-demo-hero-link" href="/login/"><span data-en="Login or create account" data-zh="登录或注册账号">Login or create account</span><small data-en="Cloud dashboard + desktop sync" data-zh="云端工作台 + 桌面同步">Cloud dashboard + desktop sync</small></a>
                 <a class="tool-demo-hero-link" href="https://geo.allgood.cn/demo/" target="_blank" rel="noopener"><span data-en="Try online demo" data-zh="在线体验 Demo">Try online demo</span><small>tuke / 123456</small></a>
-                <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="macOS · Apple Silicon" data-zh="macOS · Apple 芯片">macOS · Apple Silicon</span><small id="release-mac-hero">v1.0.0 · signed DMG</small></a>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span data-en="macOS · Intel" data-zh="macOS · Intel 芯片">macOS · Intel</span><small id="release-mac-intel-hero">v1.0.0 · signed DMG</small></a>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download for Windows" data-zh="下载 Windows 版">Download for Windows</span><small id="release-windows-hero" data-en="v1.0.0 · signed EXE setup installer" data-zh="v1.0.0 · 已签名 EXE 安装包">v1.0.0 · signed EXE setup installer</small></a>
             </div>
-            <div class="tool-availability" data-en="macOS package includes the desktop app. Windows ships as an EXE setup installer." data-zh="macOS 包含桌面 App。Windows 已切换为 EXE 安装包。">macOS package includes the desktop app. Windows ships as an EXE setup installer.</div>
-            <div class="tool-release-line"><span data-en="Current release" data-zh="当前版本">Current release</span>: <span id="release-current-version">v1.0.0</span></div>
+            <div class="tool-release-line"><span data-en="Current release" data-zh="当前版本">Current release</span>: <span id="release-current-version">v0.3.43-dev</span></div>
         </div>
         <figure class="tool-hero-visual">
             <img src="/public/assets/tools/geo-hero-product-v010.webp" alt="GEO-SOP desktop dashboard and results screenshots" width="1600" height="1000">
@@ -148,7 +143,7 @@
     <div class="container tool-demo-panel">
         <div class="tool-demo-copy">
             <span class="tool-kicker" data-en="Online demo" data-zh="在线 Demo">Online demo</span>
-            <h2 data-en="Try the GEO-SOP workspace before installing." data-zh="安装前，先体验 GEO-SOP 在线工作台。">Try the GEO-SOP workspace before installing.</h2>
+            <h2 data-en="Try the v0.3 workspace before installing." data-zh="安装前，先体验 v0.3 工作台。">Try the v0.3 workspace before installing.</h2>
             <p data-en="The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server." data-zh="在线 Demo 已预览商业版工作台：KPI 卡片、AI 分析配置、下一步动作建议、样例 GEO 任务、合成 AI 回答和可导出数据。它运行在只读安全模式，访客可以探索功能，但不会改动服务器数据。">The hosted demo now previews the commercial workspace: KPI cards, AI analysis setup, next-action guidance, sample GEO tasks, synthetic AI answers, and export-ready data. It runs in read-only safe mode, so visitors can explore without changing the server.</p>
             <div class="tool-demo-stats">
                 <article><strong>6</strong><span data-en="Demo tasks" data-zh="演示任务">Demo tasks</span></article>
@@ -272,44 +267,11 @@
     </div>
 </section>
 
-<section class="tool-download-section" id="download">
+<section class="tool-download-section tool-product-updates-section" id="product-updates">
     <div class="container">
-        <div class="tool-download-head">
-            <span class="tool-kicker" data-en="Download" data-zh="下载">Download</span>
-            <h2 data-en="Choose your desktop build." data-zh="选择你的桌面版本。">Choose your desktop build.</h2>
-        </div>
-        <div class="tool-platform-grid">
-            <article class="tool-platform-card featured">
-                <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="64" height="64">
-                <span>macOS</span>
-                <h3 data-en="Mac desktop build" data-zh="Mac 桌面版">Mac desktop build</h3>
-                <ul>
-                    <li data-en="macOS 12 Monterey or later" data-zh="macOS 12 Monterey 或以上">macOS 12 Monterey or later</li>
-                    <li data-en="Separate native builds for Apple Silicon and Intel" data-zh="分别提供 Apple 芯片与 Intel 原生版本">Separate native builds for Apple Silicon and Intel</li>
-                    <li data-en="4 GB RAM minimum, 8 GB recommended" data-zh="最低 4GB 内存，建议 8GB">4 GB RAM minimum, 8 GB recommended</li>
-                    <li data-en="Application runtime included; collection uses local Chrome or Edge" data-zh="内置应用运行时，采集使用本机 Chrome 或 Edge">Application runtime included; collection uses local Chrome or Edge</li>
-                </ul>
-                <div class="tool-platform-downloads">
-                    <a class="tool-download-primary" href="/downloads/GEO-SOP-macOS.dmg"><span data-en="Apple Silicon" data-zh="Apple 芯片">Apple Silicon</span><small id="release-mac-card">v1.0.0 · signed</small></a>
-                    <a class="tool-download-secondary" href="/downloads/GEO-SOP-macOS-Intel.dmg"><span>Intel</span><small id="release-mac-intel-card">v1.0.0 · signed</small></a>
-                </div>
-            </article>
-            <article class="tool-platform-card">
-                <img src="/public/assets/tools/geo-sop-icon.svg" alt="" width="64" height="64">
-                <span>Windows</span>
-                <h3 data-en="Windows setup installer" data-zh="Windows 安装包">Windows setup installer</h3>
-                <ul>
-                    <li data-en="Windows 10/11, 64-bit" data-zh="Windows 10/11，64 位">Windows 10/11, 64-bit</li>
-                    <li data-en="Native desktop app; Python is not required" data-zh="原生桌面应用，无需安装 Python">Native desktop app; Python is not required</li>
-                    <li data-en="Includes the application runtime and Chromium" data-zh="内置应用运行时和 Chromium 浏览器">Includes the application runtime and Chromium</li>
-                    <li id="release-windows-signing" data-en="Authenticode-signed installer with bundled runtime" data-zh="已完成 Authenticode 签名并内置运行环境">Authenticode-signed installer with bundled runtime</li>
-                </ul>
-                <a class="tool-download-secondary" href="/downloads/GEO-SOP-Setup.exe"><span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span><small id="release-windows-card">v1.0.0 · signed</small></a>
-            </article>
-        </div>
         <div class="tool-release-note">
-            <span id="release-notes-title" data-en="What is new in v1.0.0" data-zh="v1.0.0 更新内容">What is new in v1.0.0</span>
-            <p data-en="Commercial detection and sentiment analysis, synchronized desktop/cloud history, remote task execution, signed native installers, and verified in-app updates." data-zh="正式提供检测与舆情分析、桌面与云端历史同步、云端任务执行、已签名原生安装包和安全校验更新。">Commercial detection and sentiment analysis, synchronized desktop/cloud history, remote task execution, signed native installers, and verified in-app updates.</p>
+            <span id="release-notes-title" data-en="What is new in v0.3.43-dev" data-zh="v0.3.43-dev 更新内容">What is new in v0.3.43-dev</span>
+            <p data-en="Fresh installs now restore the complete cloud history even when an old pull cursor remains. Large workspaces also avoid retransmitting task, manuscript, and sentiment metadata on every result page." data-zh="重新安装后即使残留旧同步游标，也会完整恢复云端历史；大数据账号分页恢复时不再每页重复传输任务、稿件和智慧舆情配置。">Fresh installs now restore the complete cloud history even when an old pull cursor remains. Large workspaces also avoid retransmitting task, manuscript, and sentiment metadata on every result page.</p>
         </div>
         <section class="tool-roadmap-panel" id="roadmap">
             <div class="tool-roadmap-head">
@@ -320,18 +282,28 @@
             <div class="tool-roadmap-grid">
                 <article class="active">
                     <span data-en="Current" data-zh="当前版本">Current</span>
+                    <h4>v0.3-dev</h4>
+                    <p data-en="Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo." data-zh="桌面预览版：本地采集、截图留证、导出、KPI 看板、AI 分析配置和在线 Demo。">Desktop preview for local collection, screenshots, exports, KPI dashboard, AI analysis setup, and online demo.</p>
+                </article>
+                <article>
+                    <span data-en="v1.0 target" data-zh="v1.0 目标">v1.0 target</span>
                     <h4>v1.0</h4>
                     <p data-en="Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync." data-zh="实现检测和舆情分析：稳定采集、品牌曝光、引用来源、KPI 看板、导出，以及本地和云端数据同步。">Commercial detection and sentiment analysis: stable collection, brand visibility, reference sources, KPI dashboard, exports, and local/cloud sync.</p>
                 </article>
                 <article>
-                    <span data-en="Next" data-zh="下一阶段">Next</span>
+                    <span data-en="v2.0 target" data-zh="v2.0 目标">v2.0 target</span>
                     <h4>v2.0</h4>
                     <p data-en="Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports." data-zh="实现全自动 GEO 任务：云端创建任务、本机执行采集、队列重试、登录态提醒、自动分析和自动报告。">Fully automated GEO tasks: cloud task creation, local desktop execution, queue retries, login-state prompts, auto analysis, and auto reports.</p>
                 </article>
             </div>
             <div class="tool-roadmap-detail-grid">
                 <article>
-                    <strong data-en="v1.0 capabilities" data-zh="v1.0 能力">v1.0 capabilities</strong>
+                    <strong data-en="Current focus" data-zh="当前重点">Current focus</strong>
+                    <span data-en="Make analysis useful first" data-zh="先把分析做强">Make analysis useful first</span>
+                    <p data-en="Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations." data-zh="核心评分、图表洞察、AI 下一步动作、稳定导出和清晰的文件保存位置。">Core scorecard, chart-based insights, AI next actions, reliable exports, and clear saved file locations.</p>
+                </article>
+                <article>
+                    <strong data-en="v1.0 focus" data-zh="v1.0 重点">v1.0 focus</strong>
                     <span data-en="Detection and sentiment analysis" data-zh="检测与舆情分析">Detection and sentiment analysis</span>
                     <p data-en="Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations." data-zh="品牌曝光检测、引用来源提取、关键词舆情、AI 辅助舆情、证据导出和清晰的 KPI 解释。">Brand visibility, reference-source extraction, keyword sentiment, AI-assisted sentiment, export evidence, and clear KPI explanations.</p>
                 </article>
@@ -348,7 +320,7 @@
                 </div>
                 <div>
                     <strong>v1.0</strong>
-                    <span data-en="Detection workflow, reference-source analysis, sentiment analysis, and a synchronized desktop/cloud dashboard." data-zh="检测工作流、引用来源分析、舆情分析，以及本地和云端一致的数据看板。">Detection workflow, reference-source analysis, sentiment analysis, and a synchronized desktop/cloud dashboard.</span>
+                    <span data-en="Planned: detection workflow, reference-source analysis, sentiment analysis, synchronized desktop/cloud dashboard." data-zh="规划：检测工作流、引用来源分析、舆情分析、本地和云端一致的数据看板。">Planned: detection workflow, reference-source analysis, sentiment analysis, synchronized desktop/cloud dashboard.</span>
                 </div>
                 <div>
                     <strong>v2.0</strong>
@@ -356,32 +328,6 @@
                 </div>
             </div>
         </section>
-        <div class="tool-security-note">
-            <div class="tool-security-intro">
-                <span class="tool-kicker" data-en="Security Notice" data-zh="安全提示">Security Notice</span>
-                <h3 id="release-security-title" data-en="Signed packages for macOS and Windows." data-zh="macOS 与 Windows 安装包均已正式签名。">Signed packages for macOS and Windows.</h3>
-                <p id="release-security-copy" data-en="The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release." data-zh="macOS DMG 已完成 Developer ID 签名与公证；Windows 安装包已完成 Authenticode 签名，并在发布前校验完整性。">The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release.</p>
-            </div>
-            <div class="tool-security-grid">
-                <article>
-                    <div class="tool-security-card-head">
-                        <span>macOS</span>
-                        <strong>Gatekeeper</strong>
-                    </div>
-                    <p id="release-macos-security-guide" data-en="Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release." data-zh="把 GEO-SOP 拖入“应用程序”后即可正常打开；安装包已在发布前完成公证校验。">Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release.</p>
-                    <code id="release-gatekeeper-command" hidden></code>
-                    <p id="release-macos-security-status" class="tool-security-action" data-en="Developer ID signature and Apple notarization verified." data-zh="Developer ID 签名与 Apple 公证已验证。">Developer ID signature and Apple notarization verified.</p>
-                </article>
-                <article>
-                    <div class="tool-security-card-head">
-                        <span>Windows</span>
-                        <strong>SmartScreen</strong>
-                    </div>
-                    <p id="release-windows-security-guide" data-en="The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning." data-zh="已签名安装包应显示 GEO-SOP 发布者；如 Windows 仍提示风险，请先核对数字签名再继续。">The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning.</p>
-                    <p id="release-windows-security-status" class="tool-security-action" data-en="Authenticode signature and SHA-256 checksum verified." data-zh="Authenticode 签名与 SHA-256 完整性已验证。">Authenticode signature and SHA-256 checksum verified.</p>
-                </article>
-            </div>
-        </div>
         <section class="tool-faq-panel" id="faq">
             <div class="tool-roadmap-head">
                 <span class="tool-kicker" data-en="GEO tools FAQ" data-zh="GEO 工具常见问题">GEO tools FAQ</span>
@@ -413,13 +359,8 @@
             "@type": "SoftwareApplication",
             "name": "GEO-SOP",
             "applicationCategory": "BusinessApplication",
-            "operatingSystem": [
-                "macOS",
-                "Windows"
-            ],
             "url": "/tools",
-            "downloadUrl": "/downloads/GEO-SOP-Setup.exe",
-            "softwareVersion": "v1.0.0",
+            "softwareVersion": "v0.3.43-dev",
             "description": "GEO-SOP is a GEO tool for AI search visibility, generative engine optimization monitoring, AI answer screenshots, brand exposure tracking, and GEO report exports.",
             "publisher": {
                 "@type": "Organization",
@@ -494,84 +435,23 @@
       const rawVersion = String(release.version || '');
       if (!/^[0-9A-Za-z.-]+$/.test(rawVersion)) return;
       const version = 'v' + rawVersion.replace(/^v/, '');
-      const mac = release.downloads && release.downloads.macos ? release.downloads.macos : {};
-      const macIntel = release.downloads && release.downloads.macos_intel ? release.downloads.macos_intel : {};
-      const windows = release.downloads && release.downloads.windows ? release.downloads.windows : {};
-      const macSize = String(mac.size || '');
-      const macIntelSize = String(macIntel.size || '');
-      const windowsSize = String(windows.size || '');
-      if (release.channel === 'stable') {
-        const setReleaseTranslation = (id, en, zh) => {
-          const element = document.getElementById(id);
-          if (!element) return;
-          element.dataset.en = en;
-          element.dataset.zh = zh;
-        };
-        const securityTitle = document.getElementById('release-security-title');
-        const securityCopy = document.getElementById('release-security-copy');
-        if (securityTitle) {
-          securityTitle.dataset.en = 'Signed packages for macOS and Windows.';
-          securityTitle.dataset.zh = 'macOS 与 Windows 安装包均已正式签名。';
-        }
-        if (securityCopy) {
-          securityCopy.dataset.en = 'The macOS DMGs are Developer ID signed and notarized. The Windows installer is Authenticode signed and checksum verified before release.';
-          securityCopy.dataset.zh = 'macOS DMG 已完成 Developer ID 签名与公证；Windows 安装包已完成 Authenticode 签名，并在发布前校验完整性。';
-        }
-        setReleaseTranslation('release-windows-signing', 'Authenticode-signed installer with bundled runtime', '已完成 Authenticode 签名并内置运行环境');
-        setReleaseTranslation('release-macos-security-guide', 'Drag GEO-SOP into Applications, then open it normally. The notarized package has been verified before release.', '把 GEO-SOP 拖入“应用程序”后即可正常打开；安装包已在发布前完成公证校验。');
-        setReleaseTranslation('release-macos-security-status', 'Developer ID signature and Apple notarization verified.', 'Developer ID 签名与 Apple 公证已验证。');
-        setReleaseTranslation('release-windows-security-guide', 'The signed installer should identify GEO-SOP as the publisher. Verify the signature before continuing if Windows shows a warning.', '已签名安装包应显示 GEO-SOP 发布者；如 Windows 仍提示风险，请先核对数字签名再继续。');
-        setReleaseTranslation('release-windows-security-status', 'Authenticode signature and SHA-256 checksum verified.', 'Authenticode 签名与 SHA-256 完整性已验证。');
-        const gatekeeper = document.getElementById('release-gatekeeper-command');
-        if (gatekeeper) gatekeeper.hidden = true;
-      }
-
       const setText = (id, value) => {
         const element = document.getElementById(id);
         if (element) element.textContent = value;
       };
       setText('release-badge', version);
       setText('release-current-version', version);
-      setText('release-mac-hero', version + ' · DMG · ' + macSize);
-      setText('release-mac-card', version + ' · ' + macSize);
-      setText('release-mac-intel-hero', version + ' · DMG · ' + macIntelSize);
-      setText('release-mac-intel-card', version + ' · ' + macIntelSize);
-      setText('release-windows-card', version + ' · ' + windowsSize);
-
-      const windowsHero = document.getElementById('release-windows-hero');
-      if (windowsHero) {
-        windowsHero.dataset.en = version + ' · EXE setup installer · ' + windowsSize;
-        windowsHero.dataset.zh = version + ' · EXE 安装包 · ' + windowsSize;
-      }
       const notesTitle = document.getElementById('release-notes-title');
       if (notesTitle) {
         notesTitle.dataset.en = 'What is new in ' + version;
         notesTitle.dataset.zh = version + ' 更新内容';
       }
-      const gatekeeper = document.getElementById('release-gatekeeper-command');
-      if (gatekeeper) {
-        gatekeeper.replaceChildren(
-          document.createTextNode('xattr -dr com.apple.quarantine'),
-          document.createElement('br'),
-          document.createTextNode('"/Applications/GEO-SOP.app"')
-        );
-      }
-      document.querySelectorAll('a[href="/downloads/GEO-SOP-macOS.dmg"]').forEach(link => {
-        if (mac.url) link.href = mac.url;
-      });
-      document.querySelectorAll('a[href="/downloads/GEO-SOP-macOS-Intel.dmg"]').forEach(link => {
-        if (macIntel.url) link.href = macIntel.url;
-      });
-      document.querySelectorAll('a[href="/downloads/GEO-SOP-Setup.exe"]').forEach(link => {
-        if (windows.url) link.href = windows.url;
-      });
       const schema = document.getElementById('software-schema');
       if (schema) {
         const data = JSON.parse(schema.textContent);
         const software = (data['@graph'] || []).find(item => item['@type'] === 'SoftwareApplication');
         if (software) {
           software.softwareVersion = version;
-          if (windows.url) software.downloadUrl = windows.url;
           schema.textContent = JSON.stringify(data);
         }
       }
@@ -596,7 +476,6 @@
             <h2>Product</h2>
             <a href="#features">Features</a>
             <a href="#demo">Online Demo</a>
-            <a href="#download">Download</a>
             <a href="/dashboard/">Cloud Dashboard</a>
         </div>
         <div>
